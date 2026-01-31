@@ -29,6 +29,8 @@ The migration creates:
 - `chat_pubkeys` – reserved for future use
 - `terms_acceptances` – records user agreement
 
+**RLS security fix (Supabase linter):** To resolve "RLS Policy Always True" warnings, run `supabase/fix_chat_rls_security.sql` in the SQL Editor. This replaces permissive `USING (true)` policies with data-validity checks.
+
 ## Flow
 
 1. **Chat** – Buyer or seller opens listing → chat loads (or creates thread)

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useWallet, useConnection } from '@solana/wallet-adapter-react'
-import { Transaction, LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js'
+import { LAMPORTS_PER_SOL } from '@solana/web3.js'
 import { getAssociatedTokenAddress, getAccount, createAssociatedTokenAccountIdempotentInstruction, getMint } from '@solana/spl-token'
 import { supabase, hashWalletAddress } from '@/lib/supabase'
 import { transferToUserEscrowTx } from '@/lib/user-pda-wallet'
@@ -53,6 +53,36 @@ export default function OptionalEscrowSection({
 
     try {
       setProcessing(true)
+
+      // Balance check (Solana: "Attempt to debit" = source account has no funds)
+      if (token === 'SOL') {
+        let balance: number
+        try {
+          balance = await connection.getBalance(publicKey, 'confirmed')
+        } catch {
+          balance = 0
+        }
+        const totalNeeded = (totalAmount + 0.001) * LAMPORTS_PER_SOL
+        const network = process.env.NEXT_PUBLIC_SOLANA_NETWORK || 'devnet'
+        if (balance < totalNeeded) {
+          const balanceSol = balance / LAMPORTS_PER_SOL
+          if (balanceSol === 0) {
+            const tryAnyway = confirm(
+              `RPC reports 0 SOL. You need ${totalAmount + 0.001} SOL on ${network}.\n\n` +
+              'If you have SOL in Phantom, try anyway? (Add NEXT_PUBLIC_RPC_URL in Vercel for accurate balance.)'
+            )
+            if (!tryAnyway) {
+              setProcessing(false)
+              return
+            }
+          } else {
+            alert(`Insufficient balance. You need ${(totalNeeded / LAMPORTS_PER_SOL).toFixed(4)} SOL but have ${balanceSol.toFixed(4)} SOL.`)
+            setProcessing(false)
+            return
+          }
+        }
+      }
+
       const { transaction, escrowPda } = await transferToUserEscrowTx(
         publicKey,
         listing.wallet_address,
@@ -64,10 +94,30 @@ export default function OptionalEscrowSection({
       transaction.recentBlockhash = blockhash
       transaction.feePayer = publicKey
       const signed = await signTransaction(transaction)
-      const signature = await connection.sendRawTransaction(signed.serialize(), {
-        skipPreflight: false,
-        maxRetries: 3,
-      })
+
+      let signature: string
+      try {
+        signature = await connection.sendRawTransaction(signed.serialize(), {
+          skipPreflight: false,
+          maxRetries: 3,
+        })
+      } catch (sendErr: any) {
+        if (sendErr?.message?.includes('Attempt to debit') || sendErr?.message?.includes('prior credit')) {
+          const retry = confirm(
+            'Simulation failed (RPC may report wrong balance). Retry with simulation skipped?'
+          )
+          if (retry) {
+            signature = await connection.sendRawTransaction(signed.serialize(), {
+              skipPreflight: true,
+              maxRetries: 3,
+            })
+          } else {
+            throw sendErr
+          }
+        } else {
+          throw sendErr
+        }
+      }
       await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed')
 
       if (supabase) {
@@ -87,7 +137,14 @@ export default function OptionalEscrowSection({
       onUpdate()
     } catch (err: any) {
       console.error(err)
-      alert('Escrow deposit failed: ' + (err.message || 'Unknown error'))
+      let msg = err?.message || 'Unknown error'
+      try {
+        const logs = typeof err?.getLogs === 'function' ? err.getLogs() : err?.logs
+        if (logs && Array.isArray(logs) && logs.length > 0) {
+          msg += '\n\nLogs: ' + logs.slice(-5).join('\n')
+        }
+      } catch (_) {}
+      alert('Escrow deposit failed: ' + msg)
     } finally {
       setProcessing(false)
     }

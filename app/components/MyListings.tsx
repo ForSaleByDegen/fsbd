@@ -25,25 +25,24 @@ export default function MyListings() {
     
     try {
       setLoading(true)
-      const walletHash = hashWalletAddress(publicKey.toString())
-      
-      if (supabase) {
+      const wallet = publicKey.toString()
+      const res = await fetch(`/api/listings/my?wallet=${encodeURIComponent(wallet)}`)
+      if (res.ok) {
+        const data = await res.json()
+        setListings(Array.isArray(data) ? data : [])
+      } else if (supabase) {
+        const walletHash = hashWalletAddress(wallet)
         const { data, error } = await supabase
           .from('listings')
           .select('*')
           .eq('wallet_address_hash', walletHash)
           .order('created_at', { ascending: false })
-
         if (error) throw error
         setListings(data || [])
       } else {
-        // Fallback
-        const response = await fetch('/api/listings')
-        const allListings = await response.json()
-        const myListings = allListings.filter((l: any) => 
-          l.wallet_address === publicKey.toString()
-        )
-        setListings(myListings)
+        const allRes = await fetch('/api/listings')
+        const allListings = await allRes.json()
+        setListings(Array.isArray(allListings) ? allListings.filter((l: any) => l.wallet_address === wallet) : [])
       }
     } catch (error) {
       console.error('Error fetching listings:', error)
