@@ -2,20 +2,23 @@ import { Suspense } from 'react'
 import Header from '@/components/Header'
 import ListingFeed from '@/components/ListingFeed'
 import DisclaimerBanner from '@/components/DisclaimerBanner'
+import AsciiLogo from '@/components/AsciiLogo'
+import LoadingScreen from '@/components/LoadingScreen'
 
 // Force dynamic rendering - listings are fetched client-side
 export const dynamic = 'force-dynamic'
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-foreground">
       <Header />
       
       <main className="max-w-6xl mx-auto px-4 py-8">
         <DisclaimerBanner />
         
         <div className="mb-10 text-center md:text-left">
-          <h1 className="text-5xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+          <AsciiLogo />
+          <h1 className="text-5xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-primary via-purple-500 to-purple-600 bg-clip-text text-transparent">
             For Sale By Degen
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl">
@@ -24,7 +27,7 @@ export default function Home() {
           </p>
         </div>
 
-        <Suspense fallback={<div className="text-center py-12">Loading listings...</div>}>
+        <Suspense fallback={<LoadingScreen />}>
           <ListingFeed />
         </Suspense>
       </main>
