@@ -21,7 +21,7 @@ export async function getOrCreateThread(
     .select('id')
     .eq('listing_id', listingId)
     .eq('buyer_wallet_hash', buyerWalletHash)
-    .single()
+    .maybeSingle()
 
   if (existing) return { id: existing.id }
 

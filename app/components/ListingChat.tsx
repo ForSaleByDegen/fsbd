@@ -43,18 +43,28 @@ export default function ListingChat({
 
   useEffect(() => {
     if (!listing.id || !currentUserWallet) return
+    let cancelled = false
     ;(async () => {
       setLoading(true)
-      const thread = await getOrSelectThread(listing.id, sellerHash, myHash, isSeller)
-      if (thread) {
-        setThreadId(thread.id)
-        const msgs = await fetchMessages(thread.id, sellerHash, thread.buyerWalletHash)
-        setMessages(msgs)
-        const threadData = await getThread(thread.id)
-        onThreadLoaded?.(thread.id, !!threadData?.escrow_agreed, threadData?.escrow_status ?? null)
+      try {
+        const thread = await getOrSelectThread(listing.id, sellerHash, myHash, isSeller)
+        if (cancelled) return
+        if (thread) {
+          setThreadId(thread.id)
+          setThreadBuyerHash(thread.buyerWalletHash)
+          const msgs = await fetchMessages(thread.id, sellerHash, thread.buyerWalletHash)
+          if (cancelled) return
+          setMessages(msgs)
+          const threadData = await getThread(thread.id)
+          onThreadLoaded?.(thread.id, !!threadData?.escrow_agreed, threadData?.escrow_status ?? null)
+        }
+      } catch (err) {
+        console.error('Chat load error:', err)
+      } finally {
+        if (!cancelled) setLoading(false)
       }
-      setLoading(false)
     })()
+    return () => { cancelled = true }
   }, [listing.id, currentUserWallet, sellerHash, myHash, isSeller, onThreadLoaded])
 
   useEffect(() => {
@@ -147,7 +157,9 @@ export default function ListingChat({
   if (!threadId) {
     return (
       <div className="p-4 border-2 border-[#660099] rounded text-center text-[#660099]">
-        Could not load chat. Please try again.
+        {isSeller
+          ? 'No conversations yet. Buyers will see a chat when they view this listing.'
+          : 'Could not load chat. Ensure Supabase is configured and the chat migration has been run.'}
       </div>
     )
   }
