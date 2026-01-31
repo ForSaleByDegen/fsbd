@@ -7,8 +7,18 @@ const NFT_STORAGE_KEY = process.env.NEXT_PUBLIC_NFT_STORAGE_KEY || ''
  * Upload image to IPFS via NFT.Storage
  */
 export async function uploadImageToIPFS(file: File): Promise<string> {
-  if (!NFT_STORAGE_KEY) {
-    throw new Error('NFT.Storage API key not configured. Set NEXT_PUBLIC_NFT_STORAGE_KEY')
+  // Check if API key is available (client-side check)
+  const apiKey = typeof window !== 'undefined' 
+    ? process.env.NEXT_PUBLIC_NFT_STORAGE_KEY || NFT_STORAGE_KEY
+    : NFT_STORAGE_KEY
+    
+  if (!apiKey || apiKey.trim() === '') {
+    console.error('NFT.Storage API key missing:', {
+      hasKey: !!NFT_STORAGE_KEY,
+      keyLength: NFT_STORAGE_KEY?.length || 0,
+      envVar: typeof window !== 'undefined' ? process.env.NEXT_PUBLIC_NFT_STORAGE_KEY : 'server-side'
+    })
+    throw new Error('NFT.Storage API key not configured. Please set NEXT_PUBLIC_NFT_STORAGE_KEY in Vercel environment variables and redeploy.')
   }
 
   // Validate file
@@ -23,7 +33,7 @@ export async function uploadImageToIPFS(file: File): Promise<string> {
   }
 
   try {
-    const client = new NFTStorage({ token: NFT_STORAGE_KEY })
+    const client = new NFTStorage({ token: apiKey })
     
     // Upload blob directly (simpler and more reliable)
     const cid = await client.storeBlob(file)
