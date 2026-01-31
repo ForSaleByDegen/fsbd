@@ -49,9 +49,10 @@ export default function ShippingLabelForm({ listingId, buyerAddress, onLabelCrea
   useEffect(() => {
     // Load seller address from profile
     if (publicKey && supabase) {
+      const sb = supabase
       const loadSellerAddress = async () => {
         const walletHash = hashWalletAddress(publicKey.toString())
-        const { data: profile } = await supabase
+        const { data: profile } = await sb
           .from('profiles')
           .select('shipping_address, email')
           .eq('wallet_address_hash', walletHash)
