@@ -9,12 +9,15 @@ CREATE TABLE IF NOT EXISTS profiles (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   wallet_address_hash TEXT NOT NULL UNIQUE,
   wallet_address TEXT NOT NULL, -- Encrypted in app
-  email TEXT, -- From Privy if available
+  email TEXT NOT NULL, -- REQUIRED for shipping labels and escrow
+  email_verified BOOLEAN DEFAULT false,
+  escrow_pda TEXT, -- User's escrow PDA wallet address
   tier TEXT DEFAULT 'free' CHECK (tier IN ('free', 'bronze', 'silver', 'gold')),
   listings_count INTEGER DEFAULT 0,
   total_fees_paid NUMERIC DEFAULT 0,
   total_listings_sold INTEGER DEFAULT 0,
   reputation_score INTEGER DEFAULT 0,
+  shipping_address JSONB, -- Stored shipping address for labels
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -69,6 +72,10 @@ CREATE INDEX IF NOT EXISTS listings_category_idx ON listings(category);
 CREATE INDEX IF NOT EXISTS listings_wallet_hash_idx ON listings(wallet_address_hash);
 CREATE INDEX IF NOT EXISTS listings_created_at_idx ON listings(created_at DESC);
 CREATE INDEX IF NOT EXISTS listings_is_auction_idx ON listings(is_auction);
+CREATE INDEX IF NOT EXISTS listings_escrow_status_idx ON listings(escrow_status);
+CREATE INDEX IF NOT EXISTS listings_buyer_wallet_hash_idx ON listings(buyer_wallet_hash);
+CREATE INDEX IF NOT EXISTS profiles_escrow_pda_idx ON profiles(escrow_pda);
+CREATE INDEX IF NOT EXISTS profiles_email_idx ON profiles(email);
 CREATE INDEX IF NOT EXISTS profiles_wallet_hash_idx ON profiles(wallet_address_hash);
 CREATE INDEX IF NOT EXISTS admins_wallet_hash_idx ON admins(wallet_address_hash);
 CREATE INDEX IF NOT EXISTS admins_is_active_idx ON admins(is_active);

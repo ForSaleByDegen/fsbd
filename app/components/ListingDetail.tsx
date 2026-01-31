@@ -5,11 +5,14 @@ import { useWallet, useConnection } from '@solana/wallet-adapter-react'
 import { useRouter } from 'next/navigation'
 import { Transaction, SystemProgram, LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js'
 import { getAssociatedTokenAddress, createTransferInstruction, getAccount, createAssociatedTokenAccountIdempotentInstruction, getMint } from '@solana/spl-token'
-import { supabase } from '@/lib/supabase'
+import { supabase, hashWalletAddress } from '@/lib/supabase'
 import { getIPFSGatewayURL } from '@/lib/pinata'
 import { getUserTier, calculatePlatformFeeRate, type Tier } from '@/lib/tier-check'
+import { transferToUserEscrowTx } from '@/lib/user-pda-wallet'
 import { Button } from './ui/button'
 import BiddingSection from './BiddingSection'
+import EscrowActions from './EscrowActions'
+import EmailSignupModal from './EmailSignupModal'
 
 interface ListingDetailProps {
   listingId: string
@@ -102,9 +105,9 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
       const sellerTierForFee = await getUserTier(listing.wallet_address, connection)
       const feeRate = calculatePlatformFeeRate(sellerTierForFee)
       const platformFee = listing.price * feeRate
-      const sellerAmount = listing.price - platformFee
+      const totalAmount = listing.price // Total amount buyer pays (includes platform fee)
       
-      // Get app wallet for platform fees
+      // Get app wallet for platform fees (collected immediately)
       const appWallet = new PublicKey(
         process.env.NEXT_PUBLIC_APP_WALLET || '11111111111111111111111111111111'
       )
@@ -113,10 +116,10 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
       // Check buyer balance before proceeding
       if (listing.price_token === 'SOL') {
         const buyerBalance = await connection.getBalance(publicKey)
-        const totalNeeded = (listing.price + 0.0005) * LAMPORTS_PER_SOL // Add small buffer for fees
+        const totalNeeded = (totalAmount + 0.001) * LAMPORTS_PER_SOL // Add buffer for fees
         
         if (buyerBalance < totalNeeded) {
-          alert(`Insufficient balance. You need ${listing.price + 0.0005} SOL but only have ${(buyerBalance / LAMPORTS_PER_SOL).toFixed(4)} SOL`)
+          alert(`Insufficient balance. You need ${totalAmount + 0.001} SOL but only have ${(buyerBalance / LAMPORTS_PER_SOL).toFixed(4)} SOL`)
           setProcessing(false)
           return
         }
@@ -130,8 +133,8 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
           const mintInfo = await getMint(connection, mintPublicKey)
           const buyerBalance = Number(tokenAccount.amount) / (10 ** mintInfo.decimals)
           
-          if (buyerBalance < listing.price) {
-            alert(`Insufficient token balance. You need ${listing.price} ${listing.price_token} but only have ${buyerBalance.toFixed(4)}`)
+          if (buyerBalance < totalAmount) {
+            alert(`Insufficient token balance. You need ${totalAmount} ${listing.price_token} but only have ${buyerBalance.toFixed(4)}`)
             setProcessing(false)
             return
           }
@@ -142,72 +145,79 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
         }
       }
       
-      const transaction = new Transaction()
+      // Check if seller has email and escrow PDA (required)
+      if (supabase) {
+        const sellerHash = hashWalletAddress(listing.wallet_address)
+        const { data: sellerProfile } = await supabase
+          .from('profiles')
+          .select('email, escrow_pda')
+          .eq('wallet_address_hash', sellerHash)
+          .single()
 
+        if (!sellerProfile || !sellerProfile.email) {
+          alert('Seller has not completed email signup. Please contact the seller or try again later.')
+          setProcessing(false)
+          return
+        }
+
+        if (!sellerProfile.escrow_pda) {
+          // Create escrow PDA for seller if it doesn't exist
+          const { createUserEscrowPDA } = await import('@/lib/user-pda-wallet')
+          const sellerEscrowPda = await createUserEscrowPDA(listing.wallet_address)
+          
+          // Update seller profile with PDA
+          await supabase
+            .from('profiles')
+            .update({ escrow_pda: sellerEscrowPda.toString() })
+            .eq('wallet_address_hash', sellerHash)
+        }
+      }
+
+      // Transfer funds to seller's user escrow PDA (not per-listing PDA)
+      const { transaction: escrowTx, escrowPda } = await transferToUserEscrowTx(
+        publicKey,
+        listing.wallet_address, // Seller's wallet
+        totalAmount - platformFee, // Amount after platform fee
+        listing.price_token,
+        connection
+      )
+      
+      // Create separate transaction for platform fee (collected immediately)
+      const platformFeeTx = new Transaction()
+      
       if (listing.price_token === 'SOL') {
-        // Transfer platform fee to app wallet
-        transaction.add(
+        // Transfer platform fee to app wallet immediately
+        platformFeeTx.add(
           SystemProgram.transfer({
             fromPubkey: publicKey,
             toPubkey: appWallet,
             lamports: Math.floor(platformFee * LAMPORTS_PER_SOL),
           })
         )
-        
-        // Transfer remaining amount to seller
-        transaction.add(
-          SystemProgram.transfer({
-            fromPubkey: publicKey,
-            toPubkey: sellerWallet,
-            lamports: Math.floor(sellerAmount * LAMPORTS_PER_SOL),
-          })
-        )
       } else {
-        // USDC or other SPL tokens - split payment
+        // SPL token platform fee
         const mintPublicKey = new PublicKey(listing.price_token)
         const buyerTokenAccount = await getAssociatedTokenAddress(mintPublicKey, publicKey)
-        const sellerTokenAccount = await getAssociatedTokenAddress(mintPublicKey, sellerWallet)
         const appTokenAccount = await getAssociatedTokenAddress(mintPublicKey, appWallet)
-        
-        // Get token decimals
         const mintInfo = await getMint(connection, mintPublicKey)
         const decimals = mintInfo.decimals
         
-        // Ensure seller and app token accounts exist (create if needed)
-        try {
-          await getAccount(connection, sellerTokenAccount)
-        } catch {
-          // Seller token account doesn't exist, create it
-          transaction.add(
-            createAssociatedTokenAccountIdempotentInstruction(
-              publicKey, // payer
-              sellerTokenAccount, // ATA address
-              sellerWallet, // owner
-              mintPublicKey // mint
-            )
-          )
-        }
-        
+        // Ensure app token account exists
         try {
           await getAccount(connection, appTokenAccount)
         } catch {
-          // App token account doesn't exist, create it
-          transaction.add(
+          platformFeeTx.add(
             createAssociatedTokenAccountIdempotentInstruction(
-              publicKey, // payer
-              appTokenAccount, // ATA address
-              appWallet, // owner
-              mintPublicKey // mint
+              publicKey,
+              appTokenAccount,
+              appWallet,
+              mintPublicKey
             )
           )
         }
         
-        // Calculate amounts in smallest units
         const platformFeeAmount = BigInt(Math.floor(platformFee * (10 ** decimals)))
-        const sellerAmountAmount = BigInt(Math.floor(sellerAmount * (10 ** decimals)))
-        
-        // Transfer platform fee to app wallet
-        transaction.add(
+        platformFeeTx.add(
           createTransferInstruction(
             buyerTokenAccount,
             appTokenAccount,
@@ -215,17 +225,12 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
             platformFeeAmount,
           )
         )
-        
-        // Transfer remaining to seller
-        transaction.add(
-          createTransferInstruction(
-            buyerTokenAccount,
-            sellerTokenAccount,
-            publicKey,
-            sellerAmountAmount,
-          )
-        )
       }
+      
+      // Combine transactions
+      const transaction = new Transaction()
+      transaction.add(...platformFeeTx.instructions)
+      transaction.add(...escrowTx.instructions)
 
       // Get recent blockhash and set fee payer (required for transaction)
       const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('finalized')
@@ -300,7 +305,14 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
         }
       }
 
-      alert(`Purchase successful! Platform fee: ${platformFee.toFixed(4)} ${listing.price_token || 'SOL'}. Transaction signature: ${signature}`)
+      alert(
+        `Purchase successful! Funds are now held in seller's escrow wallet.\n\n` +
+        `Platform fee: ${platformFee.toFixed(4)} ${listing.price_token || 'SOL'}\n` +
+        `Escrow PDA: ${escrowPda.toString()}\n` +
+        `Transaction: ${signature}\n\n` +
+        `The seller will receive 50% when they mark the item as shipped, ` +
+        `and the remaining 50% when you confirm receipt.`
+      )
       router.push('/')
       router.refresh()
     } catch (error: any) {
@@ -379,7 +391,6 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
                 alt={`${listing.title} - Image ${index + 1}`}
                 className="w-full h-auto max-h-[400px] sm:max-h-[500px] md:max-h-[600px] object-contain mx-auto"
                 loading="lazy"
-                crossOrigin="anonymous"
                 onError={(e) => {
                   console.error('Image load error in ListingDetail:', {
                     url: imageUrl,
@@ -446,15 +457,76 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
         </div>
       )}
 
+      {/* Show escrow info if in escrow */}
+      {listing.escrow_pda && (
+        <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-[#660099]/20 border-2 border-[#660099] rounded">
+          <h3 className="font-pixel text-[#ff00ff] mb-2 text-base sm:text-lg" style={{ fontFamily: 'var(--font-pixel)' }}>
+            🔒 Escrow Information
+          </h3>
+          <p className="text-sm sm:text-base text-[#00ff00] font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+            Status: <span className="capitalize">{listing.escrow_status || 'pending'}</span>
+          </p>
+          {listing.escrow_amount && (
+            <p className="text-sm sm:text-base text-[#00ff00] font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+              Amount in escrow: {listing.escrow_amount} {listing.price_token || 'SOL'}
+            </p>
+          )}
+          <p className="text-xs text-[#660099] font-pixel-alt break-all" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+            Escrow PDA: {listing.escrow_pda}
+          </p>
+          {listing.shipped_at && (
+            <p className="text-xs text-[#00ff00] font-pixel-alt mt-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+              Shipped: {new Date(listing.shipped_at).toLocaleString()}
+            </p>
+          )}
+          {listing.received_at && (
+            <p className="text-xs text-[#00ff00] font-pixel-alt mt-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+              Received: {new Date(listing.received_at).toLocaleString()}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Show escrow actions for seller or buyer */}
+      {listing.escrow_pda && publicKey && (
+        <EscrowActions
+          listing={listing}
+          userRole={
+            publicKey.toString() === listing.wallet_address
+              ? 'seller'
+              : publicKey.toString() === listing.buyer_wallet_address
+              ? 'buyer'
+              : 'seller' // Default, but won't show actions
+          }
+        />
+      )}
+
+      {/* Legal disclaimer for escrow */}
+      {listing.escrow_pda && (
+        <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-yellow-900/20 border-2 border-yellow-600 rounded">
+          <h4 className="font-pixel text-yellow-400 mb-2 text-sm" style={{ fontFamily: 'var(--font-pixel)' }}>
+            ⚠️ Legal Disclaimer
+          </h4>
+          <p className="text-xs text-yellow-300 font-pixel-alt leading-relaxed" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+            <strong>ESCROW SERVICE DISCLAIMER:</strong> This platform provides technical infrastructure for peer-to-peer transactions only. 
+            The platform does NOT act as a money transmitter, custodian, or escrow agent. Funds are held in Program Derived Addresses (PDAs) 
+            on the Solana blockchain. The platform cannot access or control these funds. Users transact directly with each other and are 
+            responsible for compliance with all applicable laws including money transmitter regulations, escrow service regulations, consumer 
+            protection laws, and tax obligations. Consult legal counsel before using this service. By using this service, you acknowledge 
+            that you understand these risks and that the platform assumes no liability for transactions.
+          </p>
+        </div>
+      )}
+
       {/* Show bidding section for auctions */}
       {listing.is_auction ? (
         <BiddingSection listing={listing} />
       ) : (
         <>
-          {publicKey && publicKey.toString() !== listing.wallet_address && (
+          {publicKey && publicKey.toString() !== listing.wallet_address && listing.status === 'active' && !listing.escrow_pda && (
             <Button
               onClick={handlePurchase}
-              disabled={processing || listing.status !== 'active'}
+              disabled={processing}
               className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 border-2 sm:border-4 border-[#00ff00] text-[#00ff00] hover:bg-[#00ff00] hover:text-black font-pixel-alt transition-colors min-h-[44px] text-base sm:text-lg touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ fontFamily: 'var(--font-pixel-alt)' }}
             >
@@ -462,25 +534,38 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
             </Button>
           )}
 
-          {publicKey && publicKey.toString() === listing.wallet_address && (
+          {publicKey && publicKey.toString() === listing.wallet_address && !listing.escrow_pda && (
             <p className="text-[#660099] font-pixel-alt text-sm sm:text-base" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
               This is your listing
             </p>
           )}
 
-          {!publicKey && (
+          {!publicKey && listing.status === 'active' && !listing.escrow_pda && (
             <p className="text-[#660099] font-pixel-alt text-sm sm:text-base" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
               Connect your wallet to purchase
             </p>
           )}
 
-          {listing.status !== 'active' && (
+          {listing.status !== 'active' && !listing.escrow_pda && (
             <p className="text-[#ff0000] font-pixel-alt text-sm sm:text-base" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
               This listing is {listing.status}
             </p>
           )}
         </>
       )}
+
+      {/* Email Signup Modal */}
+      <EmailSignupModal
+        isOpen={showEmailModal}
+        onClose={() => setShowEmailModal(false)}
+        onComplete={() => {
+          setShowEmailModal(false)
+          // Retry purchase after email signup
+          if (publicKey) {
+            handlePurchase()
+          }
+        }}
+      />
     </div>
   )
 }
