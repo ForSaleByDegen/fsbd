@@ -142,7 +142,7 @@ export default function ProfilePage() {
                   Linked Accounts
                 </h2>
                 <div className="space-y-2">
-                  {linkedAccounts.map((account, idx) => (
+                  {linkedAccounts.map((account: { type?: string; address?: string; email?: string }, idx: number) => (
                     <div key={idx} className="text-[#660099] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                       {account.type}: {account.address || account.email || 'N/A'}
                     </div>
