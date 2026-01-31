@@ -77,11 +77,14 @@ export function calculateListingFee(tier: Tier): number {
  * Get tier benefits description
  */
 export function getTierBenefits(tier: Tier): string[] {
+  const platformFeeRate = calculatePlatformFeeRate(tier)
+  const feePercent = (platformFeeRate * 100).toFixed(3)
+  
   const benefits = {
-    free: ['Basic listings', 'Standard fees (0.1 SOL)'],
-    bronze: ['25% fee reduction', 'Auction creation', 'Basic listings'],
-    silver: ['50% fee reduction', 'Priority visibility', 'Auction creation', 'Basic listings'],
-    gold: ['75% fee reduction', 'Priority visibility', 'Governance voting', 'Auction creation', 'Basic listings']
+    free: ['Basic listings', 'Standard fees (0.1 SOL)', `Platform fee: ${feePercent}%`],
+    bronze: ['25% fee reduction', 'Platform fee: 0.35%', 'Auction creation', 'Basic listings'],
+    silver: ['50% fee reduction', 'Platform fee: 0.21%', 'Priority visibility', 'Auction creation', 'Basic listings'],
+    gold: ['75% fee reduction', 'Platform fee: 0.067%', 'Priority visibility', 'Governance voting', 'Auction creation', 'Basic listings']
   }
   return benefits[tier] || benefits.free
 }
@@ -91,4 +94,19 @@ export function getTierBenefits(tier: Tier): string[] {
  */
 export function canCreateAuction(tier: Tier): boolean {
   return tier !== 'free'
+}
+
+/**
+ * Calculate platform fee rate based on seller's tier
+ * Gold tier gets the lowest fee (0.067%)
+ */
+export function calculatePlatformFeeRate(tier: Tier): number {
+  const feeRates = {
+    free: 0.0042,   // 0.42% - base rate
+    bronze: 0.0035, // 0.35% - bronze discount
+    silver: 0.0021, // 0.21% - silver discount
+    gold: 0.00067   // 0.067% - gold discount (highest tier)
+  }
+  
+  return feeRates[tier] || feeRates.free
 }

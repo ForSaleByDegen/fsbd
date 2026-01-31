@@ -7,11 +7,9 @@ import { Transaction, SystemProgram, LAMPORTS_PER_SOL, PublicKey } from '@solana
 import { getAssociatedTokenAddress, createTransferInstruction } from '@solana/spl-token'
 import { supabase } from '@/lib/supabase'
 import { getIPFSGatewayURL } from '@/lib/pinata'
+import { getUserTier, calculatePlatformFeeRate, type Tier } from '@/lib/tier-check'
 import { Button } from './ui/button'
 import BiddingSection from './BiddingSection'
-
-// Platform fee rate (0.42%)
-const PLATFORM_FEE_RATE = 0.0042
 
 interface ListingDetailProps {
   listingId: string
@@ -24,10 +22,19 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
   const [listing, setListing] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState(false)
+  const [sellerTier, setSellerTier] = useState<Tier>('free')
+  const [platformFeeRate, setPlatformFeeRate] = useState<number>(0.0042) // Default 0.42%
 
   useEffect(() => {
     fetchListing()
   }, [listingId])
+
+  useEffect(() => {
+    // Fetch seller's tier to calculate platform fee rate
+    if (listing?.wallet_address && connection) {
+      loadSellerTier()
+    }
+  }, [listing?.wallet_address, connection])
 
   const fetchListing = async () => {
     try {
@@ -52,6 +59,21 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
     }
   }
 
+  const loadSellerTier = async () => {
+    if (!listing?.wallet_address || !connection) return
+    
+    try {
+      const tier = await getUserTier(listing.wallet_address, connection)
+      setSellerTier(tier)
+      const feeRate = calculatePlatformFeeRate(tier)
+      setPlatformFeeRate(feeRate)
+    } catch (error) {
+      console.error('Error loading seller tier:', error)
+      // Default to free tier rate if error
+      setPlatformFeeRate(0.0042)
+    }
+  }
+
   const handlePurchase = async () => {
     if (!publicKey || !connection || !signTransaction) {
       alert('Please connect your wallet')
@@ -65,8 +87,11 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
     try {
       setProcessing(true)
       
-      // Calculate platform fee (0.42% of sale price)
-      const platformFee = listing.price * PLATFORM_FEE_RATE
+      // Calculate platform fee based on seller's tier
+      // Get seller's tier to determine fee rate
+      const sellerTierForFee = await getUserTier(listing.wallet_address, connection)
+      const feeRate = calculatePlatformFeeRate(sellerTierForFee)
+      const platformFee = listing.price * feeRate
       const sellerAmount = listing.price - platformFee
       
       // Get app wallet for platform fees
@@ -246,7 +271,7 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
         </div>
         {publicKey && publicKey.toString() !== listing.wallet_address && (
           <p className="text-xs sm:text-sm text-[#660099] font-pixel-alt mt-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-            Platform fee: {(listing.price * PLATFORM_FEE_RATE).toFixed(4)} {listing.price_token || 'SOL'} (0.42%)
+            Platform fee: {(listing.price * platformFeeRate).toFixed(4)} {listing.price_token || 'SOL'} ({(platformFeeRate * 100).toFixed(3)}% - {sellerTier} tier)
           </p>
         )}
       </div>
