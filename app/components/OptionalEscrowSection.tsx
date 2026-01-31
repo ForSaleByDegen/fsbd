@@ -91,34 +91,52 @@ export default function OptionalEscrowSection({
         token,
         connection
       )
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('finalized')
-      transaction.recentBlockhash = blockhash
       transaction.feePayer = publicKey
-      const signed = await signTransaction(transaction)
-      const serialized = signed.serialize()
-      const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL
 
-      const doSend = (opts: { skipPreflight: boolean }) =>
-        shouldUseRebate() && rpcUrl
-          ? sendTransactionWithRebate(serialized, publicKey.toString(), rpcUrl, {
-              skipPreflight: opts.skipPreflight,
-              maxRetries: 3,
-            })
-          : connection.sendRawTransaction(serialized, {
-              skipPreflight: opts.skipPreflight,
-              maxRetries: 3,
-            })
+      const doSignAndSend = async (skipPreflight = false): Promise<{ signature: string; blockhash: string; lastValidBlockHeight: number }> => {
+        const { blockhash: freshBlockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('finalized')
+        transaction.recentBlockhash = freshBlockhash
+        const signed = await signTransaction(transaction)
+        const serialized = signed.serialize()
+        const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL
+        const sig =
+          shouldUseRebate() && rpcUrl
+            ? await sendTransactionWithRebate(serialized, publicKey.toString(), rpcUrl, {
+                skipPreflight,
+                maxRetries: 3,
+              })
+            : await connection.sendRawTransaction(serialized, { skipPreflight, maxRetries: 3 })
+        return { signature: sig, blockhash: freshBlockhash, lastValidBlockHeight }
+      }
 
       let signature: string
+      let blockhash: string
+      let lastValidBlockHeight: number
       try {
-        signature = await doSend({ skipPreflight: false })
+        const result = await doSignAndSend(false)
+        signature = result.signature
+        blockhash = result.blockhash
+        lastValidBlockHeight = result.lastValidBlockHeight
       } catch (sendErr: any) {
         if (sendErr?.message?.includes('Attempt to debit') || sendErr?.message?.includes('prior credit')) {
           const retry = confirm(
             'Simulation failed (RPC may report wrong balance). Retry with simulation skipped?'
           )
           if (retry) {
-            signature = await doSend({ skipPreflight: true })
+            const result = await doSignAndSend(true)
+            signature = result.signature
+            blockhash = result.blockhash
+            lastValidBlockHeight = result.lastValidBlockHeight
+          } else {
+            throw sendErr
+          }
+        } else if (/block height exceeded|expired/i.test(sendErr?.message || '')) {
+          const retry = confirm('Transaction expired. Sign again with a fresh blockhash?')
+          if (retry) {
+            const result = await doSignAndSend(false)
+            signature = result.signature
+            blockhash = result.blockhash
+            lastValidBlockHeight = result.lastValidBlockHeight
           } else {
             throw sendErr
           }

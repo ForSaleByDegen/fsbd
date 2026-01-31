@@ -216,10 +216,11 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
         )
       }
 
-      // Get recent blockhash and set fee payer (required for transaction)
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('finalized')
-      transaction.recentBlockhash = blockhash
       transaction.feePayer = publicKey
+
+      // Use placeholder blockhash for simulation; we fetch fresh one right before sign
+      const { blockhash: simBlockhash } = await connection.getLatestBlockhash('finalized')
+      transaction.recentBlockhash = simBlockhash
 
       // Simulate transaction first; if RPC simulation fails (e.g. AccountNotFound), retry with skipPreflight
       let skipPreflight = false
@@ -249,23 +250,71 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
         }
       }
 
-      const signed = await signTransaction(transaction)
-      const serialized = signed.serialize()
-      const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL
-      const signature =
-        shouldUseRebate() && rpcUrl
-          ? await sendTransactionWithRebate(serialized, publicKey.toString(), rpcUrl, {
-              skipPreflight,
-              maxRetries: 3,
-            })
-          : await connection.sendRawTransaction(serialized, { skipPreflight, maxRetries: 3 })
-      
-      // Wait for confirmation
-      await connection.confirmTransaction({
-        signature,
-        blockhash,
-        lastValidBlockHeight
-      }, 'confirmed')
+      const doSignAndSend = async (): Promise<{ signature: string; blockhash: string; lastValidBlockHeight: number }> => {
+        const { blockhash: freshBlockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('finalized')
+        transaction.recentBlockhash = freshBlockhash
+        const signed = await signTransaction(transaction)
+        const serialized = signed.serialize()
+        const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL
+        const sig =
+          shouldUseRebate() && rpcUrl
+            ? await sendTransactionWithRebate(serialized, publicKey.toString(), rpcUrl, {
+                skipPreflight,
+                maxRetries: 3,
+              })
+            : await connection.sendRawTransaction(serialized, { skipPreflight, maxRetries: 3 })
+        return { signature: sig, blockhash: freshBlockhash, lastValidBlockHeight }
+      }
+
+      let signature: string
+      let blockhash: string
+      let lastValidBlockHeight: number
+      try {
+        const result = await doSignAndSend()
+        signature = result.signature
+        blockhash = result.blockhash
+        lastValidBlockHeight = result.lastValidBlockHeight
+      } catch (sendErr: unknown) {
+        const msg = sendErr instanceof Error ? sendErr.message : String(sendErr)
+        const isBlockHeightExceeded = /block height exceeded|TransactionExpiredBlockheightExceeded|expired/i.test(msg)
+        if (isBlockHeightExceeded) {
+          const retry = confirm(
+            'Transaction expired (blockhash timed out). Sign again with a fresh blockhash?'
+          )
+          if (retry) {
+            const result = await doSignAndSend()
+            signature = result.signature
+            blockhash = result.blockhash
+            lastValidBlockHeight = result.lastValidBlockHeight
+          } else {
+            throw sendErr instanceof Error ? sendErr : new Error(String(sendErr))
+          }
+        } else {
+          throw sendErr instanceof Error ? sendErr : new Error(String(sendErr))
+        }
+      }
+
+      try {
+        await connection.confirmTransaction({
+          signature,
+          blockhash,
+          lastValidBlockHeight
+        }, 'confirmed')
+      } catch (confirmErr: unknown) {
+        const confirmMsg = confirmErr instanceof Error ? confirmErr.message : String(confirmErr)
+        if (/block height exceeded|expired/i.test(confirmMsg)) {
+          console.warn('Confirmation timed out but tx may have succeeded:', signature)
+          alert(
+            `Transaction was sent. Confirmation timed out, but it may have succeeded.\n\n` +
+            `Signature: ${signature}\n\nCheck your wallet and Solscan to verify.`
+          )
+          router.push('/')
+          router.refresh()
+          setProcessing(false)
+          return
+        }
+        throw confirmErr
+      }
 
       // Update listing status
       if (supabase) {
