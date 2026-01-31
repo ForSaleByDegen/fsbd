@@ -42,7 +42,7 @@ export default function ProfilePage() {
   const loadProfile = async () => {
     setLoading(true)
     try {
-      const walletAddress = publicKey?.toString() || wallets.find(w => w.chainId === 'solana-devnet')?.address
+      const walletAddress = publicKey?.toString() || (wallets && Array.isArray(wallets) ? wallets.find((w: { chainId?: string; address?: string }) => w.chainId === 'solana-devnet')?.address : null)
       if (walletAddress && connection) {
         const userTier = await getUserTier(walletAddress, connection)
         setTier(userTier)
