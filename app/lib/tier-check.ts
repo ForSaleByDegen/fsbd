@@ -58,17 +58,18 @@ export async function getUserTier(
 
 /**
  * Calculate listing fee based on user tier
+ * NOTE: Regular listings are FREE (just require message signing)
+ * This fee only applies when launching a token/NFT for the listing
  * Base fee: 0.1 SOL, reduced by tier
- * Note: Free tier pays full fee, tiers start at 100k tokens
  */
 export function calculateListingFee(tier: Tier): number {
-  const BASE_FEE = 0.1 // 0.1 SOL base fee
+  const BASE_FEE = 0.1 // 0.1 SOL base fee (only for token launches)
   
   const reductions = {
-    free: 0,       // No discount - need 100k+ tokens for bronze
-    bronze: 0.25,  // 25% off - 100k+ tokens
-    silver: 0.5,   // 50% off - 1M+ tokens
-    gold: 0.75     // 75% off - 10M+ tokens
+    free: 0,       // No discount - need bronze tier for discount
+    bronze: 0.25,  // 25% off - bronze tier
+    silver: 0.5,   // 50% off - silver tier
+    gold: 0.75     // 75% off - gold tier
   }
 
   const reduction = reductions[tier] || 0
@@ -81,12 +82,38 @@ export function calculateListingFee(tier: Tier): number {
 export function getTierBenefits(tier: Tier): string[] {
   const platformFeeRate = calculatePlatformFeeRate(tier)
   const feePercent = (platformFeeRate * 100).toFixed(3)
+  const listingFee = calculateListingFee(tier)
   
   const benefits = {
-    free: ['Basic listings', 'Standard fees (0.1 SOL)', `Platform fee: ${feePercent}%`],
-    bronze: ['25% fee reduction', 'Platform fee: 0.35%', 'Auction creation', 'Basic listings'],
-    silver: ['50% fee reduction', 'Platform fee: 0.21%', 'Priority visibility', 'Auction creation', 'Basic listings'],
-    gold: ['75% fee reduction', 'Platform fee: 0.067%', 'Priority visibility', 'Governance voting', 'Auction creation', 'Basic listings']
+    free: [
+      'Free listings (message signing only)', 
+      `Platform fee: ${feePercent}% on sales`,
+      `Token launch fee: ${listingFee.toFixed(3)} SOL (if creating token/NFT)`
+    ],
+    bronze: [
+      'Free listings (message signing only)',
+      `Platform fee: ${feePercent}% on sales`,
+      `Token launch fee: ${listingFee.toFixed(3)} SOL (25% discount)`,
+      'Auction creation',
+      'Basic listings'
+    ],
+    silver: [
+      'Free listings (message signing only)',
+      `Platform fee: ${feePercent}% on sales`,
+      `Token launch fee: ${listingFee.toFixed(3)} SOL (50% discount)`,
+      'Priority visibility',
+      'Auction creation',
+      'Basic listings'
+    ],
+    gold: [
+      'Free listings (message signing only)',
+      `Platform fee: ${feePercent}% on sales`,
+      `Token launch fee: ${listingFee.toFixed(3)} SOL (75% discount)`,
+      'Priority visibility',
+      'Governance voting',
+      'Auction creation',
+      'Basic listings'
+    ]
   }
   return benefits[tier] || benefits.free
 }
