@@ -1,14 +1,19 @@
 /**
  * Shipping Label Integration
  * 
- * Integrates with EasyPost API for automated shipping label creation
- * Alternative providers: Shippo, ShipStation, etc.
+ * Supports multiple providers:
+ * - EasyPost (default)
+ * - Shippo (alternative - easier signup)
  * 
- * IMPORTANT: You need to sign up for EasyPost and get an API key
- * https://www.easypost.com/
+ * Set NEXT_PUBLIC_SHIPPING_PROVIDER to 'shippo' to use Shippo instead
+ * 
+ * EasyPost: https://www.easypost.com/
+ * Shippo: https://goshippo.com/ (Recommended - easier signup, $0.05/label)
  */
 
+const SHIPPING_PROVIDER = process.env.NEXT_PUBLIC_SHIPPING_PROVIDER || 'easypost'
 const EASYPOST_API_KEY = process.env.NEXT_PUBLIC_EASYPOST_API_KEY || ''
+const SHIPPO_API_KEY = process.env.NEXT_PUBLIC_SHIPPO_API_KEY || ''
 const EASYPOST_API_URL = 'https://api.easypost.com/v2'
 
 interface ShippingAddress {
@@ -49,13 +54,23 @@ interface ShippingLabelResponse {
 }
 
 /**
- * Create a shipping label via EasyPost
+ * Create a shipping label (supports EasyPost and Shippo)
  */
 export async function createShippingLabel(
   request: ShippingLabelRequest
 ): Promise<ShippingLabelResponse> {
+  // Use Shippo if configured, otherwise EasyPost
+  if (SHIPPING_PROVIDER === 'shippo') {
+    if (!SHIPPO_API_KEY) {
+      throw new Error('Shippo API key not configured. Set NEXT_PUBLIC_SHIPPO_API_KEY')
+    }
+    const { createShippingLabelShippo } = await import('./shipping-shippo')
+    return createShippingLabelShippo(request)
+  }
+
+  // Default to EasyPost
   if (!EASYPOST_API_KEY) {
-    throw new Error('EasyPost API key not configured. Set NEXT_PUBLIC_EASYPOST_API_KEY')
+    throw new Error('EasyPost API key not configured. Set NEXT_PUBLIC_EASYPOST_API_KEY (or use Shippo by setting NEXT_PUBLIC_SHIPPING_PROVIDER=shippo)')
   }
 
   try {
