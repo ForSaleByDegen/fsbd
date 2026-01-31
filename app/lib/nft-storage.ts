@@ -22,9 +22,16 @@ export async function uploadImageToIPFS(file: File): Promise<string> {
     
     // Return IPFS URL
     return `https://ipfs.io/ipfs/${cid}`
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error uploading to NFT.Storage:', error)
-    throw new Error('Failed to upload image to IPFS')
+    const errorMessage = error?.message || 'Unknown error'
+    if (errorMessage.includes('Unauthorized') || errorMessage.includes('401')) {
+      throw new Error('NFT.Storage API key is invalid. Please check your NEXT_PUBLIC_NFT_STORAGE_KEY')
+    }
+    if (errorMessage.includes('rate limit') || errorMessage.includes('429')) {
+      throw new Error('Rate limit exceeded. Please try again in a moment.')
+    }
+    throw new Error(`Failed to upload image to IPFS: ${errorMessage}`)
   }
 }
 
