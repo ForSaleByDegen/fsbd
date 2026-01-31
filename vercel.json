@@ -1,0 +1,7 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rootDirectory": "app",
+  "installCommand": "rm -rf node_modules .next && npm install --legacy-peer-deps",
+  "buildCommand": "npm run build",
+  "framework": "nextjs"
+}
