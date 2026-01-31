@@ -114,7 +114,7 @@ NEXT_PUBLIC_EASYPOST_API_KEY=your_easypost_api_key_here
 ## Recommended Setup: Shippo
 
 ### Step 1: Sign Up
-1. Go to https://goshippo.com/signup
+1. Go to https://apps.goshippo.com/join (correct signup URL)
 2. Create account (should work smoothly)
 3. Verify email
 
@@ -158,7 +158,7 @@ Test labels are generated but not real - perfect for development!
 
 ## Quick Start with Shippo
 
-1. **Sign up**: https://goshippo.com/signup (should work!)
+1. **Sign up**: https://apps.goshippo.com/join (correct URL!)
 2. **Get test API key**: Dashboard → Settings → API Keys
 3. **Add to Vercel**:
    ```

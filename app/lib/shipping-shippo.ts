@@ -8,7 +8,7 @@
  * - Supports 1000+ carriers
  * - Excellent API documentation
  * 
- * Sign up: https://goshippo.com/
+ * Sign up: https://apps.goshippo.com/join
  * API Docs: https://docs.goshippo.com/
  */
 
