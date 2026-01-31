@@ -1,5 +1,5 @@
 import { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } from '@solana/web3.js'
-import { getAssociatedTokenAddress, createTransferInstruction, getAccount, getAssociatedTokenAddressSync } from '@solana/spl-token'
+import { getAssociatedTokenAddress, createTransferInstruction, getAccount, getAssociatedTokenAddressSync, getMint } from '@solana/spl-token'
 import { createBidEscrowPDA } from './auction-utils'
 
 /**
@@ -93,7 +93,8 @@ export async function getEscrowBalance(
     const escrowAta = getAssociatedTokenAddressSync(tokenMint, escrowPda, true)
     try {
       const account = await getAccount(connection, escrowAta)
-      return Number(account.amount) / (10 ** account.mint.decimals)
+      const mintInfo = await getMint(connection, tokenMint)
+      return Number(account.amount) / (10 ** mintInfo.decimals)
     } catch {
       return 0
     }
