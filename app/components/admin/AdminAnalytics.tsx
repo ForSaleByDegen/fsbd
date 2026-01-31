@@ -8,6 +8,7 @@ interface Analytics {
   activeListings: number
   totalUsers: number
   totalFees: number
+  totalPlatformFees: number // Platform fees from sales (0.42%)
   listingsByCategory: Record<string, number>
   recentActivity: any[]
 }
@@ -45,12 +46,20 @@ export default function AdminAnalytics() {
         .from('profiles')
         .select('*', { count: 'exact', head: true })
 
-      // Get total fees
+      // Get total listing fees (from token launches)
       const { data: feesData } = await supabase
         .from('listings')
         .select('fee_paid')
 
       const totalFees = feesData?.reduce((sum, listing) => sum + (listing.fee_paid || 0), 0) || 0
+
+      // Get total platform fees (0.42% from sales)
+      const { data: platformFeesData } = await supabase
+        .from('listings')
+        .select('platform_fee')
+        .eq('status', 'sold')
+
+      const totalPlatformFees = platformFeesData?.reduce((sum, listing) => sum + (listing.platform_fee || 0), 0) || 0
 
       // Get listings by category
       const { data: categoryData } = await supabase
@@ -74,6 +83,7 @@ export default function AdminAnalytics() {
         activeListings: activeListings || 0,
         totalUsers: totalUsers || 0,
         totalFees,
+        totalPlatformFees,
         listingsByCategory,
         recentActivity: recentActivity || []
       })
@@ -138,10 +148,19 @@ export default function AdminAnalytics() {
 
         <div className="pixel-box bg-black border-2 border-[#660099] p-4">
           <h3 className="text-[#660099] font-pixel-alt text-xs sm:text-sm mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-            Total Fees (SOL)
+            Listing Fees (SOL)
           </h3>
           <p className="text-2xl sm:text-3xl font-pixel text-[#00ff00]" style={{ fontFamily: 'var(--font-pixel)' }}>
-            {analytics.totalFees.toFixed(2)}
+            {analytics.totalFees.toFixed(4)}
+          </p>
+        </div>
+
+        <div className="pixel-box bg-black border-2 border-[#660099] p-4">
+          <h3 className="text-[#660099] font-pixel-alt text-xs sm:text-sm mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+            Platform Fees (0.42%)
+          </h3>
+          <p className="text-2xl sm:text-3xl font-pixel text-[#ff00ff]" style={{ fontFamily: 'var(--font-pixel)' }}>
+            {analytics.totalPlatformFees.toFixed(4)}
           </p>
         </div>
       </div>

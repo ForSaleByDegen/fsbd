@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS listings (
   token_name TEXT,
   token_symbol TEXT,
   fee_paid NUMERIC DEFAULT 0,
+  platform_fee NUMERIC DEFAULT 0, -- Platform fee collected on sale (0.42%)
   status TEXT DEFAULT 'active' CHECK (status IN ('active', 'sold', 'expired', 'removed', 'pending_review')),
   buyer_wallet_hash TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,

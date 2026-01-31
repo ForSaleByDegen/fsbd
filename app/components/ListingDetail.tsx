@@ -10,6 +10,9 @@ import { getIPFSGatewayURL } from '@/lib/pinata'
 import { Button } from './ui/button'
 import BiddingSection from './BiddingSection'
 
+// Platform fee rate (0.42%)
+const PLATFORM_FEE_RATE = 0.0042
+
 interface ListingDetailProps {
   listingId: string
 }
@@ -62,31 +65,62 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
     try {
       setProcessing(true)
       
-      // Create payment transaction (simplified escrow - direct transfer)
-      // TODO: Implement proper escrow with Solana program
+      // Calculate platform fee (0.42% of sale price)
+      const platformFee = listing.price * PLATFORM_FEE_RATE
+      const sellerAmount = listing.price - platformFee
+      
+      // Get app wallet for platform fees
+      const appWallet = new PublicKey(
+        process.env.NEXT_PUBLIC_APP_WALLET || '11111111111111111111111111111111'
+      )
       const sellerWallet = new PublicKey(listing.wallet_address)
       const transaction = new Transaction()
 
       if (listing.price_token === 'SOL') {
+        // Transfer platform fee to app wallet
+        transaction.add(
+          SystemProgram.transfer({
+            fromPubkey: publicKey,
+            toPubkey: appWallet,
+            lamports: platformFee * LAMPORTS_PER_SOL,
+          })
+        )
+        
+        // Transfer remaining amount to seller
         transaction.add(
           SystemProgram.transfer({
             fromPubkey: publicKey,
             toPubkey: sellerWallet,
-            lamports: listing.price * LAMPORTS_PER_SOL,
+            lamports: sellerAmount * LAMPORTS_PER_SOL,
           })
         )
       } else {
-        // USDC or other SPL tokens
+        // USDC or other SPL tokens - split payment
         const mintPublicKey = new PublicKey(listing.price_token)
         const buyerTokenAccount = await getAssociatedTokenAddress(mintPublicKey, publicKey)
         const sellerTokenAccount = await getAssociatedTokenAddress(mintPublicKey, sellerWallet)
+        const appTokenAccount = await getAssociatedTokenAddress(mintPublicKey, appWallet)
         
+        // Get token decimals (assuming 9 for most, but USDC uses 6)
+        const decimals = listing.price_token === 'USDC' ? 6 : 9
+        
+        // Transfer platform fee to app wallet
+        transaction.add(
+          createTransferInstruction(
+            buyerTokenAccount,
+            appTokenAccount,
+            publicKey,
+            BigInt(Math.floor(platformFee * (10 ** decimals))),
+          )
+        )
+        
+        // Transfer remaining to seller
         transaction.add(
           createTransferInstruction(
             buyerTokenAccount,
             sellerTokenAccount,
             publicKey,
-            BigInt(listing.price * (10 ** 9)), // Adjust decimals as needed
+            BigInt(Math.floor(sellerAmount * (10 ** decimals))),
           )
         )
       }
@@ -101,18 +135,42 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
       const signature = await connection.sendRawTransaction(signed.serialize())
       await connection.confirmTransaction(signature)
 
-      // Update listing status
+      // Update listing status and track platform fee
       if (supabase) {
         await supabase
           .from('listings')
           .update({ 
             status: 'sold',
-            buyer_wallet_hash: publicKey.toString() // Would hash in production
+            buyer_wallet_hash: publicKey.toString(), // Would hash in production
+            platform_fee: platformFee
           })
           .eq('id', listingId)
+        
+        // Update seller's total listings sold count
+        try {
+          const { hashWalletAddress } = await import('@/lib/supabase')
+          const sellerHash = hashWalletAddress(listing.wallet_address)
+          const { data: sellerProfile } = await supabase
+            .from('profiles')
+            .select('total_listings_sold')
+            .eq('wallet_address_hash', sellerHash)
+            .single()
+          
+          if (sellerProfile) {
+            await supabase
+              .from('profiles')
+              .update({ 
+                total_listings_sold: (sellerProfile.total_listings_sold || 0) + 1 
+              })
+              .eq('wallet_address_hash', sellerHash)
+          }
+        } catch (error) {
+          console.error('Error updating seller stats:', error)
+          // Don't fail purchase if stats update fails
+        }
       }
 
-      alert('Purchase successful! Contact the seller to complete the transaction.')
+      alert(`Purchase successful! Platform fee: ${platformFee.toFixed(4)} ${listing.price_token || 'SOL'}. Contact the seller to complete the transaction.`)
       router.push('/')
     } catch (error: any) {
       console.error('Error purchasing:', error)
@@ -186,6 +244,11 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
             {listing.category?.replace('-', ' ')}
           </span>
         </div>
+        {publicKey && publicKey.toString() !== listing.wallet_address && (
+          <p className="text-xs sm:text-sm text-[#660099] font-pixel-alt mt-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+            Platform fee: {(listing.price * PLATFORM_FEE_RATE).toFixed(4)} {listing.price_token || 'SOL'} (0.42%)
+          </p>
+        )}
       </div>
 
       <div className="mb-4 sm:mb-6">
