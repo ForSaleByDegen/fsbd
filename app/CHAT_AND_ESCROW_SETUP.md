@@ -6,6 +6,15 @@
 - **Terms agreement** required before purchase
 - **Optional escrow** – users agree in chat, then buyer deposits; seller ships with optional tracking; buyer confirms receipt
 
+## Real-time Updates
+
+The chat uses **Supabase Realtime** (instant) plus **polling every 4 seconds** as a fallback. To enable instant updates:
+
+1. Supabase Dashboard → **Database** → **Replication**
+2. Enable replication for `chat_messages` and `chat_threads`
+
+If Realtime is not enabled, the 4-second polling still keeps the chat in sync.
+
 ## Database Migration
 
 Run in Supabase SQL Editor:

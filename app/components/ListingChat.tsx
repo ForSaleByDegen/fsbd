@@ -81,9 +81,10 @@ export default function ListingChat({
     }
   }, [listing.id, currentUserWallet, sellerHash, myHash, isSeller, onThreadLoaded])
 
+  // Supabase Realtime: new messages + escrow updates
   useEffect(() => {
     if (!threadId || !supabase) return
-    const sub = supabase
+    const channel = supabase
       .channel(`chat:${threadId}`)
       .on(
         'postgres_changes',
@@ -95,11 +96,44 @@ export default function ListingChat({
           }
         }
       )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'chat_threads', filter: `id=eq.${threadId}` },
+        async () => {
+          const threadData = await getThread(threadId)
+          onThreadLoaded?.(threadId, !!threadData?.escrow_agreed, threadData?.escrow_status ?? null)
+          if (threadBuyerHash) {
+            const msgs = await fetchMessages(threadId, sellerHash, threadBuyerHash)
+            setMessages(msgs)
+          }
+        }
+      )
       .subscribe()
     return () => {
-      sub.unsubscribe()
+      channel.unsubscribe()
     }
-  }, [threadId, sellerHash, threadBuyerHash])
+  }, [threadId, sellerHash, threadBuyerHash, onThreadLoaded])
+
+  // Polling fallback for real-time updates (if Realtime not enabled)
+  useEffect(() => {
+    if (!threadId || !threadBuyerHash || !supabase) return
+    const interval = setInterval(async () => {
+      try {
+        const msgs = await fetchMessages(threadId, sellerHash, threadBuyerHash)
+        setMessages((prev: ChatMessage[]) => {
+          if (prev.length !== msgs.length || JSON.stringify(prev.map((p: ChatMessage) => p.id)) !== JSON.stringify(msgs.map((m) => m.id))) {
+            return msgs
+          }
+          return prev
+        })
+        const threadData = await getThread(threadId)
+        onThreadLoaded?.(threadId, !!threadData?.escrow_agreed, threadData?.escrow_status ?? null)
+      } catch {
+        // Ignore poll errors
+      }
+    }, 4000)
+    return () => clearInterval(interval)
+  }, [threadId, sellerHash, threadBuyerHash, onThreadLoaded])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -241,26 +275,24 @@ export default function ListingChat({
           Send
         </Button>
       </div>
-      {!isSeller && (
-        <div className="p-2 border-t border-[#660099] flex gap-2">
-          <Button
-            onClick={handleProposeEscrow}
-            disabled={sending}
-            variant="outline"
-            className="flex-1 border-2 border-[#ff00ff] text-[#ff00ff] hover:bg-[#ff00ff]/20 text-sm"
-          >
-            Propose Escrow
-          </Button>
-          <Button
-            onClick={handleAcceptEscrow}
-            disabled={sending}
-            variant="outline"
-            className="flex-1 border-2 border-[#00ff00] text-[#00ff00] hover:bg-[#00ff00]/20 text-sm"
-          >
-            Accept Escrow
-          </Button>
-        </div>
-      )}
+      <div className="p-2 border-t border-[#660099] flex gap-2">
+        <Button
+          onClick={handleProposeEscrow}
+          disabled={sending}
+          variant="outline"
+          className="flex-1 border-2 border-[#ff00ff] text-[#ff00ff] hover:bg-[#ff00ff]/20 text-sm"
+        >
+          Propose Escrow
+        </Button>
+        <Button
+          onClick={handleAcceptEscrow}
+          disabled={sending}
+          variant="outline"
+          className="flex-1 border-2 border-[#00ff00] text-[#00ff00] hover:bg-[#00ff00]/20 text-sm"
+        >
+          Accept Escrow
+        </Button>
+      </div>
     </div>
   )
 }

@@ -96,16 +96,31 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
       
       // Check buyer balance before proceeding
       if (listing.price_token === 'SOL') {
-        const buyerBalance = await connection.getBalance(publicKey)
+        let buyerBalance: number
+        try {
+          buyerBalance = await connection.getBalance(publicKey)
+        } catch (rpcError) {
+          console.error('RPC balance fetch error:', rpcError)
+          alert(
+            'Could not fetch your balance. The RPC may be rate-limited or down.\n\n' +
+            'Add a dedicated RPC in Vercel: NEXT_PUBLIC_RPC_URL = https://mainnet.helius-rpc.com/?api-key=YOUR_KEY\n\n' +
+            'See RPC_SETUP.md for Helius, QuickNode, or Alchemy.'
+          )
+          setProcessing(false)
+          return
+        }
         const totalNeeded = (totalAmount + 0.001) * LAMPORTS_PER_SOL // Add buffer for tx fees
         
         if (buyerBalance < totalNeeded) {
           const balanceSol = buyerBalance / LAMPORTS_PER_SOL
           const network = process.env.NEXT_PUBLIC_SOLANA_NETWORK || 'devnet'
-          const hint = balanceSol === 0
-            ? `\n\nTip: If you have SOL in Phantom, switch Phantom to ${network} (Settings → Developer Settings), or add NEXT_PUBLIC_SOLANA_NETWORK=mainnet-beta in Vercel if you use mainnet.`
+          const rpcHint = !process.env.NEXT_PUBLIC_RPC_URL
+            ? '\n\nRPC tip: Add NEXT_PUBLIC_RPC_URL (Helius/QuickNode) in Vercel — the public RPC often returns 0 balance.'
             : ''
-          alert(`Insufficient balance. You need ${totalAmount + 0.001} SOL but only have ${(balanceSol).toFixed(4)} SOL on ${network}.${hint}`)
+          const phantomHint = balanceSol === 0
+            ? `\n\nPhantom tip: Ensure Phantom is on ${network} (Settings → Developer Settings).`
+            : ''
+          alert(`Insufficient balance. You need ${totalAmount + 0.001} SOL but only have ${(balanceSol).toFixed(4)} SOL on ${network}.${phantomHint}${rpcHint}`)
           setProcessing(false)
           return
         }
