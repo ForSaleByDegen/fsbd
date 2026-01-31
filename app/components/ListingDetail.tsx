@@ -91,6 +91,11 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
         )
       }
 
+      // Get recent blockhash and set fee payer (required for transaction)
+      const { blockhash } = await connection.getLatestBlockhash('finalized')
+      transaction.recentBlockhash = blockhash
+      transaction.feePayer = publicKey
+
       // Sign and send
       const signed = await signTransaction(transaction)
       const signature = await connection.sendRawTransaction(signed.serialize())
@@ -125,46 +130,79 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
     return <div className="text-center py-12">Listing not found</div>
   }
 
-      const imageUrl = listing.images && listing.images.length > 0
-        ? listing.images[0].startsWith('Qm') || listing.images[0].startsWith('baf')
-          ? getIPFSGatewayURL(listing.images[0])
-          : listing.images[0].startsWith('http')
-          ? listing.images[0]
-          : getIPFSGatewayURL(listing.images[0])
-        : null
+  // Process images - handle both CIDs and full URLs
+  const getImageUrl = (image: string): string => {
+    if (!image) return ''
+    
+    // If it's already a full URL, return as-is
+    if (image.startsWith('http://') || image.startsWith('https://')) {
+      return image
+    }
+    
+    // If it's a CID (Qm... or bafy...), convert to IPFS gateway URL
+    if (image.startsWith('Qm') || image.startsWith('baf')) {
+      return getIPFSGatewayURL(image)
+    }
+    
+    // Try to convert to gateway URL anyway
+    return getIPFSGatewayURL(image)
+  }
+
+  const imageUrls = listing.images && listing.images.length > 0
+    ? listing.images.map(getImageUrl).filter(url => url)
+    : []
 
   return (
-    <div className="bg-card rounded-lg shadow-lg p-8">
-      <h1 className="text-3xl font-bold mb-4">{listing.title}</h1>
+    <div className="pixel-box bg-black border-2 sm:border-4 border-[#660099] p-4 sm:p-6 md:p-8 relative z-10">
+      <h1 className="text-2xl sm:text-3xl md:text-4xl font-pixel text-[#00ff00] mb-4 sm:mb-6 break-words" style={{ fontFamily: 'var(--font-pixel)' }}>
+        {listing.title}
+      </h1>
       
-      {imageUrl && (
-        <div className="mb-6">
-          <img 
-            src={imageUrl} 
-            alt={listing.title}
-            className="w-full max-h-96 object-contain rounded"
-          />
+      {imageUrls.length > 0 && (
+        <div className="mb-4 sm:mb-6 space-y-3 sm:space-y-4">
+          {imageUrls.map((imageUrl, index) => (
+            <div key={index} className="w-full bg-black/50 border-2 border-[#660099] rounded overflow-hidden">
+              <img 
+                src={imageUrl} 
+                alt={`${listing.title} - Image ${index + 1}`}
+                className="w-full h-auto max-h-[400px] sm:max-h-[500px] md:max-h-[600px] object-contain mx-auto"
+                loading="lazy"
+                onError={(e) => {
+                  console.error('Image load error:', imageUrl)
+                  e.currentTarget.style.display = 'none'
+                }}
+              />
+            </div>
+          ))}
         </div>
       )}
 
-      <div className="mb-6">
-        <span className="text-2xl font-bold text-primary">
-          {listing.price} {listing.price_token || 'SOL'}
-        </span>
-        <span className="ml-4 text-sm text-muted-foreground capitalize">
-          {listing.category?.replace('-', ' ')}
-        </span>
+      <div className="mb-4 sm:mb-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+          <span className="text-xl sm:text-2xl md:text-3xl font-pixel text-[#00ff00] font-bold" style={{ fontFamily: 'var(--font-pixel)' }}>
+            {listing.price} {listing.price_token || 'SOL'}
+          </span>
+          <span className="text-sm sm:text-base text-[#660099] font-pixel-alt capitalize" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+            {listing.category?.replace('-', ' ')}
+          </span>
+        </div>
       </div>
 
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold mb-2">Description</h2>
-        <p className="text-foreground whitespace-pre-wrap">{listing.description}</p>
+      <div className="mb-4 sm:mb-6">
+        <h2 className="text-lg sm:text-xl md:text-2xl font-pixel text-[#ff00ff] mb-2 sm:mb-3" style={{ fontFamily: 'var(--font-pixel)' }}>
+          Description
+        </h2>
+        <p className="text-[#00ff00] font-pixel-alt text-sm sm:text-base whitespace-pre-wrap break-words" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          {listing.description}
+        </p>
       </div>
 
       {listing.has_token && listing.token_mint && (
-        <div className="mb-6 p-4 bg-purple-50 dark:bg-purple-900/20 rounded">
-          <h3 className="font-semibold mb-2">🪙 Listing Token</h3>
-          <p className="text-sm text-muted-foreground">
+        <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-[#660099]/20 border-2 border-[#660099] rounded">
+          <h3 className="font-pixel text-[#ff00ff] mb-2 text-base sm:text-lg" style={{ fontFamily: 'var(--font-pixel)' }}>
+            🪙 Listing Token
+          </h3>
+          <p className="text-sm sm:text-base text-[#00ff00] font-pixel-alt break-all" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             This listing has its own token! Mint: {listing.token_mint}
           </p>
         </div>
@@ -178,15 +216,30 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
           {publicKey && publicKey.toString() !== listing.wallet_address && (
             <Button
               onClick={handlePurchase}
-              disabled={processing}
-              className="bg-green-600 hover:bg-green-700"
+              disabled={processing || listing.status !== 'active'}
+              className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 border-2 sm:border-4 border-[#00ff00] text-[#00ff00] hover:bg-[#00ff00] hover:text-black font-pixel-alt transition-colors min-h-[44px] text-base sm:text-lg touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ fontFamily: 'var(--font-pixel-alt)' }}
             >
               {processing ? 'Processing...' : 'Purchase'}
             </Button>
           )}
 
           {publicKey && publicKey.toString() === listing.wallet_address && (
-            <p className="text-muted-foreground">This is your listing</p>
+            <p className="text-[#660099] font-pixel-alt text-sm sm:text-base" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+              This is your listing
+            </p>
+          )}
+
+          {!publicKey && (
+            <p className="text-[#660099] font-pixel-alt text-sm sm:text-base" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+              Connect your wallet to purchase
+            </p>
+          )}
+
+          {listing.status !== 'active' && (
+            <p className="text-[#ff0000] font-pixel-alt text-sm sm:text-base" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+              This listing is {listing.status}
+            </p>
           )}
         </>
       )}
