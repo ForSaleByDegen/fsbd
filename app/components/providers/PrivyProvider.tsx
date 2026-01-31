@@ -1,13 +1,24 @@
 'use client'
 
-import { PrivyProvider as PrivyProviderBase } from '@privy-io/react-auth'
-import { ReactNode } from 'react'
+import { ReactNode, useEffect, useState } from 'react'
 
 export default function PrivyProvider({ children }: { children: ReactNode }) {
+  const [PrivyProviderBase, setPrivyProviderBase] = useState<any>(null)
   const appId = process.env.NEXT_PUBLIC_PRIVY_APP_ID || ''
   
-  if (!appId) {
-    console.warn('NEXT_PUBLIC_PRIVY_APP_ID not set - Privy features will be disabled')
+  useEffect(() => {
+    // Only load Privy if App ID is set and in browser
+    if (appId && typeof window !== 'undefined') {
+      try {
+        const privyModule = require('@privy-io/react-auth')
+        setPrivyProviderBase(() => privyModule.PrivyProvider)
+      } catch (error) {
+        console.warn('Privy not available:', error)
+      }
+    }
+  }, [appId])
+  
+  if (!appId || !PrivyProviderBase) {
     return <>{children}</>
   }
 
