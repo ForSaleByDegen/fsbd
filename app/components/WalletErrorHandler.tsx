@@ -28,8 +28,8 @@ export default function WalletErrorHandler() {
       return false
     }
 
-    window.addEventListener('error', handler as EventListener)
-    return () => window.removeEventListener('error', handler as EventListener)
+    window.addEventListener('error', handler as unknown as EventListener)
+    return () => window.removeEventListener('error', handler as unknown as EventListener)
   }, [])
 
   return null
