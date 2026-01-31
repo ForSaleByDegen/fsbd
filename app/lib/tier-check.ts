@@ -1,12 +1,12 @@
 import { Connection, PublicKey } from '@solana/web3.js'
 import { getAssociatedTokenAddress, getAccount, getMint } from '@solana/spl-token'
 
-// TODO: Replace with actual $FBSD token mint address after launch
+// TODO: Replace with actual $FSBD token mint address after launch
 // For devnet testing, use a mock mint address
-const FBSD_TOKEN_MINT = process.env.NEXT_PUBLIC_FBSD_TOKEN_MINT || 'FBSD_TOKEN_MINT_PLACEHOLDER'
+const FSBD_TOKEN_MINT = process.env.NEXT_PUBLIC_FSBD_TOKEN_MINT || 'FSBD_TOKEN_MINT_PLACEHOLDER'
 
 // Mock mint for devnet testing (replace with actual after launch)
-const MOCK_FBSD_MINT = 'So11111111111111111111111111111111111111112' // Wrapped SOL as placeholder
+const MOCK_FSBD_MINT = 'So11111111111111111111111111111111111111112' // Wrapped SOL as placeholder
 
 // Tier thresholds (token amounts)
 export const TIER_THRESHOLDS = {
@@ -18,7 +18,7 @@ export const TIER_THRESHOLDS = {
 export type Tier = 'free' | 'bronze' | 'silver' | 'gold'
 
 /**
- * Get user's tier based on $FBSD token balance
+ * Get user's tier based on $FSBD token balance
  * Checks on-chain balance - no data sharing, fully private
  * Uses mock mint for devnet testing
  */
@@ -27,9 +27,9 @@ export async function getUserTier(
   connection: Connection
 ): Promise<Tier> {
   // Use mock mint for devnet if placeholder
-  const mintToUse = FBSD_TOKEN_MINT === 'FBSD_TOKEN_MINT_PLACEHOLDER' 
-    ? MOCK_FBSD_MINT 
-    : FBSD_TOKEN_MINT
+  const mintToUse = FSBD_TOKEN_MINT === 'FSBD_TOKEN_MINT_PLACEHOLDER' 
+    ? MOCK_FSBD_MINT 
+    : FSBD_TOKEN_MINT
 
   try {
     const mintPublicKey = new PublicKey(mintToUse)

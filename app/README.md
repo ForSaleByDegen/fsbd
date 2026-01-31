@@ -1,4 +1,4 @@
-# For Sale By Degen ($FBSD)
+# For Sale By Degen ($FSBD)
 
 Anonymous decentralized marketplace on Solana.
 
@@ -26,7 +26,7 @@ git push -u origin main
 ```
 NEXT_PUBLIC_SOLANA_NETWORK=devnet
 NEXT_PUBLIC_RPC_URL=https://api.devnet.solana.com
-NEXT_PUBLIC_FBSD_TOKEN_MINT=FBSD_TOKEN_MINT_PLACEHOLDER
+NEXT_PUBLIC_FSBD_TOKEN_MINT=FSBD_TOKEN_MINT_PLACEHOLDER
 NEXT_PUBLIC_APP_WALLET=YOUR_WALLET_ADDRESS
 NEXT_PUBLIC_ENCRYPTION_KEY=your-32-char-key-here!!
 ```
@@ -51,7 +51,7 @@ Open http://localhost:3000
 - Wallet-only authentication
 - Create/view/search listings
 - IPFS image storage
-- $FBSD tier system
+- $FSBD tier system
 - Optional token launching
 - Privacy-first (no tracking)
 

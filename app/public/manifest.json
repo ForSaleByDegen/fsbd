@@ -1,6 +1,6 @@
 {
   "name": "For Sale By Degen",
-  "short_name": "$FBSD",
+  "short_name": "$FSBD",
   "description": "Anonymous decentralized marketplace on Solana. Craigslist-like classifieds with crypto payments.",
   "start_url": "/",
   "display": "standalone",

@@ -31,7 +31,9 @@
     "nft.storage": "^7.1.2",
     "canvas-confetti": "^1.9.3",
     "next-pwa": "^5.6.0",
-    "ios-haptics": "^0.1.4"
+    "ios-haptics": "^0.1.4",
+    "@privy-io/react-auth": "^1.80.0",
+    "@privy-io/react-auth": "^3.13.0"
   },
   "devDependencies": {
     "@types/node": "^20",

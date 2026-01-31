@@ -73,7 +73,7 @@ export default function AuctionForm() {
 
     // Check tier gate (Bronze+ required)
     if (tier === 'free') {
-      alert(`Auction creation requires Bronze tier or higher. You need ${TIER_THRESHOLDS.bronze.toLocaleString()} $FBSD tokens.`)
+      alert(`Auction creation requires Bronze tier or higher. You need ${TIER_THRESHOLDS.bronze.toLocaleString()} $FSBD tokens.`)
       return
     }
 
@@ -190,7 +190,7 @@ export default function AuctionForm() {
       {!canCreateAuction && (
         <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-400 rounded">
           <p className="text-sm text-yellow-800 dark:text-yellow-200">
-            <strong>Auction Creation Gated:</strong> You need Bronze tier ({TIER_THRESHOLDS.bronze.toLocaleString()} $FBSD) 
+            <strong>Auction Creation Gated:</strong> You need Bronze tier ({TIER_THRESHOLDS.bronze.toLocaleString()} $FSBD) 
             or higher to create auctions. Your current tier: <strong>{tier}</strong>
           </p>
         </div>

@@ -3,7 +3,7 @@ import { MetadataRoute } from 'next'
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'For Sale By Degen',
-    short_name: '$FBSD',
+    short_name: '$FSBD',
     description: 'Degen Craigslist: Crypto payments, token-gated listings, and mini-launches on Solana. Anon side project.',
     start_url: '/',
     display: 'standalone',

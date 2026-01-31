@@ -12,7 +12,7 @@ interface CryptoIcon {
   speed: number
 }
 
-const cryptoSymbols = ['SOL', 'PEPE', 'BOME', 'POPCAT', 'BONK', 'WIF', 'FBSD', 'SHIT', 'DEGEN']
+const cryptoSymbols = ['SOL', 'PEPE', 'BOME', 'POPCAT', 'BONK', 'WIF', 'FSBD', 'SHIT', 'DEGEN']
 const colors = ['#660099', '#00ff00', '#9933ff', '#cc66ff']
 
 const FloatingCryptoIcons = () => {

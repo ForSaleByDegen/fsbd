@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Press_Start_2P, VT323 } from 'next/font/google'
 import './globals.css'
+import PrivyProvider from '@/components/providers/PrivyProvider'
 import WalletProvider from '@/components/providers/WalletProvider'
 import BackDoorModal from '@/components/BackDoorModal'
 import EasterEgg from '@/components/EasterEgg'
@@ -35,7 +36,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: '$FBSD',
+    title: '$FSBD',
   },
   icons: {
     icon: [
@@ -63,18 +64,20 @@ export default function RootLayout({
         <meta name="theme-color" content="#660099" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="$FBSD" />
+        <meta name="apple-mobile-web-app-title" content="$FSBD" />
       </head>
       <body className={`${pressStart2P.variable} ${vt323.variable} bg-background text-foreground pixel-art`}>
-        <WalletProvider>
-          <div className="crt-screen">
-            <MatrixRain />
-            <FloatingCryptoIcons />
-            <BackDoorModal />
-            <EasterEgg />
-            {children}
-          </div>
-        </WalletProvider>
+        <PrivyProvider>
+          <WalletProvider>
+            <div className="crt-screen">
+              <MatrixRain />
+              <FloatingCryptoIcons />
+              <BackDoorModal />
+              <EasterEgg />
+              {children}
+            </div>
+          </WalletProvider>
+        </PrivyProvider>
       </body>
     </html>
   )

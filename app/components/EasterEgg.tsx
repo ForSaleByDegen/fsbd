@@ -103,7 +103,7 @@ const EasterEgg = () => {
         <div className="text-2xl md:text-4xl opacity-80">
           "My rug pulled me harder than my ex" – anon degen
         </div>
-        <div className="mt-6 text-xl opacity-70">$FBSD approved • 💜🐸🎉</div>
+        <div className="mt-6 text-xl opacity-70">$FSBD approved • 💜🐸🎉</div>
       </div>
     </div>
   )

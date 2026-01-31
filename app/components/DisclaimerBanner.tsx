@@ -22,7 +22,7 @@ export default function DisclaimerBanner() {
         <div className="px-4 pb-3 text-xs text-[#00ff00] font-pixel-alt leading-relaxed" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
           <p>
             <strong className="text-[#660099]">Experimental MVP:</strong> This is a prototype. Not financial advice. 
-            $FBSD is a utility token only. Use at your own risk. All transactions are final. 
+            $FSBD is a utility token only. Use at your own risk. All transactions are final. 
             No guarantees or warranties. Anonymous and private - no tracking, no data sharing.
           </p>
         </div>

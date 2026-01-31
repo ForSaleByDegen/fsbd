@@ -59,7 +59,7 @@ export default function TierDisplay() {
         <div className="mb-8 p-4 bg-muted rounded-lg">
           <p className="font-semibold">Your Current Tier: <span className="capitalize">{tier}</span></p>
           <p className="text-sm text-muted-foreground mt-2">
-            Hold $FBSD tokens to unlock higher tiers and fee reductions. 
+            Hold $FSBD tokens to unlock higher tiers and fee reductions. 
             Balance checked on-chain - no data sharing.
           </p>
         </div>
@@ -83,7 +83,7 @@ export default function TierDisplay() {
             >
               <h2 className="text-2xl font-bold mb-2">{t.name}</h2>
               <p className="text-sm text-muted-foreground mb-4">
-                Requires {t.threshold.toLocaleString()} $FBSD
+                Requires {t.threshold.toLocaleString()} $FSBD
               </p>
               <ul className="space-y-2">
                 {benefits.map((benefit, i) => (
@@ -101,9 +101,9 @@ export default function TierDisplay() {
       <div className="mt-8 p-4 bg-muted rounded-lg">
         <h3 className="font-semibold mb-2">How to Upgrade</h3>
         <p className="text-sm text-muted-foreground">
-          Purchase $FBSD tokens on the Solana blockchain. Your tier is automatically 
+          Purchase $FSBD tokens on the Solana blockchain. Your tier is automatically 
           calculated based on your on-chain token balance. No registration, no data sharing, 
-          fully private. TODO: Add token address after $FBSD launch.
+          fully private. TODO: Add token address after $FSBD launch.
         </p>
       </div>
     </>

@@ -21,13 +21,13 @@ const AsciiLogo = () => {
         />
         
         <div className="relative z-10 text-center">
-          {/* $FBSD Logo */}
+          {/* $FSBD Logo */}
           <div className="mb-6">
             <div className="text-4xl md:text-6xl font-pixel text-[#00ff00] mb-2" style={{ fontFamily: 'var(--font-pixel)' }}>
-              $FBSD
+              $FSBD
             </div>
             <div className="text-lg md:text-xl text-[#660099] font-pixel-alt">
-              fbsd.fun
+              fsbd.fun
             </div>
           </div>
           
