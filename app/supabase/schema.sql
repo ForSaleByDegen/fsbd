@@ -74,12 +74,16 @@ CREATE INDEX IF NOT EXISTS admins_is_active_idx ON admins(is_active);
 
 -- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
 BEGIN
     NEW.updated_at = timezone('utc'::text, now());
     RETURN NEW;
 END;
-$$ language 'plpgsql';
+$$;
 
 -- Triggers for updated_at
 CREATE TRIGGER update_listings_updated_at BEFORE UPDATE ON listings
@@ -98,15 +102,25 @@ ALTER TABLE admins ENABLE ROW LEVEL SECURITY;
 -- Helper function to get wallet hash from JWT claim (set by app)
 -- Note: This requires setting the claim in your Supabase client
 CREATE OR REPLACE FUNCTION get_wallet_hash()
-RETURNS TEXT AS $$
+RETURNS TEXT 
+LANGUAGE plpgsql 
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
 BEGIN
   RETURN current_setting('request.jwt.claims', true)::json->>'wallet_hash';
 END;
-$$ LANGUAGE plpgsql STABLE;
+$$;
 
 -- Helper function to check if wallet is admin
 CREATE OR REPLACE FUNCTION is_wallet_admin(wallet_hash TEXT)
-RETURNS BOOLEAN AS $$
+RETURNS BOOLEAN 
+LANGUAGE plpgsql 
+STABLE 
+SECURITY DEFINER
+SET search_path = public
+AS $$
 BEGIN
   RETURN EXISTS (
     SELECT 1 FROM admins 
@@ -114,7 +128,7 @@ BEGIN
     AND admins.is_active = true
   );
 END;
-$$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
+$$;
 
 -- Listings RLS Policies
 
@@ -128,20 +142,38 @@ CREATE POLICY "Public can view active listings"
 -- For production, implement JWT-based RLS with wallet_hash claims
 
 -- Allow inserts (app validates ownership)
+-- More restrictive: require wallet_address_hash to be set
 CREATE POLICY "Allow listing inserts"
   ON listings FOR INSERT
-  WITH CHECK (true);
+  WITH CHECK (
+    wallet_address_hash IS NOT NULL 
+    AND wallet_address_hash != ''
+    AND title IS NOT NULL
+    AND description IS NOT NULL
+    AND price > 0
+  );
 
--- Allow updates (app validates ownership)  
+-- Allow updates (app validates ownership)
+-- More restrictive: only allow updates to active listings
 CREATE POLICY "Allow listing updates"
   ON listings FOR UPDATE
-  USING (true)
-  WITH CHECK (true);
+  USING (
+    status = 'active'
+    AND wallet_address_hash IS NOT NULL
+  )
+  WITH CHECK (
+    status = 'active'
+    AND wallet_address_hash IS NOT NULL
+  );
 
 -- Allow deletes (app validates ownership or admin)
+-- More restrictive: only allow deletes of active listings
 CREATE POLICY "Allow listing deletes"
   ON listings FOR DELETE
-  USING (true);
+  USING (
+    status = 'active'
+    AND wallet_address_hash IS NOT NULL
+  );
 
 -- Profiles RLS Policies
 
