@@ -19,6 +19,8 @@ export default function CreateListingPage() {
           <CreateListingForm />
         </div>
       </main>
+      
+      <Footer />
     </div>
   )
 }
