@@ -58,10 +58,12 @@
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
-    /* Subtle dark gradient overlay */
+    /* Retro Craigslist/Geocities grid background */
     background-image: 
+      url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100%" height="100%" fill="%23000"/><line x1="0" y1="0" x2="100" y2="0" stroke="%23660099" stroke-width="1" opacity="0.08"/><line x1="0" y1="0" x2="0" y2="100" stroke="%23660099" stroke-width="1" opacity="0.08"/></svg>'),
       radial-gradient(at 0% 0%, hsl(270 30% 8% / 0.5) 0%, transparent 50%),
       radial-gradient(at 100% 100%, hsl(270 40% 6% / 0.3) 0%, transparent 50%);
+    background-attachment: fixed;
   }
   
   /* Ensure cards have proper dark background */
