@@ -91,7 +91,7 @@ export default function ProfilePage() {
     )
   }
 
-  const walletAddress = publicKey?.toString() || wallets?.find((w: any) => w.chainId === 'solana-devnet')?.address || 'Not connected'
+  const walletAddress = publicKey?.toString() || (wallets && Array.isArray(wallets) ? wallets.find((w: { chainId?: string; address?: string }) => w.chainId === 'solana-devnet')?.address : null) || 'Not connected'
   const email = user?.email?.address || 'No email'
   const linkedAccounts = user?.linkedAccounts || []
 
