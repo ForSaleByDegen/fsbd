@@ -195,11 +195,16 @@ export default function CreateListingForm() {
         }
         
         console.log('Listing created successfully:', data.id)
+        console.log('Listing data:', data)
+        
+        // Show success message
+        alert(`Listing created successfully! Redirecting to your listing...`)
+        
         // Small delay to ensure database is updated before redirect
-        await new Promise(resolve => setTimeout(resolve, 500))
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        
+        // Redirect to listing detail page
         router.push(`/listings/${data.id}`)
-        // Also refresh the home page feed if user navigates back
-        router.refresh()
       } else {
         // Fallback to API route
         const response = await fetch('/api/listings', {
@@ -219,11 +224,16 @@ export default function CreateListingForm() {
         }
         
         console.log('Listing created successfully via API:', data.id)
+        console.log('Listing data:', data)
+        
+        // Show success message
+        alert(`Listing created successfully! Redirecting to your listing...`)
+        
         // Small delay to ensure database is updated before redirect
-        await new Promise(resolve => setTimeout(resolve, 500))
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        
+        // Redirect to listing detail page
         router.push(`/listings/${data.id}`)
-        // Also refresh the home page feed if user navigates back
-        router.refresh()
       }
     } catch (error: any) {
       console.error('Error creating listing:', error)
