@@ -19,7 +19,7 @@ if (typeof window !== 'undefined') {
 }
 
 export default function PrivyConnectButton() {
-  const { connected } = useWallet()
+  const { connected, connecting } = useWallet()
   const [privyReady, setPrivyReady] = useState(false)
   const [privyAuth, setPrivyAuth] = useState(false)
   const [privyLogin, setPrivyLogin] = useState<(() => void) | null>(null)
@@ -42,7 +42,7 @@ export default function PrivyConnectButton() {
   // Fallback to Solana wallet adapter if Privy not configured
   const privyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID
   if (!privyAppId || !usePrivyHook) {
-    return <WalletMultiButton />
+    return <WalletMultiButton disabled={connecting} />
   }
 
   if (!privyReady) {
@@ -56,7 +56,7 @@ export default function PrivyConnectButton() {
   if (privyAuth || connected) {
     return (
       <div className="flex items-center gap-2">
-        <WalletMultiButton />
+        <WalletMultiButton disabled={connecting} />
         {privyAuth && privyLogout && (
           <button
             onClick={privyLogout}

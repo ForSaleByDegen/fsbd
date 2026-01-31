@@ -42,7 +42,8 @@ CREATE TABLE IF NOT EXISTS terms_acceptances (
   accepted_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Trigger for updated_at on chat_threads
+-- Trigger for updated_at on chat_threads (idempotent)
+DROP TRIGGER IF EXISTS update_chat_threads_updated_at ON chat_threads;
 CREATE TRIGGER update_chat_threads_updated_at
   BEFORE UPDATE ON chat_threads
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -61,26 +62,33 @@ ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chat_pubkeys ENABLE ROW LEVEL SECURITY;
 ALTER TABLE terms_acceptances ENABLE ROW LEVEL SECURITY;
 
--- Chat threads: participants can read/insert
+-- Chat threads: participants can read/insert (idempotent)
+DROP POLICY IF EXISTS "Chat participants can manage threads" ON chat_threads;
 CREATE POLICY "Chat participants can manage threads"
   ON chat_threads FOR ALL
   USING (true) WITH CHECK (true);
 
--- Chat messages: participants can read/insert
+-- Chat messages: participants can read/insert (idempotent)
+DROP POLICY IF EXISTS "Chat participants can manage messages" ON chat_messages;
 CREATE POLICY "Chat participants can manage messages"
   ON chat_messages FOR ALL
   USING (true) WITH CHECK (true);
 
--- Pubkeys: anyone can read (for encryption), users insert own
+-- Pubkeys: anyone can read (for encryption), users insert own (idempotent)
+DROP POLICY IF EXISTS "Pubkeys readable by all" ON chat_pubkeys;
 CREATE POLICY "Pubkeys readable by all"
   ON chat_pubkeys FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Pubkeys insert by owner" ON chat_pubkeys;
 CREATE POLICY "Pubkeys insert by owner"
   ON chat_pubkeys FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Pubkeys update by owner" ON chat_pubkeys;
 CREATE POLICY "Pubkeys update by owner"
   ON chat_pubkeys FOR UPDATE USING (true) WITH CHECK (true);
 
--- Terms: users can insert own acceptance
+-- Terms: users can insert own acceptance (idempotent)
+DROP POLICY IF EXISTS "Terms insert by user" ON terms_acceptances;
 CREATE POLICY "Terms insert by user"
   ON terms_acceptances FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Terms select by user" ON terms_acceptances;
 CREATE POLICY "Terms select by user"
   ON terms_acceptances FOR SELECT USING (true);

@@ -31,3 +31,13 @@
 2. Supabase → SQL Editor → Run `supabase/migration_chat.sql`
 
 3. Redeploy the app
+
+---
+
+## Manifest 401 / PWA install fails on preview URL
+
+**Cause:** Vercel Deployment Protection blocks unauthenticated requests on preview deployments (e.g. `*-git-main-*.vercel.app`).
+
+**Fix:**
+1. Use your production domain (e.g. `fsbd.fun`) — protection usually applies only to preview URLs.
+2. Or: Vercel Dashboard → Project → Settings → Deployment Protection → disable for previews or add a bypass.

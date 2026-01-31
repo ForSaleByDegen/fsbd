@@ -3,6 +3,7 @@ import { Press_Start_2P, VT323 } from 'next/font/google'
 import dynamic from 'next/dynamic'
 import './globals.css'
 import WalletProvider from '@/components/providers/WalletProvider'
+import WalletErrorHandler from '@/components/WalletErrorHandler'
 import BackDoorModal from '@/components/BackDoorModal'
 import EasterEgg from '@/components/EasterEgg'
 import MatrixRain from '@/components/MatrixRain'
@@ -69,6 +70,7 @@ export default function RootLayout({
       <head>
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#660099" />
+        <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="$FSBD" />
@@ -76,6 +78,7 @@ export default function RootLayout({
       <body className={`${pressStart2P.variable} ${vt323.variable} bg-background text-foreground pixel-art`}>
         <PrivyProvider>
           <WalletProvider>
+            <WalletErrorHandler />
             <div className="crt-screen">
               <MatrixRain />
               <FloatingCryptoIcons />
