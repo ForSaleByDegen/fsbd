@@ -83,9 +83,9 @@ export default function ListingChat({
 
   const handleSend = async () => {
     const text = input.trim()
-    if (!text || !threadId || sending) return
+    if (!text || !threadId || !threadBuyerHash || sending) return
     setSending(true)
-    const ok = await sendEncryptedMessage(threadId, sellerHash, buyerHash, myHash, text)
+    const ok = await sendEncryptedMessage(threadId, sellerHash, threadBuyerHash, myHash, text)
     if (ok) {
       setInput('')
       const msgs = await fetchMessages(threadId, sellerHash, threadBuyerHash)
@@ -97,12 +97,12 @@ export default function ListingChat({
   }
 
   const handleProposeEscrow = async () => {
-    if (!threadId || sending) return
+    if (!threadId || !threadBuyerHash || sending) return
     setSending(true)
     const ok = await sendEncryptedMessage(
       threadId,
       sellerHash,
-      buyerHash,
+      threadBuyerHash,
       myHash,
       'I would like to use escrow for this transaction. Funds will be held until we agree on release.',
       'escrow_proposed'
@@ -110,19 +110,19 @@ export default function ListingChat({
     if (ok) {
       await updateThreadEscrow(threadId, false, 'pending')
       onEscrowProposed?.()
-      const msgs = await fetchMessages(threadId, sellerHash, buyerHash)
+      const msgs = await fetchMessages(threadId, sellerHash, threadBuyerHash)
       setMessages(msgs)
     }
     setSending(false)
   }
 
   const handleAcceptEscrow = async () => {
-    if (!threadId || sending) return
+    if (!threadId || !threadBuyerHash || sending) return
     setSending(true)
     const ok = await sendEncryptedMessage(
       threadId,
       sellerHash,
-      buyerHash,
+      threadBuyerHash,
       myHash,
       'I agree to use escrow. Proceed with depositing funds.',
       'escrow_accepted'
