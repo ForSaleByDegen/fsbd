@@ -216,7 +216,12 @@ CREATE POLICY "Restrict admin access"
 
 -- Function to check if user is admin (for use in policies)
 CREATE OR REPLACE FUNCTION is_admin(wallet_hash TEXT)
-RETURNS BOOLEAN AS $$
+RETURNS BOOLEAN 
+LANGUAGE plpgsql 
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
 BEGIN
   RETURN EXISTS (
     SELECT 1 FROM admins 
@@ -224,4 +229,4 @@ BEGIN
     AND is_active = true
   );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
