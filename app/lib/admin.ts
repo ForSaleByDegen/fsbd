@@ -1,4 +1,4 @@
-import { supabase, hashWalletAddress } from './supabase'
+import { supabase, hashWalletAddress, getSupabaseClientWithWallet } from './supabase'
 
 export type AdminRole = 'admin' | 'moderator'
 export type AdminPermission = 'manage_listings' | 'manage_users' | 'view_analytics' | 'manage_admins'
@@ -108,8 +108,11 @@ export async function getUserProfile(walletAddress: string) {
   if (!supabase) return null
   
   try {
+    // Use client with wallet hash for RLS
+    const client = getSupabaseClientWithWallet(walletAddress) || supabase
     const walletHash = hashWalletAddress(walletAddress)
-    const { data, error } = await supabase
+    
+    const { data, error } = await client
       .from('profiles')
       .select('*')
       .eq('wallet_address_hash', walletHash)
@@ -142,8 +145,11 @@ export async function upsertUserProfile(
   if (!supabase) return null
   
   try {
+    // Use client with wallet hash for RLS
+    const client = getSupabaseClientWithWallet(walletAddress) || supabase
     const walletHash = hashWalletAddress(walletAddress)
-    const { data, error } = await supabase
+    
+    const { data, error } = await client
       .from('profiles')
       .upsert({
         wallet_address_hash: walletHash,

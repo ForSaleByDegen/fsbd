@@ -13,6 +13,24 @@ export const supabase = supabaseUrl && supabaseAnonKey
   : null
 
 /**
+ * Get Supabase client with wallet hash set in JWT claims for RLS
+ * This allows RLS policies to identify the user
+ */
+export function getSupabaseClientWithWallet(walletAddress: string) {
+  if (!supabaseUrl || !supabaseAnonKey) return null
+  
+  const walletHash = hashWalletAddress(walletAddress)
+  
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    global: {
+      headers: {
+        'x-wallet-hash': walletHash
+      }
+    }
+  })
+}
+
+/**
  * Hash wallet address for privacy
  */
 export function hashWalletAddress(address: string): string {
