@@ -309,7 +309,7 @@ export default function AuctionForm() {
             disabled={!canCreateAuction}
           />
           <p className="text-xs text-muted-foreground mt-1">
-            Image will be uploaded to IPFS via Pinata
+            Image will be uploaded to IPFS via Pinata in original quality (no compression)
           </p>
         </div>
 

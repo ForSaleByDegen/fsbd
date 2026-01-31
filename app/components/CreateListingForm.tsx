@@ -246,11 +246,13 @@ export default function CreateListingForm() {
               alert(`Some files are too large (max 1GB). Please select smaller images.`)
               return
             }
+            // Store original files without any compression or modification
+            // Files are uploaded as-is to preserve original quality
             setFormData(prev => ({ ...prev, images: files }))
           }}
         />
         <p className="text-xs text-muted-foreground mt-1">
-          Images will be uploaded to IPFS via Pinata (max 1GB per file)
+          Images will be uploaded to IPFS via Pinata in original quality (no compression) - max 1GB per file
         </p>
         {formData.images.length > 0 && (
           <p className="text-xs text-[#00ff00] mt-1">

@@ -39,8 +39,10 @@ export async function uploadImageToIPFS(file: File): Promise<string> {
 
   try {
     // Use Pinata REST API directly (more reliable than SDK for client-side)
+    // Upload original file without any compression or modification
     const formData = new FormData()
-    formData.append('file', file)
+    // Pass file directly - no compression, no resizing, original quality preserved
+    formData.append('file', file, file.name)
 
     const response = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
       method: 'POST',
