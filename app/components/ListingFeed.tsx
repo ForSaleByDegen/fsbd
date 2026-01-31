@@ -80,15 +80,30 @@ export default function ListingFeed() {
       />
 
       {loading ? (
-        <div className="text-center py-12 text-muted-foreground">Loading listings...</div>
+        <div className="text-center py-16">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
+          <p className="text-muted-foreground">Loading listings...</p>
+        </div>
       ) : listings.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          <p>No listings found.</p>
-          {connected && (
-            <Link href="/listings/create">
-              <Button className="mt-4">Create First Listing</Button>
-            </Link>
-          )}
+        <div className="text-center py-16 px-4">
+          <div className="max-w-md mx-auto">
+            <div className="text-6xl mb-4">📦</div>
+            <h3 className="text-xl font-semibold mb-2">No listings yet</h3>
+            <p className="text-muted-foreground mb-6">
+              Be the first to create a listing on For Sale By Degen!
+            </p>
+            {connected ? (
+              <Link href="/listings/create">
+                <Button size="lg" className="gap-2">
+                  <span>+</span> Create First Listing
+                </Button>
+              </Link>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Connect your wallet to create a listing
+              </p>
+            )}
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

@@ -25,14 +25,17 @@ export default function SearchBar({
   categories 
 }: SearchBarProps) {
   return (
-    <div className="mb-8 flex flex-col md:flex-row gap-4">
-      <Input
-        type="text"
-        placeholder="Search listings..."
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        className="flex-1"
-      />
+    <div className="mb-8 flex flex-col md:flex-row gap-4 bg-card p-4 rounded-lg border shadow-sm">
+      <div className="flex-1 relative">
+        <Input
+          type="text"
+          placeholder="Search listings..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-10"
+        />
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">🔍</span>
+      </div>
       <Select value={category} onValueChange={setCategory}>
         <SelectTrigger className="w-full md:w-[200px]">
           <SelectValue placeholder="Category" />
