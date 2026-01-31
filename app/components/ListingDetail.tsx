@@ -232,7 +232,7 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
   }
 
   const imageUrls = listing.images && listing.images.length > 0
-    ? listing.images.map(getImageUrl).filter(url => url)
+    ? listing.images.map(getImageUrl).filter((url: string) => url)
     : []
 
   return (
