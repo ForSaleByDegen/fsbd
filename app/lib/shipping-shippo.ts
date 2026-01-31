@@ -41,12 +41,12 @@ interface ShippingLabelRequest {
 
 interface ShippingLabelResponse {
   id: string
-  tracking_number: string
+  tracking_code: string
   label_url: string
   tracking_url: string
   rate: {
     service: string
-    amount: string
+    rate: string
     currency: string
   }
   carrier: string
@@ -207,12 +207,12 @@ export async function createShippingLabelShippo(
 
     return {
       id: transaction.object_id,
-      tracking_number: transaction.tracking_number || '',
+      tracking_code: transaction.tracking_number || '',
       label_url: transaction.label_url || '',
       tracking_url: transaction.tracking_url_provider || '',
       rate: {
         service: selectedRate.servicelevel?.name || selectedRate.servicelevel?.token || 'Unknown',
-        amount: selectedRate.amount,
+        rate: selectedRate.amount,
         currency: selectedRate.currency || 'USD'
       },
       carrier: selectedRate.provider || 'Unknown'
