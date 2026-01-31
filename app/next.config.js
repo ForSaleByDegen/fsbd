@@ -68,12 +68,16 @@ const nextConfig = {
       'pino-pretty': false,
     }
     
-    // Fix for Privy/lucide-react compatibility
-    if (!isServer) {
-      config.resolve.alias = {
-        ...config.resolve.alias,
-        'lucide-react': require.resolve('lucide-react'),
-      }
+    // Fix for Privy/lucide-react barrel optimization issue
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      'lucide-react': require.resolve('lucide-react'),
+    }
+    
+    // Disable barrel optimization for lucide-react to fix Privy import
+    config.optimization = {
+      ...config.optimization,
+      usedExports: true,
     }
     
     return config

@@ -1,14 +1,25 @@
 'use client'
 
 import { useWallet } from '@solana/wallet-adapter-react'
-import { usePrivy } from '@privy-io/react-auth'
 import Link from 'next/link'
 import { Button } from './ui/button'
 import PrivyConnectButton from './PrivyConnectButton'
 
+// Dynamic import for Privy
+let usePrivyHook: any = null
+if (typeof window !== 'undefined') {
+  try {
+    const privyModule = require('@privy-io/react-auth')
+    usePrivyHook = privyModule.usePrivy
+  } catch {
+    // Privy not available
+  }
+}
+
 export default function Header() {
   const { connected } = useWallet()
-  const { authenticated } = usePrivy()
+  const privyAuth = usePrivyHook ? usePrivyHook() : { authenticated: false }
+  const authenticated = privyAuth.authenticated || false
 
   return (
     <header className="border-b-4 border-[#660099] bg-black/90 backdrop-blur-sm sticky top-0 z-50 shadow-lg pixel-art">

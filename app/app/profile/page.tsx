@@ -1,24 +1,38 @@
 'use client'
 
-import { usePrivy, useWallets } from '@privy-io/react-auth'
-import { useWallet } from '@solana/wallet-adapter-react'
-import { useConnection } from '@solana/wallet-adapter-react'
+import { useWallet, useConnection } from '@solana/wallet-adapter-react'
 import { useEffect, useState } from 'react'
 import Header from '@/components/Header'
 import DisclaimerBanner from '@/components/DisclaimerBanner'
 import { getUserTier } from '@/lib/tier-check'
 import Link from 'next/link'
 
+// Dynamic import for Privy to avoid build issues
+let usePrivy: any = null
+let useWallets: any = null
+
+if (typeof window !== 'undefined') {
+  try {
+    const privyModule = require('@privy-io/react-auth')
+    usePrivy = privyModule.usePrivy
+    useWallets = privyModule.useWallets
+  } catch {
+    // Privy not available
+  }
+}
+
 export default function ProfilePage() {
-  const { user, authenticated, ready } = usePrivy()
-  const { wallets } = useWallets()
+  const privyHooks = usePrivy ? usePrivy() : { user: null, authenticated: false, ready: true }
+  const walletsHook = useWallets ? useWallets() : { wallets: [] }
+  const { user, authenticated, ready } = privyHooks
+  const { wallets } = walletsHook
   const { publicKey, connected } = useWallet()
   const { connection } = useConnection()
   const [tier, setTier] = useState<'free' | 'bronze' | 'silver' | 'gold'>('free')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if ((authenticated || connected) && (publicKey || wallets.length > 0)) {
+    if ((authenticated || connected) && (publicKey || wallets?.length > 0)) {
       loadProfile()
     } else {
       setLoading(false)
@@ -77,7 +91,7 @@ export default function ProfilePage() {
     )
   }
 
-  const walletAddress = publicKey?.toString() || wallets.find(w => w.chainId === 'solana-devnet')?.address || 'Not connected'
+  const walletAddress = publicKey?.toString() || wallets?.find((w: any) => w.chainId === 'solana-devnet')?.address || 'Not connected'
   const email = user?.email?.address || 'No email'
   const linkedAccounts = user?.linkedAccounts || []
 
