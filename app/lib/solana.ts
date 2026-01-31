@@ -8,7 +8,7 @@ import {
   MINT_SIZE,
   getMinimumBalanceForRentExemptMint
 } from '@solana/spl-token'
-import { calculateListingFee } from './tier-check'
+import { calculateListingFee, getUserTier } from './tier-check'
 
 const connection = new Connection(
   process.env.NEXT_PUBLIC_RPC_URL || 'https://api.devnet.solana.com',
@@ -34,8 +34,9 @@ export async function createListingWithPayment(
   }
 ): Promise<{ success: boolean; listingId?: string; error?: string }> {
   try {
-    // Calculate fee based on tier
-    const fee = await calculateListingFee(wallet.toString(), connection)
+    // Get user tier and calculate fee based on tier
+    const tier = await getUserTier(wallet.toString(), connection)
+    const fee = calculateListingFee(tier)
     
     // Create transaction
     const transaction = new Transaction()
