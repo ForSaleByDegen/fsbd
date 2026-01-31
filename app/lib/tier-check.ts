@@ -9,10 +9,11 @@ const FSBD_TOKEN_MINT = process.env.NEXT_PUBLIC_FSBD_TOKEN_MINT || 'FSBD_TOKEN_M
 const MOCK_FSBD_MINT = 'So11111111111111111111111111111111111111112' // Wrapped SOL as placeholder
 
 // Tier thresholds (token amounts)
+// Updated: Start at 100k, top tier at 10M
 export const TIER_THRESHOLDS = {
-  bronze: 1000,
-  silver: 10000,
-  gold: 100000
+  bronze: 100000,      // 100,000 $FSBD - Lowest tier
+  silver: 1000000,     // 1,000,000 $FSBD - Mid tier
+  gold: 10000000       // 10,000,000 $FSBD - Top tier
 } as const
 
 export type Tier = 'free' | 'bronze' | 'silver' | 'gold'
@@ -58,15 +59,16 @@ export async function getUserTier(
 /**
  * Calculate listing fee based on user tier
  * Base fee: 0.1 SOL, reduced by tier
+ * Note: Free tier pays full fee, tiers start at 100k tokens
  */
 export function calculateListingFee(tier: Tier): number {
   const BASE_FEE = 0.1 // 0.1 SOL base fee
   
   const reductions = {
-    free: 0,
-    bronze: 0.25,  // 25% off
-    silver: 0.5,   // 50% off
-    gold: 0.75     // 75% off
+    free: 0,       // No discount - need 100k+ tokens for bronze
+    bronze: 0.25,  // 25% off - 100k+ tokens
+    silver: 0.5,   // 50% off - 1M+ tokens
+    gold: 0.75     // 75% off - 10M+ tokens
   }
 
   const reduction = reductions[tier] || 0
