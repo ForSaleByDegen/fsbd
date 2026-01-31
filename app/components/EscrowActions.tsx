@@ -28,6 +28,7 @@ export default function EscrowActions({ listing, userRole }: EscrowActionsProps)
   const { connection } = useConnection()
   const [processing, setProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showTrackingForm, setShowTrackingForm] = useState(false)
 
   const handleMarkShipped = async () => {
     if (!publicKey || !signTransaction) {
