@@ -67,6 +67,15 @@ const nextConfig = {
       ...config.resolve.fallback,
       'pino-pretty': false,
     }
+    
+    // Fix for Privy/lucide-react compatibility
+    if (!isServer) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        'lucide-react': require.resolve('lucide-react'),
+      }
+    }
+    
     return config
   },
 }
