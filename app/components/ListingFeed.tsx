@@ -19,6 +19,17 @@ export default function ListingFeed() {
     fetchListings()
   }, [category, searchQuery])
 
+  // Refresh listings when component becomes visible (user navigates back)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        fetchListings()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [])
+
   const fetchListings = async () => {
     try {
       setLoading(true)
