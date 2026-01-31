@@ -1,6 +1,9 @@
 import Header from '@/components/Header'
 import MyListings from '@/components/MyListings'
 
+// Force dynamic rendering - requires wallet connection
+export const dynamic = 'force-dynamic'
+
 export default function MyListingsPage() {
   return (
     <div className="min-h-screen bg-background">

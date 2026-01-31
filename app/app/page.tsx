@@ -3,6 +3,9 @@ import Header from '@/components/Header'
 import ListingFeed from '@/components/ListingFeed'
 import DisclaimerBanner from '@/components/DisclaimerBanner'
 
+// Force dynamic rendering - listings are fetched client-side
+export const dynamic = 'force-dynamic'
+
 export default function Home() {
   return (
     <div className="min-h-screen bg-background">

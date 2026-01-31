@@ -2,6 +2,9 @@ import CreateListingForm from '@/components/CreateListingForm'
 import Header from '@/components/Header'
 import DisclaimerBanner from '@/components/DisclaimerBanner'
 
+// Force dynamic rendering - requires wallet connection
+export const dynamic = 'force-dynamic'
+
 export default function CreateListingPage() {
   return (
     <div className="min-h-screen bg-background">
