@@ -20,7 +20,8 @@ interface ListingDetailProps {
 }
 
 export default function ListingDetail({ listingId }: ListingDetailProps) {
-  const { publicKey, signTransaction } = useWallet()
+  const wallet = useWallet()
+  const { publicKey, signTransaction } = wallet
   const { connection } = useConnection()
   const router = useRouter()
   const [listing, setListing] = useState<any>(null)
@@ -94,6 +95,12 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
       
       const totalAmount = listing.price
       const sellerWallet = new PublicKey(listing.wallet_address)
+
+      if (listing.price_token === 'SOL' && totalAmount <= MINT_FEE_SOL) {
+        alert(`Listing price must be greater than ${MINT_FEE_SOL} SOL (mint fee) for receipt cNFT.`)
+        setProcessing(false)
+        return
+      }
       
       // Check buyer balance before proceeding (Solana docs: getBalance with commitment 'confirmed')
       if (listing.price_token === 'SOL') {
@@ -178,11 +185,12 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
       const transaction = new Transaction()
       
       if (listing.price_token === 'SOL') {
+        const sellerAmount = Math.max(0, totalAmount - MINT_FEE_SOL)
         transaction.add(
           SystemProgram.transfer({
             fromPubkey: publicKey,
             toPubkey: sellerWallet,
-            lamports: Math.floor(totalAmount * LAMPORTS_PER_SOL),
+            lamports: Math.floor(sellerAmount * LAMPORTS_PER_SOL),
           })
         )
       } else {
@@ -316,13 +324,45 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
         throw confirmErr
       }
 
-      // Update listing status
+      let receiptAssetId: string | null = null
+      const treeAddress = process.env.NEXT_PUBLIC_CNFT_TREE_ADDRESS
+      const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL
+
+      if (listing.price_token === 'SOL' && treeAddress && rpcUrl) {
+        try {
+          const imageUrl = listing.images?.[0]
+            ? (listing.images[0].startsWith('http') ? listing.images[0] : `https://gateway.pinata.cloud/ipfs/${listing.images[0]}`)
+            : null
+          const metadataUri = await uploadReceiptMetadata({
+            title: listing.title,
+            description: listing.description || '',
+            imageUrl,
+            price: totalAmount,
+            priceToken: listing.price_token || 'SOL',
+            soldAt: new Date().toISOString(),
+            listingId,
+          })
+          const { assetId } = await mintReceiptCnft(
+            wallet,
+            rpcUrl,
+            treeAddress,
+            publicKey.toString(),
+            metadataUri,
+            listing.title
+          )
+          receiptAssetId = assetId
+        } catch (mintErr) {
+          console.error('Receipt cNFT mint failed (purchase still succeeded):', mintErr)
+        }
+      }
+
       if (supabase) {
         await supabase
           .from('listings')
           .update({ 
             status: 'sold',
             buyer_wallet_hash: publicKey.toString(),
+            ...(receiptAssetId && { receipt_asset_id: receiptAssetId }),
           })
           .eq('id', listingId)
         
@@ -350,8 +390,12 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
         }
       }
 
+      const sellerReceived = listing.price_token === 'SOL' ? totalAmount - MINT_FEE_SOL : totalAmount
+      const receiptMsg = receiptAssetId
+        ? `\n\nYou received a receipt cNFT as proof of purchase.`
+        : ''
       alert(
-        `Purchase successful! ${totalAmount} ${listing.price_token || 'SOL'} sent directly to seller.\n\n` +
+        `Purchase successful! ${sellerReceived.toFixed(4)} ${listing.price_token || 'SOL'} sent to seller.${receiptMsg}\n\n` +
         `Transaction: ${signature}\n\n` +
         `Coordinate with the seller for shipping. This platform does not handle payments or shipping.`
       )

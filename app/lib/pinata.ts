@@ -117,6 +117,43 @@ export async function uploadMultipleImagesToIPFS(files: File[]): Promise<string[
 }
 
 /**
+ * Upload JSON to IPFS via Pinata (for cNFT metadata)
+ */
+export async function uploadJSONToIPFS(content: object, name?: string): Promise<string> {
+  const apiKey = typeof window !== 'undefined'
+    ? process.env.NEXT_PUBLIC_PINATA_JWT || PINATA_JWT
+    : PINATA_JWT
+
+  if (!apiKey || apiKey.trim() === '') {
+    throw new Error('Pinata JWT not configured. Set NEXT_PUBLIC_PINATA_JWT.')
+  }
+
+  const gateway = PINATA_GATEWAY || 'gateway.pinata.cloud'
+  const response = await fetch('https://api.pinata.cloud/pinning/pinJSONToIPFS', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      pinataContent: content,
+      pinataMetadata: { name: name || 'metadata.json' },
+      pinataOptions: { cidVersion: 1 },
+    }),
+  })
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}))
+    throw new Error(`Pinata pin JSON failed: ${(err as { error?: string }).error || response.statusText}`)
+  }
+
+  const data = await response.json()
+  const cid = data.IpfsHash
+  if (!cid) throw new Error('No CID returned from Pinata')
+  return `https://${gateway}/ipfs/${cid}`
+}
+
+/**
  * Get IPFS gateway URL from CID
  */
 export function getIPFSGatewayURL(cid: string): string {
