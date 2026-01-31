@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
       .order('updated_at', { ascending: false })
 
     if (!escrowsErr && escrowsRaw?.length) {
-      const listingIds = [...new Set((escrowsRaw as { listing_id: string }[]).map((e) => e.listing_id).filter(Boolean))]
+      const listingIds = Array.from(new Set((escrowsRaw as { listing_id: string }[]).map((e) => e.listing_id).filter(Boolean)))
       let listingMap: Record<string, { title: string; price: number; price_token: string }> = {}
       if (listingIds.length > 0) {
         const { data: listingsForEscrows } = await supabaseAdmin
