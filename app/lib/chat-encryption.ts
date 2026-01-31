@@ -10,7 +10,11 @@ import CryptoJS from 'crypto-js'
 const NONCE_LENGTH = 24
 
 function encodeBase64(u8: Uint8Array): string {
-  return btoa(String.fromCharCode(...u8))
+  let binary = ''
+  for (let i = 0; i < u8.length; i++) {
+    binary += String.fromCharCode(u8[i])
+  }
+  return btoa(binary)
 }
 
 function decodeBase64(s: string): Uint8Array {
