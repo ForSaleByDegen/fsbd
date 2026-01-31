@@ -4,6 +4,7 @@ import ListingFeed from '@/components/ListingFeed'
 import DisclaimerBanner from '@/components/DisclaimerBanner'
 import AsciiLogo from '@/components/AsciiLogo'
 import LoadingScreen from '@/components/LoadingScreen'
+import Footer from '@/components/Footer'
 
 // Force dynamic rendering - listings are fetched client-side
 export const dynamic = 'force-dynamic'
@@ -24,6 +25,8 @@ export default function Home() {
           <ListingFeed />
         </Suspense>
       </main>
+      
+      <Footer />
     </div>
   )
 }

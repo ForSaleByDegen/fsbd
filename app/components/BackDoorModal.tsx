@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { useWallet } from '@solana/wallet-adapter-react'
+import Link from 'next/link'
 
 const BackDoorModal = () => {
   const { connected, connecting } = useWallet()
@@ -41,6 +42,25 @@ const BackDoorModal = () => {
               <p className="text-xs italic text-gray-700">
                 Warning: For degens only. No refunds on rugs. Proceed at own risk.
               </p>
+              
+              <div className="mt-4 pt-3 border-t border-gray-400">
+                <div className="flex flex-col gap-2 text-xs">
+                  <Link 
+                    href="/terms" 
+                    className="text-blue-600 hover:text-blue-800 underline"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    Terms of Service
+                  </Link>
+                  <Link 
+                    href="/privacy" 
+                    className="text-blue-600 hover:text-blue-800 underline"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    Privacy Policy
+                  </Link>
+                </div>
+              </div>
             </div>
           </div>
         </div>
