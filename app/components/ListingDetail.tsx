@@ -178,12 +178,11 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
       const transaction = new Transaction()
       
       if (listing.price_token === 'SOL') {
-        const sellerAmount = Math.max(0, totalAmount - MINT_FEE_SOL)
         transaction.add(
           SystemProgram.transfer({
             fromPubkey: publicKey,
             toPubkey: sellerWallet,
-            lamports: Math.floor(sellerAmount * LAMPORTS_PER_SOL),
+            lamports: Math.floor(totalAmount * LAMPORTS_PER_SOL),
           })
         )
       } else {
