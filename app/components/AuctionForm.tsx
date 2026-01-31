@@ -361,7 +361,7 @@ export default function AuctionForm() {
         <Button
           type="submit"
           disabled={loading || !canCreateAuction}
-          className="w-full"
+          className="w-full min-h-[44px] text-base sm:text-sm touch-manipulation"
         >
           {loading ? 'Creating Auction...' : canCreateAuction ? 'Create Auction (Pay Fee)' : 'Upgrade Tier to Create Auctions'}
         </Button>

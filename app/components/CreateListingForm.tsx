@@ -261,7 +261,7 @@ export default function CreateListingForm() {
       <Button
         type="submit"
         disabled={loading}
-        className="w-full"
+        className="w-full min-h-[44px] text-base sm:text-sm touch-manipulation"
       >
         {loading ? 'Creating...' : 'Create Listing (Pay Fee)'}
       </Button>
