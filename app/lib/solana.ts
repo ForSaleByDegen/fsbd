@@ -1,5 +1,13 @@
-import { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } from '@solana/web3.js'
-import { createMint, getOrCreateAssociatedTokenAccount, mintTo } from '@solana/spl-token'
+import { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL, Keypair } from '@solana/web3.js'
+import { 
+  getAssociatedTokenAddressSync,
+  createAssociatedTokenAccountInstruction,
+  createInitializeMint2Instruction,
+  createMintToInstruction,
+  TOKEN_PROGRAM_ID,
+  MINT_SIZE,
+  getMinimumBalanceForRentExemptMint
+} from '@solana/spl-token'
 import { calculateListingFee } from './tier-check'
 
 const connection = new Connection(
@@ -78,31 +86,72 @@ async function launchListingToken(
   listingData: { tokenName?: string; tokenSymbol?: string }
 ): Promise<PublicKey> {
   try {
-    const mint = await createMint(
-      connection,
-      wallet, // payer
-      wallet, // mint authority
-      null,   // freeze authority (null = no freeze)
-      9       // decimals
+    // Generate mint keypair
+    const mintKeypair = Keypair.generate()
+    const mint = mintKeypair.publicKey
+
+    // Get rent exemption for mint account
+    const lamports = await getMinimumBalanceForRentExemptMint(connection)
+
+    // Build transaction
+    const transaction = new Transaction()
+    
+    // Create mint account
+    transaction.add(
+      SystemProgram.createAccount({
+        fromPubkey: wallet,
+        newAccountPubkey: mint,
+        space: MINT_SIZE,
+        lamports,
+        programId: TOKEN_PROGRAM_ID,
+      })
     )
 
-    // Create associated token account and mint initial supply
-    const tokenAccount = await getOrCreateAssociatedTokenAccount(
-      connection,
-      wallet,
-      mint,
-      wallet
+    // Initialize mint
+    transaction.add(
+      createInitializeMint2Instruction(
+        mint,
+        9, // decimals
+        wallet, // mint authority
+        null   // freeze authority
+      )
+    )
+
+    // Get associated token account address
+    const tokenAccount = getAssociatedTokenAddressSync(mint, wallet)
+    
+    // Create associated token account
+    transaction.add(
+      createAssociatedTokenAccountInstruction(
+        wallet, // payer
+        tokenAccount, // ATA address
+        wallet, // owner
+        mint // mint
+      )
     )
 
     // Mint initial supply (1 billion tokens)
-    await mintTo(
-      connection,
-      wallet,
-      mint,
-      tokenAccount.address,
-      wallet,
-      1_000_000_000 * (10 ** 9)
+    transaction.add(
+      createMintToInstruction(
+        mint,
+        tokenAccount,
+        wallet, // mint authority
+        BigInt(1_000_000_000) * BigInt(10 ** 9)
+      )
     )
+
+    // Sign transaction (mint keypair needs to sign the createAccount instruction)
+    transaction.partialSign(mintKeypair)
+    
+    // Get recent blockhash
+    const { blockhash } = await connection.getLatestBlockhash()
+    transaction.recentBlockhash = blockhash
+    transaction.feePayer = wallet
+
+    // Sign with wallet and send
+    const signed = await signTransaction(transaction)
+    const signature = await connection.sendRawTransaction(signed.serialize())
+    await connection.confirmTransaction(signature)
 
     return mint
   } catch (error) {

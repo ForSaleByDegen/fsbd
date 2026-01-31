@@ -13,9 +13,14 @@ import {
   TOKEN_PROGRAM_ID,
   createAssociatedTokenAccountIdempotentInstruction,
   getAssociatedTokenAddressSync,
-  getMint
+  getMint,
+  createInitializeMintInstruction,
+  createInitializeMint2Instruction,
+  createMintToInstruction,
+  MINT_SIZE,
+  getMinimumBalanceForRentExemptMint
 } from '@solana/spl-token'
-import { createMint, getOrCreateAssociatedTokenAccount, mintTo, transfer, createTransferInstruction } from '@solana/spl-token'
+import { transfer, createTransferInstruction } from '@solana/spl-token'
 import { WalletContextState } from '@solana/wallet-adapter-react'
 
 // Mock dev wallet for testing (replace with actual dev wallet keypair in production)
@@ -85,55 +90,99 @@ export async function createAuctionToken(
   tokenSymbol: string,
   listingId: string
 ): Promise<{ mint: PublicKey; sellerAmount: bigint; devAmount: bigint }> {
-  // Create mint
-  const mint = await createMint(
-    connection,
-    seller, // payer
-    seller, // mint authority
-    null,   // freeze authority
-    9       // decimals
-  )
+  // Generate mint keypair
+  const mintKeypair = Keypair.generate()
+  const mint = mintKeypair.publicKey
 
   const totalSupply = BigInt(1_000_000_000) * BigInt(10 ** 9) // 1B tokens
   const sellerAmount = (totalSupply * BigInt(90)) / BigInt(100) // 90%
   const devAmount = totalSupply - sellerAmount // 10%
 
-  // Create seller token account
-  const sellerTokenAccount = await getOrCreateAssociatedTokenAccount(
-    connection,
-    seller,
-    mint,
-    seller
+  // Get rent exemption for mint account
+  const lamports = await getMinimumBalanceForRentExemptMint(connection)
+
+  // Build transaction to create and initialize mint
+  const transaction = new Transaction()
+  
+  // Create mint account
+  transaction.add(
+    SystemProgram.createAccount({
+      fromPubkey: seller,
+      newAccountPubkey: mint,
+      space: MINT_SIZE,
+      lamports,
+      programId: TOKEN_PROGRAM_ID,
+    })
+  )
+
+  // Initialize mint
+  transaction.add(
+    createInitializeMint2Instruction(
+      mint,
+      9, // decimals
+      seller, // mint authority
+      null   // freeze authority
+    )
+  )
+
+  // Get seller's associated token account address
+  const sellerTokenAccount = getAssociatedTokenAddressSync(mint, seller)
+  
+  // Create seller's associated token account if it doesn't exist
+  transaction.add(
+    createAssociatedTokenAccountInstruction(
+      seller, // payer
+      sellerTokenAccount, // ATA address
+      seller, // owner
+      mint // mint
+    )
   )
 
   // Mint seller's portion
-  await mintTo(
-    connection,
-    seller,
-    mint,
-    sellerTokenAccount.address,
-    seller,
-    sellerAmount
+  transaction.add(
+    createMintToInstruction(
+      mint,
+      sellerTokenAccount,
+      seller, // mint authority
+      sellerAmount
+    )
   )
 
-  // Create dev token account and mint dev's portion
+  // Create dev token account and mint dev's portion if dev wallet exists
   if (devWallet) {
-    const devTokenAccount = await getOrCreateAssociatedTokenAccount(
-      connection,
-      seller, // payer
-      mint,
-      devWallet.publicKey
+    const devTokenAccount = getAssociatedTokenAddressSync(mint, devWallet.publicKey)
+    
+    transaction.add(
+      createAssociatedTokenAccountInstruction(
+        seller, // payer
+        devTokenAccount, // ATA address
+        devWallet.publicKey, // owner
+        mint // mint
+      )
     )
 
-    await mintTo(
-      connection,
-      seller,
-      mint,
-      devTokenAccount.address,
-      seller,
-      devAmount
+    transaction.add(
+      createMintToInstruction(
+        mint,
+        devTokenAccount,
+        seller, // mint authority
+        devAmount
+      )
     )
   }
+
+  // Sign transaction (mint keypair needs to sign the createAccount instruction)
+  transaction.partialSign(mintKeypair)
+  
+  // Get recent blockhash
+  const { blockhash } = await connection.getLatestBlockhash()
+  transaction.recentBlockhash = blockhash
+  transaction.feePayer = seller
+
+  // Sign with wallet and send
+  const signed = await signTransaction(transaction)
+  const signature = await connection.sendRawTransaction(signed.serialize())
+  await connection.confirmTransaction(signature)
 
   return { mint, sellerAmount, devAmount }
 }
