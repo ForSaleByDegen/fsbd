@@ -55,20 +55,82 @@
   * {
     border-color: hsl(var(--border));
   }
+  
   body {
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
-    /* Retro Craigslist/Geocities grid background */
+    background-color: #000;
+    color: #00ff00;
+    font-family: var(--font-pixel-alt), 'Courier New', monospace;
+    /* Pixel-art purple background with grid */
     background-image: 
-      url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100%" height="100%" fill="%23000"/><line x1="0" y1="0" x2="100" y2="0" stroke="%23660099" stroke-width="1" opacity="0.08"/><line x1="0" y1="0" x2="0" y2="100" stroke="%23660099" stroke-width="1" opacity="0.08"/></svg>'),
-      radial-gradient(at 0% 0%, hsl(270 30% 8% / 0.5) 0%, transparent 50%),
-      radial-gradient(at 100% 100%, hsl(270 40% 6% / 0.3) 0%, transparent 50%);
+      url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100%" height="100%" fill="%23000"/><line x1="0" y1="0" x2="100" y2="0" stroke="%23660099" stroke-width="1" opacity="0.15"/><line x1="0" y1="0" x2="0" y2="100" stroke="%23660099" stroke-width="1" opacity="0.15"/></svg>'),
+      radial-gradient(at 0% 0%, rgba(102, 0, 153, 0.3) 0%, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(102, 0, 153, 0.2) 0%, transparent 50%);
     background-attachment: fixed;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+  }
+  
+  /* Pixel-art styling */
+  .pixel-art {
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+  }
+  
+  .pixel-text {
+    font-family: var(--font-pixel-alt), 'Courier New', monospace;
+    text-rendering: optimizeSpeed;
+    font-smooth: never;
+    -webkit-font-smoothing: none;
+  }
+  
+  /* CRT Monitor Effect */
+  .crt-screen {
+    position: relative;
+  }
+  
+  .crt-screen::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    background: 
+      repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.15) 0px,
+        rgba(0, 0, 0, 0.15) 1px,
+        transparent 1px,
+        transparent 2px
+      );
+    animation: scanlines 8s linear infinite;
+  }
+  
+  .crt-screen::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9998;
+    background: radial-gradient(
+      ellipse at center,
+      transparent 0%,
+      rgba(0, 0, 0, 0.3) 100%
+    );
+    box-shadow: inset 0 0 200px rgba(0, 0, 0, 0.5);
+  }
+  
+  @keyframes scanlines {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(4px); }
   }
   
   /* Ensure cards have proper dark background */
   .bg-card {
-    background-color: hsl(var(--card));
+    background-color: rgba(0, 0, 0, 0.8);
+    border: 2px solid #660099;
+    image-rendering: pixelated;
   }
 }
 
@@ -280,21 +342,55 @@
   100% { transform: translateY(100%); }
 }
 
-/* Glitch Text */
+/* Pixel-Art Glitch Text */
 .glitch-text {
   position: relative;
   display: inline-block;
   color: #660099;
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 3rem;
-  font-weight: bold;
+  font-family: var(--font-pixel), 'Courier New', monospace;
+  font-size: 2rem;
+  font-weight: normal;
   text-transform: uppercase;
   letter-spacing: 0.1em;
+  image-rendering: pixelated;
   text-shadow: 
-    0.05em 0 0 rgba(255, 0, 255, 0.75),
-    -0.025em 0 0 rgba(0, 255, 255, 0.75),
-    -0.05em -0.05em 0 rgba(255, 255, 0, 0.75);
+    0.05em 0 0 rgba(255, 0, 0, 0.8),
+    -0.025em 0 0 rgba(0, 255, 0, 0.8),
+    -0.05em -0.05em 0 rgba(255, 255, 0, 0.6);
   animation: glitch-main 2.5s infinite linear alternate-reverse;
+}
+
+/* Laser Eye Effect */
+.laser-eyes {
+  position: relative;
+  display: inline-block;
+}
+
+.laser-eyes::before,
+.laser-eyes::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 200px;
+  height: 2px;
+  background: linear-gradient(90deg, #ff0000, #ff6666, transparent);
+  box-shadow: 0 0 10px #ff0000, 0 0 20px #ff0000;
+  animation: laser-pulse 2s ease-in-out infinite;
+}
+
+.laser-eyes::before {
+  left: -220px;
+  transform: translateY(-50%) rotate(0deg);
+}
+
+.laser-eyes::after {
+  right: -220px;
+  transform: translateY(-50%) rotate(0deg);
+}
+
+@keyframes laser-pulse {
+  0%, 100% { opacity: 0.8; transform: translateY(-50%) scaleX(1); }
+  50% { opacity: 1; transform: translateY(-50%) scaleX(1.1); }
 }
 
 .glitch-text::before,
@@ -387,26 +483,71 @@
   animation: fadeInOut 5s ease-in-out forwards;
 }
 
-/* ASCII Logo Styles */
-.ascii-logo {
-  font-family: 'Courier New', Courier, monospace;
+/* Pixel-Art Logo Styles */
+.pixel-logo-container {
+  image-rendering: pixelated;
+}
+
+.pixel-title {
+  font-family: var(--font-pixel), 'Courier New', monospace;
+  font-size: 1.5rem;
   color: #660099;
-  background: #000;
-  padding: 1rem;
-  border: 2px solid #9933ff;
-  text-shadow: 0 0 8px #cc66ff, 0 0 16px #9933ff;
-  box-shadow: inset 0 0 20px rgba(102, 0, 153, 0.3);
-  max-w-2xl: 42rem;
-  margin: 2rem auto;
-  white-space: pre;
-  line-height: 1.2;
-  font-size: 0.875rem;
+  text-shadow: 
+    2px 2px 0 #000,
+    4px 4px 0 rgba(102, 0, 153, 0.5);
+  image-rendering: pixelated;
 }
 
 @media (min-width: 768px) {
-  .ascii-logo {
-    font-size: 1rem;
+  .pixel-title {
+    font-size: 2rem;
   }
+}
+
+.pixel-box {
+  border: 4px solid #660099;
+  box-shadow: 
+    inset 0 0 20px rgba(102, 0, 153, 0.3),
+    0 0 30px rgba(102, 0, 153, 0.5);
+  image-rendering: pixelated;
+  position: relative;
+}
+
+.pixel-box::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border: 2px solid #00ff00;
+  opacity: 0.3;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.pixel-category {
+  font-family: var(--font-pixel-alt), 'Courier New', monospace;
+  image-rendering: pixelated;
+  text-transform: lowercase;
+  transition: all 0.2s;
+}
+
+.pixel-category:hover {
+  background: rgba(102, 0, 153, 0.3);
+  border-color: #00ff00;
+  color: #00ff00;
+}
+
+.font-pixel {
+  font-family: var(--font-pixel), 'Courier New', monospace;
+  image-rendering: pixelated;
+  font-smooth: never;
+  -webkit-font-smoothing: none;
+}
+
+.font-pixel-alt {
+  font-family: var(--font-pixel-alt), 'Courier New', monospace;
+  image-rendering: pixelated;
+  font-smooth: never;
+  -webkit-font-smoothing: none;
 }
 
 /* Mobile/Touch Optimizations */

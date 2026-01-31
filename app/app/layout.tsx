@@ -1,12 +1,25 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Press_Start_2P, VT323 } from 'next/font/google'
 import './globals.css'
 import WalletProvider from '@/components/providers/WalletProvider'
 import BackDoorModal from '@/components/BackDoorModal'
 import EasterEgg from '@/components/EasterEgg'
 import MatrixRain from '@/components/MatrixRain'
+import FloatingCryptoIcons from '@/components/FloatingCryptoIcons'
 
-const inter = Inter({ subsets: ['latin'] })
+const pressStart2P = Press_Start_2P({ 
+  weight: '400',
+  subsets: ['latin'],
+  variable: '--font-pixel',
+  display: 'swap',
+})
+
+const vt323 = VT323({ 
+  weight: '400',
+  subsets: ['latin'],
+  variable: '--font-pixel-alt',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
   title: 'For Sale By Degen',
@@ -51,12 +64,15 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="$FBSD" />
       </head>
-      <body className={`${inter.className} bg-background text-foreground`}>
+      <body className={`${pressStart2P.variable} ${vt323.variable} bg-background text-foreground pixel-art`}>
         <WalletProvider>
-          <MatrixRain />
-          <BackDoorModal />
-          <EasterEgg />
-          {children}
+          <div className="crt-screen">
+            <MatrixRain />
+            <FloatingCryptoIcons />
+            <BackDoorModal />
+            <EasterEgg />
+            {children}
+          </div>
         </WalletProvider>
       </body>
     </html>
