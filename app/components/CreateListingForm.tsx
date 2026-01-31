@@ -97,6 +97,11 @@ export default function CreateListingForm() {
         })
       )
 
+      // Get recent blockhash and set fee payer (required for transaction)
+      const { blockhash } = await connection.getLatestBlockhash('finalized')
+      transaction.recentBlockhash = blockhash
+      transaction.feePayer = publicKey
+
       // Sign and send payment
       const signed = await signTransaction!(transaction)
       const signature = await connection.sendRawTransaction(signed.serialize())
