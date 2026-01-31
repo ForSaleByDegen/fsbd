@@ -56,10 +56,10 @@ export default function ProfilePage() {
 
   if (!ready) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background w-full overflow-x-hidden">
         <Header />
-        <main className="max-w-4xl mx-auto px-4 py-8">
-          <div className="text-center text-[#00ff00] font-pixel-alt">Loading...</div>
+        <main className="max-w-4xl mx-auto px-2 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 w-full">
+          <div className="text-center text-[#00ff00] font-pixel-alt text-sm sm:text-base" style={{ fontFamily: 'var(--font-pixel-alt)' }}>Loading...</div>
         </main>
       </div>
     )
@@ -69,19 +69,19 @@ export default function ProfilePage() {
   
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background w-full overflow-x-hidden">
         <Header />
-        <main className="max-w-4xl mx-auto px-4 py-8">
+        <main className="max-w-4xl mx-auto px-2 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 w-full">
           <DisclaimerBanner />
-          <div className="text-center py-16">
-            <h1 className="text-4xl font-pixel text-[#660099] mb-4" style={{ fontFamily: 'var(--font-pixel)' }}>
+          <div className="text-center py-8 sm:py-12 md:py-16">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-pixel text-[#660099] mb-4 break-words" style={{ fontFamily: 'var(--font-pixel)' }}>
               Profile
             </h1>
-            <p className="text-[#00ff00] font-pixel-alt mb-6" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+            <p className="text-[#00ff00] font-pixel-alt mb-6 text-sm sm:text-base px-4" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
               Connect your wallet or sign in to view your profile
             </p>
             <Link href="/">
-              <button className="px-6 py-3 border-4 border-[#660099] text-[#00ff00] hover:bg-[#660099] hover:text-black font-pixel-alt transition-colors" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+              <button className="px-4 sm:px-6 py-2 sm:py-3 border-2 sm:border-4 border-[#660099] text-[#00ff00] hover:bg-[#660099] hover:text-black font-pixel-alt transition-colors min-h-[44px] text-sm sm:text-base touch-manipulation" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                 Go Home
               </button>
             </Link>
@@ -96,54 +96,54 @@ export default function ProfilePage() {
   const linkedAccounts = user?.linkedAccounts || []
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background w-full overflow-x-hidden">
       <Header />
-      <main className="max-w-4xl mx-auto px-4 py-8">
+      <main className="max-w-4xl mx-auto px-2 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 w-full relative z-10">
         <DisclaimerBanner />
         
-        <h1 className="text-4xl font-pixel text-[#660099] mb-6" style={{ fontFamily: 'var(--font-pixel)' }}>
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-pixel text-[#660099] mb-4 sm:mb-6 break-words" style={{ fontFamily: 'var(--font-pixel)' }}>
           Profile
         </h1>
 
-        <div className="pixel-box bg-black border-4 border-[#660099] p-6 md:p-8 mb-6">
-          <div className="space-y-4">
+        <div className="pixel-box bg-black border-2 sm:border-4 border-[#660099] p-4 sm:p-6 md:p-8 mb-4 sm:mb-6 relative z-10">
+          <div className="space-y-4 sm:space-y-6">
             <div>
-              <h2 className="text-xl font-pixel text-[#00ff00] mb-2" style={{ fontFamily: 'var(--font-pixel)' }}>
+              <h2 className="text-base sm:text-lg md:text-xl font-pixel text-[#00ff00] mb-2 break-words" style={{ fontFamily: 'var(--font-pixel)' }}>
                 Wallet Address
               </h2>
-              <p className="text-[#660099] font-pixel-alt break-all" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+              <p className="text-[#660099] font-pixel-alt break-all text-xs sm:text-sm md:text-base leading-relaxed" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                 {walletAddress}
               </p>
             </div>
 
             {email !== 'No email' && (
               <div>
-                <h2 className="text-xl font-pixel text-[#00ff00] mb-2" style={{ fontFamily: 'var(--font-pixel)' }}>
+                <h2 className="text-base sm:text-lg md:text-xl font-pixel text-[#00ff00] mb-2 break-words" style={{ fontFamily: 'var(--font-pixel)' }}>
                   Email
                 </h2>
-                <p className="text-[#660099] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                <p className="text-[#660099] font-pixel-alt text-xs sm:text-sm md:text-base break-all" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                   {email}
                 </p>
               </div>
             )}
 
             <div>
-              <h2 className="text-xl font-pixel text-[#00ff00] mb-2" style={{ fontFamily: 'var(--font-pixel)' }}>
+              <h2 className="text-base sm:text-lg md:text-xl font-pixel text-[#00ff00] mb-2 break-words" style={{ fontFamily: 'var(--font-pixel)' }}>
                 Current Tier
               </h2>
-              <p className="text-2xl font-pixel text-[#660099] capitalize" style={{ fontFamily: 'var(--font-pixel)' }}>
+              <p className="text-xl sm:text-2xl md:text-3xl font-pixel text-[#660099] capitalize" style={{ fontFamily: 'var(--font-pixel)' }}>
                 {loading ? 'Loading...' : tier}
               </p>
             </div>
 
             {linkedAccounts.length > 0 && (
               <div>
-                <h2 className="text-xl font-pixel text-[#00ff00] mb-2" style={{ fontFamily: 'var(--font-pixel)' }}>
+                <h2 className="text-base sm:text-lg md:text-xl font-pixel text-[#00ff00] mb-2 break-words" style={{ fontFamily: 'var(--font-pixel)' }}>
                   Linked Accounts
                 </h2>
                 <div className="space-y-2">
                   {linkedAccounts.map((account: { type?: string; address?: string; email?: string }, idx: number) => (
-                    <div key={idx} className="text-[#660099] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                    <div key={idx} className="text-[#660099] font-pixel-alt text-xs sm:text-sm md:text-base break-all" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                       {account.type}: {account.address || account.email || 'N/A'}
                     </div>
                   ))}
@@ -153,14 +153,14 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        <div className="flex gap-4">
-          <Link href="/listings/my">
-            <button className="px-6 py-3 border-4 border-[#660099] text-[#00ff00] hover:bg-[#660099] hover:text-black font-pixel-alt transition-colors" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full">
+          <Link href="/listings/my" className="flex-1 sm:flex-none">
+            <button className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 border-2 sm:border-4 border-[#660099] text-[#00ff00] hover:bg-[#660099] hover:text-black font-pixel-alt transition-colors min-h-[44px] text-sm sm:text-base touch-manipulation" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
               My Listings
             </button>
           </Link>
-          <Link href="/tiers">
-            <button className="px-6 py-3 border-4 border-[#660099] text-[#00ff00] hover:bg-[#660099] hover:text-black font-pixel-alt transition-colors" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          <Link href="/tiers" className="flex-1 sm:flex-none">
+            <button className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 border-2 sm:border-4 border-[#660099] text-[#00ff00] hover:bg-[#660099] hover:text-black font-pixel-alt transition-colors min-h-[44px] text-sm sm:text-base touch-manipulation" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
               View Tiers
             </button>
           </Link>
