@@ -54,6 +54,9 @@ export async function createListingWithPayment(
     )
 
     // Sign and send transaction
+    if (!signTransaction) {
+      throw new Error('Wallet signTransaction is not available')
+    }
     const signed = await signTransaction(transaction)
     const signature = await connection.sendRawTransaction(signed.serialize())
     await connection.confirmTransaction(signature)
