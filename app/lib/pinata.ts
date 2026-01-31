@@ -51,11 +51,17 @@ export async function uploadImageToIPFS(file: File): Promise<string> {
     })
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      const errorMessage = errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`
+      let errorData: any = {}
+      try {
+        errorData = await response.json()
+      } catch {
+        // If response isn't JSON, use status text
+      }
+      
+      const errorMessage = errorData.error?.message || errorData.error || `HTTP ${response.status}: ${response.statusText}`
       
       if (response.status === 401 || response.status === 403) {
-        throw new Error('Pinata JWT is invalid or expired. Please check your NEXT_PUBLIC_PINATA_JWT in Vercel settings')
+        throw new Error('Pinata JWT is invalid or expired. Please check your NEXT_PUBLIC_PINATA_JWT in Vercel settings and redeploy.')
       }
       if (response.status === 429) {
         throw new Error('Rate limit exceeded. Please try again in a moment.')

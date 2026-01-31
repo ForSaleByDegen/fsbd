@@ -240,7 +240,7 @@ export default function CreateListingForm() {
           onChange={(e) => {
             const files = Array.from(e.target.files || [])
             // Validate file sizes
-            const maxSize = 100 * 1024 * 1024 // 100MB
+            const maxSize = 1024 * 1024 * 1024 // 1GB (Pinata free tier limit)
             const invalidFiles = files.filter(f => f.size > maxSize)
             if (invalidFiles.length > 0) {
               alert(`Some files are too large (max 100MB). Please select smaller images.`)
@@ -250,7 +250,7 @@ export default function CreateListingForm() {
           }}
         />
         <p className="text-xs text-muted-foreground mt-1">
-          Images will be uploaded to IPFS via NFT.Storage (max 100MB per file)
+          Images will be uploaded to IPFS via Pinata (max 1GB per file)
         </p>
         {formData.images.length > 0 && (
           <p className="text-xs text-[#00ff00] mt-1">
