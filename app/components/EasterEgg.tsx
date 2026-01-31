@@ -34,7 +34,8 @@ const EasterEgg = () => {
       try {
         const iosHapticsModule = await import('ios-haptics')
         if (iosHapticsModule && iosHapticsModule.haptic) {
-          iosHapticsModule.haptic('heavy')
+          // Use confirm() for celebration (two rapid haptics)
+          iosHapticsModule.haptic.confirm()
         }
       } catch {
         // iOS haptics not available - that's okay, we tried
