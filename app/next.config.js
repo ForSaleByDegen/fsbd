@@ -3,6 +3,7 @@ const withPWA = require('next-pwa')({
   disable: process.env.NODE_ENV === 'development',
   register: true,
   skipWaiting: true,
+  maximumFileSizeToCacheInBytes: 6 * 1024 * 1024, // 6MB - avoid hang on large chunks
   runtimeCaching: [
     {
       urlPattern: /\.(?:mp3|ogg|wav|m4a)$/i,
