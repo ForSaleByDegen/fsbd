@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import Header from '@/components/Header'
 import DisclaimerBanner from '@/components/DisclaimerBanner'
 import { getUserTier } from '@/lib/tier-check'
+import { getUserProfile, upsertUserProfile } from '@/lib/admin'
 import Link from 'next/link'
 
 // Dynamic import for Privy to avoid build issues
@@ -44,8 +45,29 @@ export default function ProfilePage() {
     try {
       const walletAddress = publicKey?.toString() || (wallets && Array.isArray(wallets) ? wallets.find((w: { chainId?: string; address?: string }) => w.chainId === 'solana-devnet')?.address : null)
       if (walletAddress && connection) {
+        // Get tier from on-chain
         const userTier = await getUserTier(walletAddress, connection)
         setTier(userTier)
+        
+        // Get profile stats from Supabase
+        const profile = await getUserProfile(walletAddress)
+        if (profile) {
+          setProfileStats({
+            listings_count: profile.listings_count || 0,
+            total_fees_paid: profile.total_fees_paid || 0,
+            total_listings_sold: profile.total_listings_sold || 0
+          })
+        } else {
+          // Create profile if doesn't exist
+          await upsertUserProfile(walletAddress, {
+            tier: userTier
+          })
+          setProfileStats({
+            listings_count: 0,
+            total_fees_paid: 0,
+            total_listings_sold: 0
+          })
+        }
       }
     } catch (error) {
       console.error('Error loading profile:', error)
@@ -135,6 +157,35 @@ export default function ProfilePage() {
                 {loading ? 'Loading...' : tier}
               </p>
             </div>
+
+            {profileStats && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-[#660099]/30">
+                <div>
+                  <h3 className="text-sm font-pixel text-[#00ff00] mb-1" style={{ fontFamily: 'var(--font-pixel)' }}>
+                    Listings Created
+                  </h3>
+                  <p className="text-lg font-pixel text-[#660099]" style={{ fontFamily: 'var(--font-pixel)' }}>
+                    {profileStats.listings_count}
+                  </p>
+                </div>
+                <div>
+                  <h3 className="text-sm font-pixel text-[#00ff00] mb-1" style={{ fontFamily: 'var(--font-pixel)' }}>
+                    Listings Sold
+                  </h3>
+                  <p className="text-lg font-pixel text-[#660099]" style={{ fontFamily: 'var(--font-pixel)' }}>
+                    {profileStats.total_listings_sold}
+                  </p>
+                </div>
+                <div>
+                  <h3 className="text-sm font-pixel text-[#00ff00] mb-1" style={{ fontFamily: 'var(--font-pixel)' }}>
+                    Total Fees Paid
+                  </h3>
+                  <p className="text-lg font-pixel text-[#660099]" style={{ fontFamily: 'var(--font-pixel)' }}>
+                    {profileStats.total_fees_paid.toFixed(2)} SOL
+                  </p>
+                </div>
+              </div>
+            )}
 
             {linkedAccounts.length > 0 && (
               <div>

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Transaction, SystemProgram, LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js'
 import { getUserTier, calculateListingFee } from '@/lib/tier-check'
 import { supabase, hashWalletAddress } from '@/lib/supabase'
+import { incrementListingCount, addToTotalFees, upsertUserProfile } from '@/lib/admin'
 import { uploadImageToIPFS, uploadMultipleImagesToIPFS } from '@/lib/nft-storage'
 import { createListingToken } from '@/lib/token-ops'
 import { Button } from './ui/button'
@@ -95,6 +96,16 @@ export default function CreateListingForm() {
       const signed = await signTransaction!(transaction)
       const signature = await connection.sendRawTransaction(signed.serialize())
       await connection.confirmTransaction(signature)
+
+      // Update user profile stats
+      try {
+        await upsertUserProfile(publicKey.toString(), { tier })
+        await incrementListingCount(publicKey.toString())
+        await addToTotalFees(publicKey.toString(), fee)
+      } catch (error) {
+        console.error('Error updating user profile:', error)
+        // Don't fail the listing creation if profile update fails
+      }
 
       // Create listing in database
       const listingData = {

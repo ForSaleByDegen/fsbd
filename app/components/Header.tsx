@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useWallet } from '@solana/wallet-adapter-react'
 import Link from 'next/link'
 import { Button } from './ui/button'
 import PrivyConnectButton from './PrivyConnectButton'
+import { isAdmin } from '@/lib/admin'
 
 // Dynamic import for Privy
 let usePrivyHook: any = null
@@ -18,10 +19,30 @@ if (typeof window !== 'undefined') {
 }
 
 export default function Header() {
-  const { connected } = useWallet()
+  const { connected, publicKey } = useWallet()
   const privyAuth = usePrivyHook ? usePrivyHook() : { authenticated: false }
   const authenticated = privyAuth.authenticated || false
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [userIsAdmin, setUserIsAdmin] = useState(false)
+
+  useEffect(() => {
+    if (connected && publicKey) {
+      checkAdminStatus()
+    } else {
+      setUserIsAdmin(false)
+    }
+  }, [connected, publicKey])
+
+  const checkAdminStatus = async () => {
+    if (!publicKey) return
+    try {
+      const adminStatus = await isAdmin(publicKey.toString())
+      setUserIsAdmin(adminStatus)
+    } catch (error) {
+      console.error('Error checking admin status:', error)
+      setUserIsAdmin(false)
+    }
+  }
 
   return (
     <header className="border-b-4 border-[#660099] bg-black/90 backdrop-blur-sm sticky top-0 z-50 shadow-lg pixel-art">
@@ -135,6 +156,16 @@ export default function Header() {
                   >
                     Tiers
                   </Link>
+                  {userIsAdmin && (
+                    <Link 
+                      href="/admin" 
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="text-sm font-pixel-alt text-[#ff00ff] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-3 py-2 border-2 border-[#ff00ff] hover:border-[#00ff00] min-h-[44px] flex items-center" 
+                      style={{ fontFamily: 'var(--font-pixel-alt)' }}
+                    >
+                      Admin
+                    </Link>
+                  )}
                 </>
               )}
             </div>
