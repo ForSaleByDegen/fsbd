@@ -5,7 +5,7 @@ interface ListingCardProps {
   listing: {
     id: string
     title: string
-    description: string
+    description?: string
     price: number
     price_token: string
     category: string
