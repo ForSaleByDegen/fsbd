@@ -27,6 +27,7 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
   const [processing, setProcessing] = useState(false)
   const [sellerTier, setSellerTier] = useState<Tier>('free')
   const [platformFeeRate, setPlatformFeeRate] = useState<number>(0.0042) // Default 0.42%
+  const [showEmailModal, setShowEmailModal] = useState(false)
 
   useEffect(() => {
     fetchListing()
