@@ -3,17 +3,6 @@
 import React, { useEffect, useState, useRef } from 'react'
 import confetti from 'canvas-confetti'
 
-// Dynamic import for ios-haptics (optional, may not be available)
-let iosHaptic: ((type: string) => void) | null = null
-if (typeof window !== 'undefined') {
-  try {
-    const iosHapticsModule = require('ios-haptics')
-    iosHaptic = iosHapticsModule.haptic
-  } catch {
-    // ios-haptics not available, will use navigator.vibrate only
-  }
-}
-
 const EasterEgg = () => {
   const [showBanner, setShowBanner] = useState(false)
   const [typed, setTyped] = useState('')
@@ -36,14 +25,19 @@ const EasterEgg = () => {
     }, 200)
   }
 
-  const triggerHaptic = () => {
+  const triggerHaptic = async () => {
+    // Try standard vibrate API first (works on Android and most browsers)
     if (navigator.vibrate) {
       navigator.vibrate([100, 50, 100, 50, 200])
-    } else if (iosHaptic) {
+    } else {
+      // Fallback: Try iOS haptics (Safari iOS only)
       try {
-        iosHaptic('heavy')
+        const iosHapticsModule = await import('ios-haptics')
+        if (iosHapticsModule && iosHapticsModule.haptic) {
+          iosHapticsModule.haptic('heavy')
+        }
       } catch {
-        // iOS haptic not available
+        // iOS haptics not available - that's okay, we tried
       }
     }
   }
