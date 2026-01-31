@@ -25,6 +25,8 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
   const [listing, setListing] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState(false)
+  const [showTermsModal, setShowTermsModal] = useState(false)
+  const [escrowThread, setEscrowThread] = useState<{ threadId: string; escrowAgreed: boolean; escrowStatus: string | null } | null>(null)
 
   useEffect(() => {
     fetchListing()
