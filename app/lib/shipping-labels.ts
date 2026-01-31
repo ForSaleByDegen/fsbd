@@ -2,13 +2,16 @@
  * Shipping Label Integration
  * 
  * Supports multiple providers:
- * - EasyPost (default)
- * - Shippo (alternative - easier signup)
+ * - EasyPost (default) - https://www.easypost.com/
+ * - Shippo (alternative) - https://apps.goshippo.com/join
  * 
- * Set NEXT_PUBLIC_SHIPPING_PROVIDER to 'shippo' to use Shippo instead
+ * NOTE: Shipping labels are OPTIONAL! Manual tracking works great too.
+ * Set NEXT_PUBLIC_SHIPPING_PROVIDER to 'shippo' to use Shippo instead of EasyPost.
  * 
- * EasyPost: https://www.easypost.com/
- * Shippo: https://goshippo.com/ (Recommended - easier signup, $0.05/label)
+ * Current Status (Jan 2026):
+ * - Shippo: Experiencing USPS maintenance issues
+ * - EasyPost: More stable, recommended
+ * - Manual tracking: Always works, no API needed (recommended for MVP)
  */
 
 const SHIPPING_PROVIDER = process.env.NEXT_PUBLIC_SHIPPING_PROVIDER || 'easypost'
