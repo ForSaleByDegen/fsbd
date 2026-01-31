@@ -21,7 +21,7 @@ import {
 } from './ui/select'
 
 export default function CreateListingForm() {
-  const { publicKey, signTransaction } = useWallet()
+  const { publicKey, signTransaction, signMessage } = useWallet()
   const { connection } = useConnection()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -43,13 +43,21 @@ export default function CreateListingForm() {
       alert('Please connect your wallet')
       return
     }
+    
+    // Check if signMessage is available (required for non-token listings)
+    if (!formData.launchToken && !signMessage) {
+      alert('Your wallet does not support message signing. Please use a compatible wallet or enable token launch.')
+      return
+    }
+    
+    // Check if signTransaction is available (required for token launches)
+    if (formData.launchToken && !signTransaction) {
+      alert('Please connect your wallet to launch a token')
+      return
+    }
 
     try {
       setLoading(true)
-      
-      // Get user tier and calculate fee
-      const tier = await getUserTier(publicKey.toString(), connection)
-      const fee = calculateListingFee(tier)
       
       // Upload images to IPFS via Pinata
       const imageHashes: string[] = []
@@ -72,9 +80,15 @@ export default function CreateListingForm() {
         }
       }
 
-      // Launch token if requested
+      // Launch token if requested (this requires payment for token creation)
       let tokenMint: string | null = null
+      let fee = 0
       if (formData.launchToken && formData.tokenName && formData.tokenSymbol) {
+        // Get user tier and calculate fee for token launch
+        const tier = await getUserTier(publicKey.toString(), connection)
+        fee = calculateListingFee(tier)
+        
+        // Create token (this costs SOL for rent and fees)
         tokenMint = await createListingToken(
           publicKey,
           signTransaction!,
@@ -82,39 +96,68 @@ export default function CreateListingForm() {
           formData.tokenName,
           formData.tokenSymbol
         )
-      }
 
-      // Create payment transaction
-      const appWallet = new PublicKey(
-        process.env.NEXT_PUBLIC_APP_WALLET || '11111111111111111111111111111111'
-      )
-      
-      const transaction = new Transaction().add(
-        SystemProgram.transfer({
-          fromPubkey: publicKey,
-          toPubkey: appWallet,
-          lamports: fee * LAMPORTS_PER_SOL,
-        })
-      )
+        // Pay listing fee only when launching token
+        const appWallet = new PublicKey(
+          process.env.NEXT_PUBLIC_APP_WALLET || '11111111111111111111111111111111'
+        )
+        
+        const transaction = new Transaction().add(
+          SystemProgram.transfer({
+            fromPubkey: publicKey,
+            toPubkey: appWallet,
+            lamports: fee * LAMPORTS_PER_SOL,
+          })
+        )
 
-      // Get recent blockhash and set fee payer (required for transaction)
-      const { blockhash } = await connection.getLatestBlockhash('finalized')
-      transaction.recentBlockhash = blockhash
-      transaction.feePayer = publicKey
+        // Get recent blockhash and set fee payer (required for transaction)
+        const { blockhash } = await connection.getLatestBlockhash('finalized')
+        transaction.recentBlockhash = blockhash
+        transaction.feePayer = publicKey
 
-      // Sign and send payment
-      const signed = await signTransaction!(transaction)
-      const signature = await connection.sendRawTransaction(signed.serialize())
-      await connection.confirmTransaction(signature)
+        // Sign and send payment
+        const signed = await signTransaction!(transaction)
+        const signature = await connection.sendRawTransaction(signed.serialize())
+        await connection.confirmTransaction(signature)
 
-      // Update user profile stats
-      try {
-        await upsertUserProfile(publicKey.toString(), { tier })
-        await incrementListingCount(publicKey.toString())
-        await addToTotalFees(publicKey.toString(), fee)
-      } catch (error) {
-        console.error('Error updating user profile:', error)
-        // Don't fail the listing creation if profile update fails
+        // Update user profile stats
+        try {
+          await upsertUserProfile(publicKey.toString(), { tier })
+          await incrementListingCount(publicKey.toString())
+          await addToTotalFees(publicKey.toString(), fee)
+        } catch (error) {
+          console.error('Error updating user profile:', error)
+          // Don't fail the listing creation if profile update fails
+        }
+      } else {
+        // For regular listings (no token), just sign a message of intent
+        if (!signMessage) {
+          throw new Error('Wallet signMessage is not available. Please use a compatible wallet.')
+        }
+
+        // Create message of intent
+        const message = new TextEncoder().encode(
+          `I intend to create a listing on $FSBD Marketplace:\n\n` +
+          `Title: ${formData.title}\n` +
+          `Category: ${formData.category}\n` +
+          `Price: ${formData.price} ${formData.priceToken}\n` +
+          `Timestamp: ${Date.now()}\n\n` +
+          `By signing this message, I confirm my intent to list this item.`
+        )
+
+        // Sign message
+        const signature = await signMessage(message)
+        console.log('Message signed:', signature)
+
+        // Update user profile stats (no fee paid)
+        try {
+          const tier = await getUserTier(publicKey.toString(), connection)
+          await upsertUserProfile(publicKey.toString(), { tier })
+          await incrementListingCount(publicKey.toString())
+        } catch (error) {
+          console.error('Error updating user profile:', error)
+          // Don't fail the listing creation if profile update fails
+        }
       }
 
       // Create listing in database
@@ -131,7 +174,7 @@ export default function CreateListingForm() {
         token_mint: tokenMint,
         token_name: formData.tokenName || null,
         token_symbol: formData.tokenSymbol || null,
-        fee_paid: fee,
+        fee_paid: fee, // 0 for regular listings, fee amount for token launches
         status: 'active'
       }
 
