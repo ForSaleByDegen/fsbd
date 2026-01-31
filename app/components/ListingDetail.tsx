@@ -243,7 +243,7 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
       
       {imageUrls.length > 0 && (
         <div className="mb-4 sm:mb-6 space-y-3 sm:space-y-4">
-          {imageUrls.map((imageUrl, index) => (
+          {imageUrls.map((imageUrl: string, index: number) => (
             <div key={index} className="w-full bg-black/50 border-2 border-[#660099] rounded overflow-hidden">
               <img 
                 src={imageUrl} 
