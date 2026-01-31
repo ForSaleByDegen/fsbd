@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Transaction, SystemProgram, LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js'
 import { getUserTier, calculateListingFee } from '@/lib/tier-check'
 import { supabase, hashWalletAddress } from '@/lib/supabase'
-import { uploadToIPFS } from '@/lib/ipfs'
+import { uploadImageToIPFS, uploadMultipleImagesToIPFS } from '@/lib/nft-storage'
 import { createListingToken } from '@/lib/token-ops'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -50,12 +50,19 @@ export default function CreateListingForm() {
       const tier = await getUserTier(publicKey.toString(), connection)
       const fee = calculateListingFee(tier)
       
-      // Upload images to IPFS
+      // Upload images to IPFS via NFT.Storage
       const imageHashes: string[] = []
       if (formData.images.length > 0) {
-        for (const file of formData.images) {
-          const hash = await uploadToIPFS(file)
-          imageHashes.push(hash)
+        try {
+          const urls = await uploadMultipleImagesToIPFS(formData.images)
+          // Extract CID from URLs (format: https://ipfs.io/ipfs/{cid})
+          imageHashes.push(...urls.map(url => {
+            const match = url.match(/ipfs\/([^/]+)/)
+            return match ? match[1] : url
+          }))
+        } catch (error: any) {
+          console.error('IPFS upload error:', error)
+          throw new Error('Failed to upload images to IPFS: ' + (error.message || 'Please check your NFT.Storage API key'))
         }
       }
 
