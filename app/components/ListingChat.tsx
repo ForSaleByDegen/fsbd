@@ -18,6 +18,7 @@ interface ListingChatProps {
   currentUserWallet: string
   onEscrowProposed?: () => void
   onEscrowAccepted?: () => void
+  onThreadLoaded?: (threadId: string, escrowAgreed: boolean, escrowStatus: string | null) => void
 }
 
 export default function ListingChat({
