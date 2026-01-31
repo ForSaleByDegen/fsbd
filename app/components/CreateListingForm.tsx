@@ -9,6 +9,7 @@ import { supabase, hashWalletAddress } from '@/lib/supabase'
 import { incrementListingCount, addToTotalFees, upsertUserProfile } from '@/lib/admin'
 import { uploadMultipleImagesToIPFS } from '@/lib/pinata'
 import { createListingToken } from '@/lib/token-ops'
+import { sendTransactionWithRebate, shouldUseRebate } from '@/lib/helius-rebate'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Textarea } from './ui/textarea'
@@ -108,9 +109,14 @@ export default function CreateListingForm() {
         transaction.recentBlockhash = blockhash
         transaction.feePayer = publicKey
 
-        // Sign and send payment
+        // Sign and send payment (with Helius rebate when available)
         const signed = await signTransaction!(transaction)
-        const signature = await connection.sendRawTransaction(signed.serialize())
+        const serialized = signed.serialize()
+        const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL
+        const signature =
+          shouldUseRebate() && rpcUrl
+            ? await sendTransactionWithRebate(serialized, publicKey.toString(), rpcUrl, { maxRetries: 3 })
+            : await connection.sendRawTransaction(serialized)
         await connection.confirmTransaction(signature)
 
         // Update user profile stats

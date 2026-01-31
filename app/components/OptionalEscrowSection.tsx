@@ -6,6 +6,7 @@ import { LAMPORTS_PER_SOL } from '@solana/web3.js'
 import { getAssociatedTokenAddress, getAccount, createAssociatedTokenAccountIdempotentInstruction, getMint } from '@solana/spl-token'
 import { supabase, hashWalletAddress } from '@/lib/supabase'
 import { transferToUserEscrowTx } from '@/lib/user-pda-wallet'
+import { sendTransactionWithRebate, shouldUseRebate } from '@/lib/helius-rebate'
 import { updateThreadEscrow } from '@/lib/chat'
 import { Button } from './ui/button'
 import ManualTrackingForm from './ManualTrackingForm'
@@ -94,23 +95,30 @@ export default function OptionalEscrowSection({
       transaction.recentBlockhash = blockhash
       transaction.feePayer = publicKey
       const signed = await signTransaction(transaction)
+      const serialized = signed.serialize()
+      const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL
+
+      const doSend = (opts: { skipPreflight: boolean }) =>
+        shouldUseRebate() && rpcUrl
+          ? sendTransactionWithRebate(serialized, publicKey.toString(), rpcUrl, {
+              skipPreflight: opts.skipPreflight,
+              maxRetries: 3,
+            })
+          : connection.sendRawTransaction(serialized, {
+              skipPreflight: opts.skipPreflight,
+              maxRetries: 3,
+            })
 
       let signature: string
       try {
-        signature = await connection.sendRawTransaction(signed.serialize(), {
-          skipPreflight: false,
-          maxRetries: 3,
-        })
+        signature = await doSend({ skipPreflight: false })
       } catch (sendErr: any) {
         if (sendErr?.message?.includes('Attempt to debit') || sendErr?.message?.includes('prior credit')) {
           const retry = confirm(
             'Simulation failed (RPC may report wrong balance). Retry with simulation skipped?'
           )
           if (retry) {
-            signature = await connection.sendRawTransaction(signed.serialize(), {
-              skipPreflight: true,
-              maxRetries: 3,
-            })
+            signature = await doSend({ skipPreflight: true })
           } else {
             throw sendErr
           }

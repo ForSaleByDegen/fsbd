@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Transaction, SystemProgram, LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js'
 import { getAssociatedTokenAddress, createTransferInstruction, getAccount, createAssociatedTokenAccountIdempotentInstruction, getMint } from '@solana/spl-token'
 import { supabase } from '@/lib/supabase'
+import { sendTransactionWithRebate, shouldUseRebate } from '@/lib/helius-rebate'
 import { getIPFSGatewayURL } from '@/lib/pinata'
 import { Button } from './ui/button'
 import BiddingSection from './BiddingSection'
@@ -249,10 +250,15 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
       }
 
       const signed = await signTransaction(transaction)
-      const signature = await connection.sendRawTransaction(signed.serialize(), {
-        skipPreflight,
-        maxRetries: 3
-      })
+      const serialized = signed.serialize()
+      const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL
+      const signature =
+        shouldUseRebate() && rpcUrl
+          ? await sendTransactionWithRebate(serialized, publicKey.toString(), rpcUrl, {
+              skipPreflight,
+              maxRetries: 3,
+            })
+          : await connection.sendRawTransaction(serialized, { skipPreflight, maxRetries: 3 })
       
       // Wait for confirmation
       await connection.confirmTransaction({
