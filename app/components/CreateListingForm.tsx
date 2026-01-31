@@ -7,7 +7,7 @@ import { Transaction, SystemProgram, LAMPORTS_PER_SOL, PublicKey } from '@solana
 import { getUserTier, calculateListingFee } from '@/lib/tier-check'
 import { supabase, hashWalletAddress } from '@/lib/supabase'
 import { incrementListingCount, addToTotalFees, upsertUserProfile } from '@/lib/admin'
-import { uploadImageToIPFS, uploadMultipleImagesToIPFS } from '@/lib/nft-storage'
+import { uploadMultipleImagesToIPFS } from '@/lib/pinata'
 import { createListingToken } from '@/lib/token-ops'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -51,19 +51,24 @@ export default function CreateListingForm() {
       const tier = await getUserTier(publicKey.toString(), connection)
       const fee = calculateListingFee(tier)
       
-      // Upload images to IPFS via NFT.Storage
+      // Upload images to IPFS via Pinata
       const imageHashes: string[] = []
-      if (formData.images.length > 0) {
+      if (formData.images && formData.images.length > 0) {
         try {
           const urls = await uploadMultipleImagesToIPFS(formData.images)
-          // Extract CID from URLs (format: https://ipfs.io/ipfs/{cid})
+          // Extract CID from URLs (format: https://gateway.pinata.cloud/ipfs/{cid} or https://ipfs.io/ipfs/{cid})
           imageHashes.push(...urls.map(url => {
-            const match = url.match(/ipfs\/([^/]+)/)
-            return match ? match[1] : url
+            // Extract CID from various URL formats
+            const match = url.match(/ipfs\/([^/?]+)/)
+            if (match) return match[1]
+            // If it's already a CID, return as-is
+            if (url.length === 46 && url.startsWith('Qm')) return url
+            if (url.length === 59 && url.startsWith('baf')) return url
+            return url
           }))
         } catch (error: any) {
           console.error('IPFS upload error:', error)
-          throw new Error('Failed to upload images to IPFS: ' + (error.message || 'Please check your NFT.Storage API key'))
+          throw new Error('Failed to upload images to IPFS: ' + (error.message || 'Please check your Pinata JWT'))
         }
       }
 

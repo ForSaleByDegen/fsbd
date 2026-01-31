@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Transaction, SystemProgram, LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js'
 import { getUserTier, calculateListingFee, TIER_THRESHOLDS } from '@/lib/tier-check'
 import { supabase, hashWalletAddress } from '@/lib/supabase'
-import { uploadImageToIPFS } from '@/lib/nft-storage'
+import { uploadImageToIPFS } from '@/lib/pinata'
 import { createAuctionToken, simulateDevBuy } from '@/lib/auction-utils'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -84,10 +84,15 @@ export default function AuctionForm() {
       const durationDays = parseInt(formData.auctionDuration)
       const endTime = Math.floor(Date.now() / 1000) + (durationDays * 24 * 60 * 60)
       
-      // Upload image to IPFS
+      // Upload image to IPFS via Pinata
       let imageUrl: string | null = null
       if (formData.image) {
-        imageUrl = await uploadImageToIPFS(formData.image)
+        try {
+          imageUrl = await uploadImageToIPFS(formData.image)
+        } catch (error: any) {
+          console.error('IPFS upload error:', error)
+          throw new Error('Failed to upload image to IPFS: ' + (error.message || 'Please check your Pinata JWT'))
+        }
       }
 
       // Create auction token

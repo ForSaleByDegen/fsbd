@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Transaction, SystemProgram, LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js'
 import { getAssociatedTokenAddress, createTransferInstruction } from '@solana/spl-token'
 import { supabase } from '@/lib/supabase'
-import { getIPFSURL } from '@/lib/ipfs'
+import { getIPFSGatewayURL } from '@/lib/pinata'
 import { Button } from './ui/button'
 import BiddingSection from './BiddingSection'
 
@@ -125,11 +125,13 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
     return <div className="text-center py-12">Listing not found</div>
   }
 
-  const imageUrl = listing.images && listing.images.length > 0
-    ? listing.images[0].startsWith('Qm') || listing.images[0].startsWith('baf')
-      ? getIPFSURL(listing.images[0])
-      : listing.images[0]
-    : null
+      const imageUrl = listing.images && listing.images.length > 0
+        ? listing.images[0].startsWith('Qm') || listing.images[0].startsWith('baf')
+          ? getIPFSGatewayURL(listing.images[0])
+          : listing.images[0].startsWith('http')
+          ? listing.images[0]
+          : getIPFSGatewayURL(listing.images[0])
+        : null
 
   return (
     <div className="bg-card rounded-lg shadow-lg p-8">

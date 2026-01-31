@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { getIPFSURL } from '@/lib/ipfs'
+import { getIPFSGatewayURL } from '@/lib/pinata'
 
 interface ListingCardProps {
   listing: {
@@ -20,8 +20,10 @@ export default function ListingCard({ listing }: ListingCardProps) {
   }
 
   const imageUrl = listing.images && listing.images.length > 0
-    ? listing.images[0].startsWith('Qm') || listing.images[0].startsWith('baf')
-      ? getIPFSURL(listing.images[0])
+    ? listing.images[0].startsWith('Qm') || listing.images[0].startsWith('baf') || listing.images[0].startsWith('http')
+      ? listing.images[0].startsWith('http') 
+        ? listing.images[0]
+        : getIPFSGatewayURL(listing.images[0])
       : listing.images[0]
     : null
 
