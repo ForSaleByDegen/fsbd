@@ -1,5 +1,5 @@
 import { Connection, PublicKey } from '@solana/web3.js'
-import { getAssociatedTokenAddress, getAccount } from '@solana/spl-token'
+import { getAssociatedTokenAddress, getAccount, getMint } from '@solana/spl-token'
 
 // TODO: Replace with actual $FBSD token mint address after launch
 // For devnet testing, use a mock mint address
@@ -41,7 +41,8 @@ export async function getUserTier(
     )
 
     const accountInfo = await getAccount(connection, tokenAccount)
-    const balance = Number(accountInfo.amount) / (10 ** accountInfo.mint.decimals)
+    const mintInfo = await getMint(connection, mintPublicKey)
+    const balance = Number(accountInfo.amount) / (10 ** mintInfo.decimals)
 
     if (balance >= TIER_THRESHOLDS.gold) return 'gold'
     if (balance >= TIER_THRESHOLDS.silver) return 'silver'
