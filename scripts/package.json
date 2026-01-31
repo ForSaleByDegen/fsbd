@@ -1,0 +1,17 @@
+{
+  "name": "deployment-scripts",
+  "version": "1.0.0",
+  "description": "Token deployment scripts",
+  "scripts": {
+    "deploy": "ts-node deployToken.ts"
+  },
+  "dependencies": {
+    "@solana/web3.js": "^1.87.6",
+    "@solana/spl-token": "^0.3.9"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "ts-node": "^10.9.2",
+    "typescript": "^5"
+  }
+}

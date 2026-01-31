@@ -1,0 +1,7 @@
+{
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "rm -rf node_modules package-lock.json && npm install --no-workspaces --legacy-peer-deps",
+  "framework": "nextjs",
+  "regions": ["iad1"]
+}
