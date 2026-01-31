@@ -185,7 +185,16 @@ export default function CreateListingForm() {
           .select()
           .single()
 
-        if (error) throw error
+        if (error) {
+          console.error('Supabase insert error:', error)
+          throw new Error(`Database error: ${error.message || 'Failed to save listing'}`)
+        }
+        
+        if (!data || !data.id) {
+          throw new Error('Listing created but no ID returned')
+        }
+        
+        console.log('Listing created successfully:', data.id)
         router.push(`/listings/${data.id}`)
       } else {
         // Fallback to API route
@@ -194,12 +203,25 @@ export default function CreateListingForm() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(listingData)
         })
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.error || `HTTP ${response.status}: Failed to create listing`)
+        }
+        
         const data = await response.json()
+        if (!data || !data.id) {
+          throw new Error('Listing created but no ID returned')
+        }
+        
+        console.log('Listing created successfully via API:', data.id)
         router.push(`/listings/${data.id}`)
       }
     } catch (error: any) {
       console.error('Error creating listing:', error)
-      alert('Failed to create listing: ' + (error.message || 'Unknown error'))
+      const errorMessage = error?.message || 'Unknown error'
+      console.error('Full error details:', error)
+      alert('Failed to create listing: ' + errorMessage)
     } finally {
       setLoading(false)
     }
