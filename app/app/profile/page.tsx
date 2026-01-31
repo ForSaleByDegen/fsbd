@@ -43,7 +43,7 @@ function getWalletAddress(
 type ProfileData = {
   profile: { listings_count: number; total_fees_paid: number; total_listings_sold: number } | null
   listings: Array<{ id: string; title: string; price: number; price_token: string; status: string; escrow_status?: string; images?: string[]; category: string }>
-  escrows: Array<{ id: string; listing_id: string; escrow_status: string; seller_wallet_hash: string; buyer_wallet_hash: string }>
+  escrows: Array<{ id: string; listing_id: string; escrow_status: string; listing_title?: string; listing_price?: number; listing_price_token?: string }>
   bids: Array<{ id: string; title: string; price: number; highest_bid: number; status: string; images?: string[]; category: string }>
   purchases: Array<{ id: string; title: string; price: number; price_token: string; status: string; images?: string[]; category: string }>
 }
