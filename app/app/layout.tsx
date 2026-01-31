@@ -1,12 +1,18 @@
 import type { Metadata } from 'next'
 import { Press_Start_2P, VT323 } from 'next/font/google'
+import dynamic from 'next/dynamic'
 import './globals.css'
-import PrivyProvider from '@/components/providers/PrivyProvider'
 import WalletProvider from '@/components/providers/WalletProvider'
 import BackDoorModal from '@/components/BackDoorModal'
 import EasterEgg from '@/components/EasterEgg'
 import MatrixRain from '@/components/MatrixRain'
 import FloatingCryptoIcons from '@/components/FloatingCryptoIcons'
+
+// Dynamically import PrivyProvider to avoid build-time errors
+const PrivyProvider = dynamic(
+  () => import('@/components/providers/PrivyProvider'),
+  { ssr: false }
+)
 
 const pressStart2P = Press_Start_2P({ 
   weight: '400',
