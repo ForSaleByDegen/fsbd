@@ -1,6 +1,7 @@
 import CreateListingForm from '@/components/CreateListingForm'
 import Header from '@/components/Header'
 import DisclaimerBanner from '@/components/DisclaimerBanner'
+import Footer from '@/components/Footer'
 
 // Force dynamic rendering - requires wallet connection
 export const dynamic = 'force-dynamic'
