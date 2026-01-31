@@ -243,7 +243,7 @@ export default function CreateListingForm() {
             const maxSize = 1024 * 1024 * 1024 // 1GB (Pinata free tier limit)
             const invalidFiles = files.filter(f => f.size > maxSize)
             if (invalidFiles.length > 0) {
-              alert(`Some files are too large (max 100MB). Please select smaller images.`)
+              alert(`Some files are too large (max 1GB). Please select smaller images.`)
               return
             }
             setFormData(prev => ({ ...prev, images: files }))
