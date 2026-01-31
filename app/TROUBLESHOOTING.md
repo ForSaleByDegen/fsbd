@@ -34,6 +34,14 @@
 
 ---
 
+## Console: runtime.lastError, MetaMask not found
+
+**Cause:** Browser extensions (Phantom, MetaMask, etc.) inject scripts that can log these errors. They come from the extensions, not from FSBD.
+
+**Fix:** These are harmless. Ignore them, or disable unused wallet extensions for this site.
+
+---
+
 ## Manifest 401 / PWA install fails on preview URL
 
 **Cause:** Vercel Deployment Protection blocks unauthenticated requests on preview deployments (e.g. `*-git-main-*.vercel.app`).

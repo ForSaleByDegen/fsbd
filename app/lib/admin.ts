@@ -26,7 +26,7 @@ export async function isAdmin(walletAddress: string): Promise<boolean> {
       .select('id, is_active')
       .eq('wallet_address_hash', walletHash)
       .eq('is_active', true)
-      .single()
+      .maybeSingle()
     
     if (error || !data) return false
     return true

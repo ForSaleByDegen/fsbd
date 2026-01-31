@@ -66,7 +66,6 @@ export default function ListingCard({ listing }: ListingCardProps) {
                 }
               }}
               onLoad={() => {
-                console.log('Image loaded successfully in ListingCard:', imageUrl)
               }}
             />
           </div>

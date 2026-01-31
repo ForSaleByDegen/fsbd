@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useWallet, useConnection } from '@solana/wallet-adapter-react'
 import { useRouter } from 'next/navigation'
 import { Transaction, SystemProgram, LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js'
@@ -28,6 +28,16 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
   const [showTermsModal, setShowTermsModal] = useState(false)
   const [escrowThread, setEscrowThread] = useState<{ threadId: string; escrowAgreed: boolean; escrowStatus: string | null } | null>(null)
 
+  const handleThreadLoaded = useCallback((threadId: string, escrowAgreed: boolean, escrowStatus: string | null) => {
+    setEscrowThread({ threadId, escrowAgreed, escrowStatus })
+  }, [])
+  const handleEscrowProposed = useCallback(() => {
+    setEscrowThread((t) => (t ? { ...t, escrowStatus: 'pending' } : t))
+  }, [])
+  const handleEscrowAccepted = useCallback(() => {
+    setEscrowThread((t) => (t ? { ...t, escrowAgreed: true, escrowStatus: 'pending' } : t))
+  }, [])
+
   useEffect(() => {
     fetchListing()
   }, [listingId])
@@ -51,8 +61,6 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
                   []
         }
         
-        console.log('Fetched listing:', normalizedListing)
-        console.log('Listing images:', normalizedListing.images)
         setListing(normalizedListing)
       } else {
         const response = await fetch(`/api/listings/${listingId}`)
@@ -335,9 +343,6 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
                     parent.innerHTML = `<div class="w-full h-64 flex items-center justify-center border-2 border-[#660099] rounded"><span class="text-[#660099] text-sm">Image ${index + 1} failed to load</span></div>`
                   }
                 }}
-                onLoad={() => {
-                  console.log('Image loaded successfully in ListingDetail:', imageUrl)
-                }}
               />
             </div>
           ))}
@@ -376,11 +381,9 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
           <ListingChat
             listing={{ id: listing.id, wallet_address: listing.wallet_address }}
             currentUserWallet={publicKey.toString()}
-            onThreadLoaded={(threadId, escrowAgreed, escrowStatus) => {
-              setEscrowThread({ threadId, escrowAgreed, escrowStatus })
-            }}
-            onEscrowProposed={() => setEscrowThread((t) => (t ? { ...t, escrowStatus: 'pending' } : t))}
-            onEscrowAccepted={() => setEscrowThread((t) => (t ? { ...t, escrowAgreed: true, escrowStatus: 'pending' } : t))}
+            onThreadLoaded={handleThreadLoaded}
+            onEscrowProposed={handleEscrowProposed}
+            onEscrowAccepted={handleEscrowAccepted}
           />
         </div>
       )}

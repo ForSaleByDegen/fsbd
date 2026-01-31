@@ -70,7 +70,6 @@ export default function ListingFeed() {
                 []
       }))
       
-      console.log('Fetched listings:', normalizedListings.length)
       setListings(normalizedListings)
     } catch (error) {
       console.error('Error fetching listings:', error)
