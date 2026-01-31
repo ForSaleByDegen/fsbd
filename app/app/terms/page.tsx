@@ -62,12 +62,34 @@ export default function TermsPage() {
                 blockchain. We do not:
               </p>
               <ul className="list-disc list-inside ml-4 space-y-2">
-                <li>Hold, control, or escrow funds</li>
+                <li>Hold, control, or escrow funds (except optional user-initiated escrow)</li>
                 <li>Act as an intermediary in transactions</li>
                 <li>Guarantee the quality, safety, or legality of listed items</li>
                 <li>Verify the identity of users</li>
                 <li>Provide refunds or dispute resolution</li>
               </ul>
+            </section>
+
+            <section>
+              <h2 className="text-lg sm:text-xl font-pixel text-[#ff00ff] mb-3">4a. NO GUARANTEE OF CONDITION, AUTHENTICITY, OR DELIVERY</h2>
+              <p className="text-[#ff0000] font-bold mb-3">
+                ⚠️ BUYER AND SELLER BEWARE. WE CANNOT GUARANTEE ITEM CONDITION, AUTHENTICITY, OR SUCCESSFUL DELIVERY.
+              </p>
+              <p>
+                All listings are provided AS IS, AS AVAILABLE. To the fullest extent permitted by law, we:
+              </p>
+              <ul className="list-disc list-inside ml-4 space-y-2">
+                <li><strong>Do NOT guarantee</strong> that listed items match their descriptions, are authentic, or are in the condition stated</li>
+                <li><strong>Do NOT guarantee</strong> that items will be shipped or successfully delivered</li>
+                <li><strong>Do NOT verify</strong> listings, seller reliability, or shipping arrangements</li>
+                <li>Make <strong>no promises, warranties, or representations</strong> as to the completeness, accuracy, or reliability of any listing</li>
+                <li><strong>Disclaim all warranties</strong>, express or implied, including merchantability and fitness for a particular purpose</li>
+                <li><strong>Disclaim any liability</strong> for the acts, omissions, or conduct of any user in connection with the platform</li>
+              </ul>
+              <p className="mt-3">
+                Any risk of using the platform is assumed by you. Conduct your own due diligence. Coordinate directly with the other party. 
+                (Similar to Craigslist: we are a listing directory, not a party to transactions.)
+              </p>
             </section>
 
             <section>
@@ -81,6 +103,8 @@ export default function TermsPage() {
               </p>
               <ul className="list-disc list-inside ml-4 space-y-2">
                 <li>Any losses resulting from transactions on the platform</li>
+                <li>Items that do not match descriptions, are damaged, counterfeit, or misrepresented</li>
+                <li>Failed delivery, lost shipments, or items never received</li>
                 <li>Fraudulent, misrepresented, or illegal items listed by users</li>
                 <li>Disputes between buyers and sellers</li>
                 <li>Loss of funds due to wallet compromise, phishing, or user error</li>
