@@ -11,26 +11,44 @@ export async function uploadImageToIPFS(file: File): Promise<string> {
     throw new Error('NFT.Storage API key not configured. Set NEXT_PUBLIC_NFT_STORAGE_KEY')
   }
 
+  // Validate file
+  if (!file || file.size === 0) {
+    throw new Error('Invalid file: file is empty or not provided')
+  }
+
+  // Check file size (NFT.Storage has limits)
+  const maxSize = 100 * 1024 * 1024 // 100MB
+  if (file.size > maxSize) {
+    throw new Error(`File too large: ${(file.size / 1024 / 1024).toFixed(2)}MB. Maximum size is 100MB`)
+  }
+
   try {
     const client = new NFTStorage({ token: NFT_STORAGE_KEY })
     
-    // Convert File to nft.storage File format
-    const nftFile = new File([file], file.name, { type: file.type })
+    // Upload blob directly (simpler and more reliable)
+    const cid = await client.storeBlob(file)
     
-    // Upload to IPFS
-    const cid = await client.storeBlob(nftFile)
+    if (!cid) {
+      throw new Error('Upload succeeded but no CID returned')
+    }
     
     // Return IPFS URL
     return `https://ipfs.io/ipfs/${cid}`
   } catch (error: any) {
     console.error('Error uploading to NFT.Storage:', error)
     const errorMessage = error?.message || 'Unknown error'
-    if (errorMessage.includes('Unauthorized') || errorMessage.includes('401')) {
-      throw new Error('NFT.Storage API key is invalid. Please check your NEXT_PUBLIC_NFT_STORAGE_KEY')
+    
+    // Check for specific error types
+    if (errorMessage.includes('Unauthorized') || errorMessage.includes('401') || errorMessage.includes('invalid token')) {
+      throw new Error('NFT.Storage API key is invalid or expired. Please check your NEXT_PUBLIC_NFT_STORAGE_KEY in Vercel settings')
     }
     if (errorMessage.includes('rate limit') || errorMessage.includes('429')) {
       throw new Error('Rate limit exceeded. Please try again in a moment.')
     }
+    if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+      throw new Error('Network error. Please check your internet connection and try again.')
+    }
+    
     throw new Error(`Failed to upload image to IPFS: ${errorMessage}`)
   }
 }

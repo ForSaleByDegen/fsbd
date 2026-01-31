@@ -223,12 +223,24 @@ export default function CreateListingForm() {
           className="min-h-[44px] text-base sm:text-sm w-full"
           onChange={(e) => {
             const files = Array.from(e.target.files || [])
+            // Validate file sizes
+            const maxSize = 100 * 1024 * 1024 // 100MB
+            const invalidFiles = files.filter(f => f.size > maxSize)
+            if (invalidFiles.length > 0) {
+              alert(`Some files are too large (max 100MB). Please select smaller images.`)
+              return
+            }
             setFormData(prev => ({ ...prev, images: files }))
           }}
         />
         <p className="text-xs text-muted-foreground mt-1">
-          Images will be uploaded to IPFS (decentralized storage)
+          Images will be uploaded to IPFS via NFT.Storage (max 100MB per file)
         </p>
+        {formData.images.length > 0 && (
+          <p className="text-xs text-[#00ff00] mt-1">
+            {formData.images.length} file(s) selected
+          </p>
+        )}
       </div>
 
       <div className="border-t pt-4">
