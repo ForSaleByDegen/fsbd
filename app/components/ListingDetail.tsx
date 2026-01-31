@@ -121,10 +121,26 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
             ? `\n\nPhantom tip: Ensure Phantom is on ${network} (Settings → Developer Settings).`
             : ''
           if (balanceSol === 0) {
-            const tryAnyway = confirm(
-              `RPC reports 0 SOL (may be incorrect). You need ${totalAmount + 0.001} SOL on ${network}.${phantomHint}${rpcHint}\n\n` +
-              'If you have SOL in Phantom, try transaction anyway?'
-            )
+            let tryAnyway = false
+            try {
+              const verifyRes = await fetch(`/api/balance/verify?wallet=${encodeURIComponent(publicKey.toString())}`)
+              const verify = await verifyRes.json()
+              if (verify.balance != null && verify.balance > totalAmount + 0.001) {
+                tryAnyway = confirm(
+                  `Bitquery confirms you have ${verify.balance.toFixed(4)} SOL. RPC reported 0 (incorrect).\n\nProceed with purchase?`
+                )
+              } else {
+                tryAnyway = confirm(
+                  `RPC reports 0 SOL (may be incorrect). You need ${totalAmount + 0.001} SOL on ${network}.${phantomHint}${rpcHint}\n\n` +
+                  'If you have SOL in Phantom, try transaction anyway?'
+                )
+              }
+            } catch {
+              tryAnyway = confirm(
+                `RPC reports 0 SOL (may be incorrect). You need ${totalAmount + 0.001} SOL on ${network}.${phantomHint}${rpcHint}\n\n` +
+                'If you have SOL in Phantom, try transaction anyway?'
+              )
+            }
             if (!tryAnyway) {
               setProcessing(false)
               return
@@ -204,7 +220,8 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
       transaction.recentBlockhash = blockhash
       transaction.feePayer = publicKey
 
-      // Simulate transaction first to catch errors early
+      // Simulate transaction first; if RPC simulation fails (e.g. AccountNotFound), retry with skipPreflight
+      let skipPreflight = false
       try {
         const simulation = await connection.simulateTransaction(transaction)
         if (simulation.value.err) {
@@ -213,20 +230,27 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
             : String(simulation.value.err)
           throw new Error(`Transaction simulation failed: ${errorMsg}`)
         }
-        
-        // Check if balance would be sufficient
         if (simulation.value.logs) {
           console.log('Transaction simulation logs:', simulation.value.logs)
         }
       } catch (simError: any) {
         console.error('Transaction simulation error:', simError)
-        throw new Error(`Transaction simulation failed: ${simError.message || 'Unknown error'}`)
+        const msg = simError?.message || ''
+        const isRpcSimIssue = /AccountNotFound|0 SOL|Attempt to debit|prior credit/i.test(msg)
+        if (isRpcSimIssue) {
+          const retry = confirm(
+            'RPC simulation failed (often incorrect with Phantom). Send transaction anyway? This skips simulation and submits directly to the network.'
+          )
+          if (retry) skipPreflight = true
+          else throw new Error(`Transaction simulation failed: ${msg}`)
+        } else {
+          throw new Error(`Transaction simulation failed: ${msg}`)
+        }
       }
 
-      // Sign and send
       const signed = await signTransaction(transaction)
       const signature = await connection.sendRawTransaction(signed.serialize(), {
-        skipPreflight: false,
+        skipPreflight,
         maxRetries: 3
       })
       
