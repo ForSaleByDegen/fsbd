@@ -120,7 +120,18 @@ export async function uploadMultipleImagesToIPFS(files: File[]): Promise<string[
  * Get IPFS gateway URL from CID
  */
 export function getIPFSGatewayURL(cid: string): string {
+  if (!cid) return ''
+  
   // Remove ipfs:// prefix if present
-  const cleanCid = cid.replace('ipfs://', '').replace('https://ipfs.io/ipfs/', '').replace('https://gateway.pinata.cloud/ipfs/', '')
-  return `https://${PINATA_GATEWAY}/ipfs/${cleanCid}`
+  const cleanCid = cid.replace('ipfs://', '').replace('https://ipfs.io/ipfs/', '').replace('https://gateway.pinata.cloud/ipfs/', '').replace('https://', '').split('/ipfs/').pop() || cid
+  
+  // Use configured gateway or fallback to public gateways
+  const gateway = PINATA_GATEWAY || 'gateway.pinata.cloud'
+  
+  // If gateway is empty or invalid, use public IPFS gateway as fallback
+  if (!gateway || gateway === '') {
+    return `https://ipfs.io/ipfs/${cleanCid}`
+  }
+  
+  return `https://${gateway}/ipfs/${cleanCid}`
 }

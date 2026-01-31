@@ -61,7 +61,17 @@ export default function ListingFeed() {
       const { data, error } = await query
 
       if (error) throw error
-      setListings(data || [])
+      
+      // Normalize listings data - ensure images arrays are properly formatted
+      const normalizedListings = (data || []).map((listing: any) => ({
+        ...listing,
+        images: Array.isArray(listing.images) ? listing.images : 
+                typeof listing.images === 'string' ? JSON.parse(listing.images || '[]') : 
+                []
+      }))
+      
+      console.log('Fetched listings:', normalizedListings.length)
+      setListings(normalizedListings)
     } catch (error) {
       console.error('Error fetching listings:', error)
       setListings([])

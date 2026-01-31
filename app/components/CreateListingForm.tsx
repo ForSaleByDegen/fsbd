@@ -60,20 +60,13 @@ export default function CreateListingForm() {
       setLoading(true)
       
       // Upload images to IPFS via Pinata
-      const imageHashes: string[] = []
+      const imageUrls: string[] = []
       if (formData.images && formData.images.length > 0) {
         try {
           const urls = await uploadMultipleImagesToIPFS(formData.images)
-          // Extract CID from URLs (format: https://gateway.pinata.cloud/ipfs/{cid} or https://ipfs.io/ipfs/{cid})
-          imageHashes.push(...urls.map(url => {
-            // Extract CID from various URL formats
-            const match = url.match(/ipfs\/([^/?]+)/)
-            if (match) return match[1]
-            // If it's already a CID, return as-is
-            if (url.length === 46 && url.startsWith('Qm')) return url
-            if (url.length === 59 && url.startsWith('baf')) return url
-            return url
-          }))
+          // Store full URLs directly (more reliable than extracting CIDs)
+          imageUrls.push(...urls)
+          console.log('Uploaded images:', urls)
         } catch (error: any) {
           console.error('IPFS upload error:', error)
           throw new Error('Failed to upload images to IPFS: ' + (error.message || 'Please check your Pinata JWT'))
@@ -167,7 +160,7 @@ export default function CreateListingForm() {
         category: formData.category,
         price: parseFloat(formData.price),
         price_token: formData.priceToken,
-        images: imageHashes,
+        images: imageUrls, // Store full URLs
         wallet_address_hash: hashWalletAddress(publicKey.toString()),
         wallet_address: publicKey.toString(), // Encrypted in DB
         has_token: !!tokenMint,
@@ -177,6 +170,8 @@ export default function CreateListingForm() {
         fee_paid: fee, // 0 for regular listings, fee amount for token launches
         status: 'active'
       }
+      
+      console.log('Creating listing with images:', imageUrls)
 
       if (supabase) {
         const { data, error } = await supabase

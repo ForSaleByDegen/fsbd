@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useWallet, useConnection } from '@solana/wallet-adapter-react'
 import { useRouter } from 'next/navigation'
 import { Transaction, SystemProgram, LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js'
-import { getAssociatedTokenAddress, createTransferInstruction } from '@solana/spl-token'
+import { getAssociatedTokenAddress, createTransferInstruction, getAccount, createAssociatedTokenAccountIdempotentInstruction, getMint } from '@solana/spl-token'
 import { supabase } from '@/lib/supabase'
 import { getIPFSGatewayURL } from '@/lib/pinata'
 import { getUserTier, calculatePlatformFeeRate, type Tier } from '@/lib/tier-check'
@@ -46,7 +46,18 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
           .single()
 
         if (error) throw error
-        setListing(data)
+        
+        // Normalize images array - handle both array and JSON string formats
+        const normalizedListing = {
+          ...data,
+          images: Array.isArray(data.images) ? data.images : 
+                  typeof data.images === 'string' ? JSON.parse(data.images || '[]') : 
+                  []
+        }
+        
+        console.log('Fetched listing:', normalizedListing)
+        console.log('Listing images:', normalizedListing.images)
+        setListing(normalizedListing)
       } else {
         const response = await fetch(`/api/listings/${listingId}`)
         const data = await response.json()
@@ -88,7 +99,6 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
       setProcessing(true)
       
       // Calculate platform fee based on seller's tier
-      // Get seller's tier to determine fee rate
       const sellerTierForFee = await getUserTier(listing.wallet_address, connection)
       const feeRate = calculatePlatformFeeRate(sellerTierForFee)
       const platformFee = listing.price * feeRate
@@ -99,6 +109,39 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
         process.env.NEXT_PUBLIC_APP_WALLET || '11111111111111111111111111111111'
       )
       const sellerWallet = new PublicKey(listing.wallet_address)
+      
+      // Check buyer balance before proceeding
+      if (listing.price_token === 'SOL') {
+        const buyerBalance = await connection.getBalance(publicKey)
+        const totalNeeded = (listing.price + 0.0005) * LAMPORTS_PER_SOL // Add small buffer for fees
+        
+        if (buyerBalance < totalNeeded) {
+          alert(`Insufficient balance. You need ${listing.price + 0.0005} SOL but only have ${(buyerBalance / LAMPORTS_PER_SOL).toFixed(4)} SOL`)
+          setProcessing(false)
+          return
+        }
+      } else {
+        // Check SPL token balance
+        const mintPublicKey = new PublicKey(listing.price_token)
+        const buyerTokenAccount = await getAssociatedTokenAddress(mintPublicKey, publicKey)
+        
+        try {
+          const tokenAccount = await getAccount(connection, buyerTokenAccount)
+          const mintInfo = await getMint(connection, mintPublicKey)
+          const buyerBalance = Number(tokenAccount.amount) / (10 ** mintInfo.decimals)
+          
+          if (buyerBalance < listing.price) {
+            alert(`Insufficient token balance. You need ${listing.price} ${listing.price_token} but only have ${buyerBalance.toFixed(4)}`)
+            setProcessing(false)
+            return
+          }
+        } catch (error) {
+          alert(`Token account not found. Please ensure you have ${listing.price_token} tokens in your wallet.`)
+          setProcessing(false)
+          return
+        }
+      }
+      
       const transaction = new Transaction()
 
       if (listing.price_token === 'SOL') {
@@ -107,7 +150,7 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
           SystemProgram.transfer({
             fromPubkey: publicKey,
             toPubkey: appWallet,
-            lamports: platformFee * LAMPORTS_PER_SOL,
+            lamports: Math.floor(platformFee * LAMPORTS_PER_SOL),
           })
         )
         
@@ -116,7 +159,7 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
           SystemProgram.transfer({
             fromPubkey: publicKey,
             toPubkey: sellerWallet,
-            lamports: sellerAmount * LAMPORTS_PER_SOL,
+            lamports: Math.floor(sellerAmount * LAMPORTS_PER_SOL),
           })
         )
       } else {
@@ -126,8 +169,42 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
         const sellerTokenAccount = await getAssociatedTokenAddress(mintPublicKey, sellerWallet)
         const appTokenAccount = await getAssociatedTokenAddress(mintPublicKey, appWallet)
         
-        // Get token decimals (assuming 9 for most, but USDC uses 6)
-        const decimals = listing.price_token === 'USDC' ? 6 : 9
+        // Get token decimals
+        const mintInfo = await getMint(connection, mintPublicKey)
+        const decimals = mintInfo.decimals
+        
+        // Ensure seller and app token accounts exist (create if needed)
+        try {
+          await getAccount(connection, sellerTokenAccount)
+        } catch {
+          // Seller token account doesn't exist, create it
+          transaction.add(
+            createAssociatedTokenAccountIdempotentInstruction(
+              publicKey, // payer
+              sellerTokenAccount, // ATA address
+              sellerWallet, // owner
+              mintPublicKey // mint
+            )
+          )
+        }
+        
+        try {
+          await getAccount(connection, appTokenAccount)
+        } catch {
+          // App token account doesn't exist, create it
+          transaction.add(
+            createAssociatedTokenAccountIdempotentInstruction(
+              publicKey, // payer
+              appTokenAccount, // ATA address
+              appWallet, // owner
+              mintPublicKey // mint
+            )
+          )
+        }
+        
+        // Calculate amounts in smallest units
+        const platformFeeAmount = BigInt(Math.floor(platformFee * (10 ** decimals)))
+        const sellerAmountAmount = BigInt(Math.floor(sellerAmount * (10 ** decimals)))
         
         // Transfer platform fee to app wallet
         transaction.add(
@@ -135,7 +212,7 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
             buyerTokenAccount,
             appTokenAccount,
             publicKey,
-            BigInt(Math.floor(platformFee * (10 ** decimals))),
+            platformFeeAmount,
           )
         )
         
@@ -145,20 +222,48 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
             buyerTokenAccount,
             sellerTokenAccount,
             publicKey,
-            BigInt(Math.floor(sellerAmount * (10 ** decimals))),
+            sellerAmountAmount,
           )
         )
       }
 
       // Get recent blockhash and set fee payer (required for transaction)
-      const { blockhash } = await connection.getLatestBlockhash('finalized')
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('finalized')
       transaction.recentBlockhash = blockhash
       transaction.feePayer = publicKey
 
+      // Simulate transaction first to catch errors early
+      try {
+        const simulation = await connection.simulateTransaction(transaction)
+        if (simulation.value.err) {
+          const errorMsg = typeof simulation.value.err === 'object' 
+            ? JSON.stringify(simulation.value.err)
+            : String(simulation.value.err)
+          throw new Error(`Transaction simulation failed: ${errorMsg}`)
+        }
+        
+        // Check if balance would be sufficient
+        if (simulation.value.logs) {
+          console.log('Transaction simulation logs:', simulation.value.logs)
+        }
+      } catch (simError: any) {
+        console.error('Transaction simulation error:', simError)
+        throw new Error(`Transaction simulation failed: ${simError.message || 'Unknown error'}`)
+      }
+
       // Sign and send
       const signed = await signTransaction(transaction)
-      const signature = await connection.sendRawTransaction(signed.serialize())
-      await connection.confirmTransaction(signature)
+      const signature = await connection.sendRawTransaction(signed.serialize(), {
+        skipPreflight: false,
+        maxRetries: 3
+      })
+      
+      // Wait for confirmation
+      await connection.confirmTransaction({
+        signature,
+        blockhash,
+        lastValidBlockHeight
+      }, 'confirmed')
 
       // Update listing status and track platform fee
       if (supabase) {
@@ -195,11 +300,32 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
         }
       }
 
-      alert(`Purchase successful! Platform fee: ${platformFee.toFixed(4)} ${listing.price_token || 'SOL'}. Contact the seller to complete the transaction.`)
+      alert(`Purchase successful! Platform fee: ${platformFee.toFixed(4)} ${listing.price_token || 'SOL'}. Transaction signature: ${signature}`)
       router.push('/')
+      router.refresh()
     } catch (error: any) {
       console.error('Error purchasing:', error)
-      alert('Purchase failed: ' + (error.message || 'Unknown error'))
+      
+      // Provide more helpful error messages
+      let errorMessage = 'Unknown error'
+      if (error.message) {
+        errorMessage = error.message
+      } else if (typeof error === 'string') {
+        errorMessage = error
+      } else if (error.logs && Array.isArray(error.logs)) {
+        errorMessage = `Transaction failed. Logs: ${error.logs.join(', ')}`
+      }
+      
+      // Check for common errors
+      if (errorMessage.includes('insufficient funds') || errorMessage.includes('Insufficient')) {
+        errorMessage = 'Insufficient funds. Please ensure you have enough balance to cover the purchase and transaction fees.'
+      } else if (errorMessage.includes('ReadonlyLamportChange')) {
+        errorMessage = 'Transaction error: Account permissions issue. Please try again or contact support.'
+      } else if (errorMessage.includes('simulation')) {
+        errorMessage = `Transaction simulation failed: ${errorMessage}. Please check your balance and try again.`
+      }
+      
+      alert('Purchase failed: ' + errorMessage)
     } finally {
       setProcessing(false)
     }
@@ -214,8 +340,8 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
   }
 
   // Process images - handle both CIDs and full URLs
-  const getImageUrl = (image: string): string => {
-    if (!image) return ''
+  const getImageUrl = (image: string | null | undefined): string | null => {
+    if (!image) return null
     
     // If it's already a full URL, return as-is
     if (image.startsWith('http://') || image.startsWith('https://')) {
@@ -227,13 +353,16 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
       return getIPFSGatewayURL(image)
     }
     
-    // Try to convert to gateway URL anyway
+    // Try to convert to gateway URL anyway (backward compatibility)
     return getIPFSGatewayURL(image)
   }
 
-  const imageUrls = listing.images && listing.images.length > 0
-    ? listing.images.map(getImageUrl).filter((url: string) => url)
+  const imageUrls = listing.images && Array.isArray(listing.images) && listing.images.length > 0
+    ? listing.images.map(getImageUrl).filter((url: string | null): url is string => url !== null)
     : []
+  
+  console.log('Listing images:', listing.images)
+  console.log('Processed image URLs:', imageUrls)
 
   return (
     <div className="pixel-box bg-black border-2 sm:border-4 border-[#660099] p-4 sm:p-6 md:p-8 relative z-10">
@@ -241,24 +370,45 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
         {listing.title}
       </h1>
       
-      {imageUrls.length > 0 && (
+      {imageUrls.length > 0 ? (
         <div className="mb-4 sm:mb-6 space-y-3 sm:space-y-4">
           {imageUrls.map((imageUrl: string, index: number) => (
-            <div key={index} className="w-full bg-black/50 border-2 border-[#660099] rounded overflow-hidden">
+            <div key={index} className="w-full bg-black/50 border-2 border-[#660099] rounded overflow-hidden relative">
               <img 
                 src={imageUrl} 
                 alt={`${listing.title} - Image ${index + 1}`}
                 className="w-full h-auto max-h-[400px] sm:max-h-[500px] md:max-h-[600px] object-contain mx-auto"
                 loading="lazy"
+                crossOrigin="anonymous"
                 onError={(e) => {
-                  console.error('Image load error:', imageUrl)
-                  e.currentTarget.style.display = 'none'
+                  console.error('Image load error in ListingDetail:', {
+                    url: imageUrl,
+                    index,
+                    listingId: listing.id,
+                    title: listing.title
+                  })
+                  const target = e.currentTarget
+                  target.style.display = 'none'
+                  // Show error placeholder
+                  const parent = target.parentElement
+                  if (parent) {
+                    parent.innerHTML = `<div class="w-full h-64 flex items-center justify-center border-2 border-[#660099] rounded"><span class="text-[#660099] text-sm">Image ${index + 1} failed to load</span></div>`
+                  }
+                }}
+                onLoad={() => {
+                  console.log('Image loaded successfully in ListingDetail:', imageUrl)
                 }}
               />
             </div>
           ))}
         </div>
-      )}
+      ) : listing.images && listing.images.length > 0 ? (
+        <div className="mb-4 sm:mb-6 p-4 bg-black/50 border-2 border-[#660099] rounded">
+          <p className="text-[#660099] text-sm font-pixel-alt mb-2">⚠️ Images found but failed to process</p>
+          <p className="text-[#660099] text-xs font-pixel-alt">Raw images data: {JSON.stringify(listing.images)}</p>
+          <p className="text-[#660099] text-xs font-pixel-alt mt-2">Check browser console for details.</p>
+        </div>
+      ) : null}
 
       <div className="mb-4 sm:mb-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
