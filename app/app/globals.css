@@ -69,6 +69,15 @@
     image-rendering: pixelated;
     image-rendering: -moz-crisp-edges;
     image-rendering: crisp-edges;
+    position: relative;
+  }
+
+  /* Ensure form elements are above background decorations */
+  form,
+  main,
+  [role="main"] {
+    position: relative;
+    z-index: 10;
   }
   
   /* Pixel-art styling */

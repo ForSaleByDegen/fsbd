@@ -46,18 +46,18 @@ const FloatingCryptoIcons = () => {
   }, [])
 
   return (
-    <div className="fixed inset-0 pointer-events-none z-[-5] overflow-hidden">
+    <div className="fixed inset-0 pointer-events-none z-[-10] overflow-hidden">
       {icons.map((icon) => (
         <div
           key={icon.id}
-          className="absolute pixel-text"
+          className="absolute pixel-text hidden md:block"
           style={{
             left: `${icon.x}%`,
             top: `${icon.y}%`,
             fontSize: `${icon.size}px`,
             color: icon.color,
             fontFamily: 'var(--font-pixel-alt)',
-            opacity: 0.3 + Math.random() * 0.4,
+            opacity: 0.15 + Math.random() * 0.2, // Reduced opacity
             textShadow: `0 0 ${icon.size / 2}px ${icon.color}`,
             transform: 'translate(-50%, -50%)',
           }}

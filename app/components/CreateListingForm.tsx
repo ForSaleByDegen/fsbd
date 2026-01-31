@@ -135,7 +135,7 @@ export default function CreateListingForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6 w-full max-w-full">
+    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6 w-full max-w-full relative z-10">
       <div>
         <label className="block text-sm font-medium mb-2">Title *</label>
         <Input
