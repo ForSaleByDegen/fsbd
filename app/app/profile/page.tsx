@@ -31,6 +31,11 @@ export default function ProfilePage() {
   const { connection } = useConnection()
   const [tier, setTier] = useState<'free' | 'bronze' | 'silver' | 'gold'>('free')
   const [loading, setLoading] = useState(true)
+  const [profileStats, setProfileStats] = useState<{
+    listings_count: number
+    total_fees_paid: number
+    total_listings_sold: number
+  } | null>(null)
 
   useEffect(() => {
     if ((authenticated || connected) && (publicKey || wallets?.length > 0)) {
