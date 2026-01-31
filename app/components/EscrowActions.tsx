@@ -5,6 +5,7 @@ import { useWallet, useConnection } from '@solana/wallet-adapter-react'
 import { PublicKey } from '@solana/web3.js'
 import { supabase, hashWalletAddress } from '@/lib/supabase'
 import { Button } from './ui/button'
+import ManualTrackingForm from './ManualTrackingForm'
 
 interface EscrowActionsProps {
   listing: {
@@ -69,16 +70,8 @@ export default function EscrowActions({ listing, userRole }: EscrowActionsProps)
           throw new Error(`Database update failed: ${updateError.message}`)
         }
 
-        alert(
-          'Item marked as shipped!\n\n' +
-          'The buyer will be notified. Once they confirm receipt, ' +
-          'the remaining 50% will be released to you.\n\n' +
-          'NOTE: Actual fund release requires a Solana escrow program. ' +
-          'For MVP, the status is updated but funds will be released when the program is deployed.'
-        )
-        
-        // Refresh the page to show updated status
-        window.location.reload()
+        // Show tracking form instead of reloading
+        setShowTrackingForm(true)
       }
     } catch (err: any) {
       console.error('Error marking as shipped:', err)
@@ -168,6 +161,21 @@ export default function EscrowActions({ listing, userRole }: EscrowActionsProps)
       )
     }
 
+    // Show tracking form if item was just marked as shipped
+    if (showTrackingForm) {
+      return (
+        <div className="mt-4">
+          <ManualTrackingForm
+            listingId={listing.id}
+            onTrackingAdded={() => {
+              setShowTrackingForm(false)
+              window.location.reload()
+            }}
+          />
+        </div>
+      )
+    }
+
     return (
       <div className="mt-4 p-4 bg-black/50 border-2 border-[#660099] rounded">
         <h3 className="text-[#ff00ff] font-pixel text-base mb-2" style={{ fontFamily: 'var(--font-pixel)' }}>
@@ -187,6 +195,9 @@ export default function EscrowActions({ listing, userRole }: EscrowActionsProps)
         >
           {processing ? 'Processing...' : 'Mark as Shipped'}
         </Button>
+        <p className="text-[#660099] font-pixel-alt text-xs mt-3" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          💡 You can add tracking information after marking as shipped. Shipping labels are optional - manual tracking works great too!
+        </p>
       </div>
     )
   }

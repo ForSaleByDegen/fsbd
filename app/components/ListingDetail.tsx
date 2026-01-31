@@ -474,6 +474,27 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
           <p className="text-xs text-[#660099] font-pixel-alt break-all" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             Escrow PDA: {listing.escrow_pda}
           </p>
+          {listing.tracking_number && (
+            <div className="mt-3 p-2 bg-black/50 rounded">
+              <p className="text-xs text-[#00ff00] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                📦 Tracking: {listing.tracking_number}
+              </p>
+              <p className="text-xs text-[#660099] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                Carrier: {listing.shipping_carrier || 'Unknown'}
+              </p>
+              {listing.shipping_carrier && (
+                <a
+                  href={`https://www.google.com/search?q=${listing.shipping_carrier}+tracking+${listing.tracking_number}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-[#00ff00] underline font-pixel-alt mt-1 block"
+                  style={{ fontFamily: 'var(--font-pixel-alt)' }}
+                >
+                  Track Package →
+                </a>
+              )}
+            </div>
+          )}
           {listing.shipped_at && (
             <p className="text-xs text-[#00ff00] font-pixel-alt mt-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
               Shipped: {new Date(listing.shipped_at).toLocaleString()}
