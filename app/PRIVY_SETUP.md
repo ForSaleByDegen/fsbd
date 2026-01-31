@@ -1,86 +1,77 @@
 # Privy Setup Guide
 
-Privy allows users to connect with email, social logins, or existing wallets. When users sign in with email/social, Privy automatically creates an embedded Solana wallet for them.
+Privy allows users to connect with email, social accounts (Google, Twitter, Discord), or traditional wallets. It also creates embedded wallets for users who don't have one.
 
-## Setup Steps
+## Step 1: Create Privy Account
 
-### 1. Create Privy Account
-
-1. Go to https://dashboard.privy.io
+1. Go to https://privy.io
 2. Sign up for a free account
 3. Create a new app
-4. Copy your **App ID**
 
-### 2. Configure Environment Variable
+## Step 2: Get Your App ID
 
-Add to your `.env` file (or Vercel environment variables):
+1. In Privy dashboard, go to your app
+2. Copy your **App ID** (looks like: `clxxxxxxxxxxxxxxxxxx`)
+3. Add it to your `.env` file:
 
 ```env
-NEXT_PUBLIC_PRIVY_APP_ID=your-privy-app-id-here
+NEXT_PUBLIC_PRIVY_APP_ID=clxxxxxxxxxxxxxxxxxx
 ```
 
-### 3. Enable Solana in Privy Dashboard
+## Step 3: Configure Privy App Settings
 
-1. Go to your Privy app settings
-2. Navigate to **Chains** → **Solana**
-3. Enable Solana Devnet (or Mainnet for production)
-4. Configure RPC endpoint if needed
+In the Privy dashboard:
 
-### 4. Configure Login Methods
+1. **Login Methods**: Enable:
+   - Email
+   - Wallet (Phantom, Solflare, etc.)
+   - Google
+   - Twitter
+   - Discord
 
-In Privy Dashboard → **Login Methods**:
-- ✅ Email
-- ✅ Google
-- ✅ Twitter/X
-- ✅ Discord
-- ✅ GitHub
-- ✅ Wallet (for existing Solana wallets)
+2. **Embedded Wallets**: 
+   - Enable "Create on login" → Set to "Users without wallets"
+   - This creates a wallet automatically for email/social logins
 
-### 5. Enable Embedded Wallets
+3. **Solana Configuration**:
+   - Add Solana Devnet chain
+   - RPC URL: `https://api.devnet.solana.com` (or your custom RPC)
 
-In Privy Dashboard → **Wallets** → **Embedded Wallets**:
-- Enable "Create embedded wallet on login"
-- Set to "Users without wallets" (creates wallet automatically for email/social logins)
+## Step 4: Add to Vercel Environment Variables
+
+1. Go to Vercel dashboard → Your project → Settings → Environment Variables
+2. Add:
+   - Key: `NEXT_PUBLIC_PRIVY_APP_ID`
+   - Value: Your Privy App ID
+3. Redeploy
 
 ## How It Works
 
-### For New Users (Email/Social):
-1. User clicks "Connect"
-2. Chooses email, Google, Twitter, etc.
-3. Privy creates embedded Solana wallet automatically
-4. User can immediately use the app
+- **Email/Social Login**: Users can sign in with email, Google, Twitter, or Discord. Privy automatically creates an embedded Solana wallet for them.
+- **Wallet Login**: Users can still connect with Phantom, Solflare, etc. (works alongside Privy)
+- **Profile Page**: Shows wallet address, email, linked accounts, and tier status
+- **Fallback**: If Privy App ID is not set, the app falls back to Solana wallet adapter only
 
-### For Existing Wallet Users:
-1. User clicks "Connect"
-2. Chooses "Wallet" option
-3. Connects Phantom, Solflare, etc.
-4. Uses their existing wallet
+## Features Enabled
 
-### Fallback:
-- If Privy is not configured (`NEXT_PUBLIC_PRIVY_APP_ID` not set), the app falls back to regular Solana Wallet Adapter
-- Users can still connect with Phantom/Solflare directly
+✅ Email login  
+✅ Social login (Google, Twitter, Discord)  
+✅ Traditional wallet connection (Phantom, Solflare)  
+✅ Automatic wallet creation for email/social users  
+✅ Profile page with user info  
+✅ Solana Devnet support  
 
 ## Testing
 
 1. Set `NEXT_PUBLIC_PRIVY_APP_ID` in your `.env`
 2. Run `npm run dev`
-3. Click "Connect" → Should see Privy modal with login options
-4. Try email login → Should create embedded wallet automatically
-5. Check profile page → Should show wallet address and email
-
-## Production Checklist
-
-- [ ] Set `NEXT_PUBLIC_PRIVY_APP_ID` in Vercel environment variables
-- [ ] Enable Solana Mainnet in Privy dashboard (if using mainnet)
-- [ ] Configure custom domain in Privy (optional)
-- [ ] Test email/social login flows
-- [ ] Test embedded wallet creation
-- [ ] Verify profile page shows correct wallet address
+3. Click "Connect" button
+4. Try logging in with email or social account
+5. Check `/profile` page to see your account info
 
 ## Notes
 
-- Privy works alongside Solana Wallet Adapter
-- If Privy is not configured, app works normally with wallet adapter
-- Embedded wallets are fully functional Solana wallets
-- Users can export their embedded wallet keys if needed
-- All wallet operations work the same regardless of login method
+- Privy is optional - if App ID is not set, the app works with Solana wallet adapter only
+- Embedded wallets are created automatically for email/social users
+- All wallet addresses work with the existing Solana functionality
+- Profile page shows both Privy and Solana wallet info
