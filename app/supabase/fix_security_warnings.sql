@@ -85,15 +85,16 @@ CREATE POLICY "Allow listing inserts"
   );
 
 -- Create more restrictive UPDATE policy
+-- Allow updates to active listings AND escrow-related statuses (for escrow flow)
 CREATE POLICY "Allow listing updates"
   ON listings FOR UPDATE
   USING (
-    status = 'active'
+    status IN ('active', 'in_escrow', 'shipped', 'completed', 'disputed')
     AND wallet_address_hash IS NOT NULL
     AND wallet_address_hash != ''
   )
   WITH CHECK (
-    status IN ('active', 'in_escrow', 'shipped', 'completed', 'disputed')
+    status IN ('active', 'in_escrow', 'shipped', 'completed', 'disputed', 'sold', 'expired', 'removed', 'pending_review')
     AND wallet_address_hash IS NOT NULL
     AND wallet_address_hash != ''
   );
