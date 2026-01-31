@@ -92,7 +92,12 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
         const totalNeeded = (totalAmount + 0.001) * LAMPORTS_PER_SOL // Add buffer for tx fees
         
         if (buyerBalance < totalNeeded) {
-          alert(`Insufficient balance. You need ${totalAmount + 0.001} SOL but only have ${(buyerBalance / LAMPORTS_PER_SOL).toFixed(4)} SOL`)
+          const balanceSol = buyerBalance / LAMPORTS_PER_SOL
+          const network = process.env.NEXT_PUBLIC_SOLANA_NETWORK || 'devnet'
+          const hint = balanceSol === 0
+            ? `\n\nTip: If you have SOL in Phantom, switch Phantom to ${network} (Settings → Developer Settings), or add NEXT_PUBLIC_SOLANA_NETWORK=mainnet-beta in Vercel if you use mainnet.`
+            : ''
+          alert(`Insufficient balance. You need ${totalAmount + 0.001} SOL but only have ${(balanceSol).toFixed(4)} SOL on ${network}.${hint}`)
           setProcessing(false)
           return
         }

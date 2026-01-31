@@ -43,7 +43,17 @@ export default function ListingChat({
 
   useEffect(() => {
     if (!listing.id || !currentUserWallet) return
+    if (!supabase) {
+      setLoading(false)
+      return
+    }
     let cancelled = false
+    const timeout = setTimeout(() => {
+      if (!cancelled) {
+        cancelled = true
+        setLoading(false)
+      }
+    }, 8000)
     ;(async () => {
       setLoading(true)
       try {
@@ -61,10 +71,14 @@ export default function ListingChat({
       } catch (err) {
         console.error('Chat load error:', err)
       } finally {
+        clearTimeout(timeout)
         if (!cancelled) setLoading(false)
       }
     })()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+      clearTimeout(timeout)
+    }
   }, [listing.id, currentUserWallet, sellerHash, myHash, isSeller, onThreadLoaded])
 
   useEffect(() => {
@@ -144,6 +158,14 @@ export default function ListingChat({
       setMessages(msgs)
     }
     setSending(false)
+  }
+
+  if (!supabase) {
+    return (
+      <div className="p-4 border-2 border-[#660099] rounded text-center text-[#660099]">
+        Chat requires Supabase. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel, then run migration_chat.sql.
+      </div>
+    )
   }
 
   if (loading) {
