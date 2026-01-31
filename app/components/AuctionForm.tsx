@@ -196,7 +196,7 @@ export default function AuctionForm() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6 w-full max-w-full">
         <div>
           <label className="block text-sm font-medium mb-2">Title *</label>
           <Input
@@ -206,6 +206,7 @@ export default function AuctionForm() {
             required
             maxLength={200}
             disabled={!canCreateAuction}
+            className="min-h-[44px] text-base sm:text-sm w-full"
           />
         </div>
 
@@ -218,10 +219,11 @@ export default function AuctionForm() {
             rows={6}
             maxLength={5000}
             disabled={!canCreateAuction}
+            className="min-h-[120px] text-base sm:text-sm w-full resize-y"
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-2">Category *</label>
             <Select

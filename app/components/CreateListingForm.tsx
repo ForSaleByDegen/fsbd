@@ -135,7 +135,7 @@ export default function CreateListingForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6 w-full max-w-full">
       <div>
         <label className="block text-sm font-medium mb-2">Title *</label>
         <Input
@@ -144,6 +144,7 @@ export default function CreateListingForm() {
           onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
           required
           maxLength={200}
+          className="min-h-[44px] text-base sm:text-sm w-full"
         />
       </div>
 
@@ -155,6 +156,7 @@ export default function CreateListingForm() {
           required
           rows={6}
           maxLength={5000}
+          className="min-h-[120px] text-base sm:text-sm w-full resize-y"
         />
       </div>
 
@@ -211,6 +213,7 @@ export default function CreateListingForm() {
           type="file"
           multiple
           accept="image/*"
+          className="min-h-[44px] text-base sm:text-sm w-full"
           onChange={(e) => {
             const files = Array.from(e.target.files || [])
             setFormData(prev => ({ ...prev, images: files }))

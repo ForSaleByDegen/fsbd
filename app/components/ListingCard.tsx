@@ -26,23 +26,24 @@ export default function ListingCard({ listing }: ListingCardProps) {
     : null
 
   return (
-    <Link href={`/listings/${listing.id}`}>
-      <div className="bg-black/80 border-4 border-[#660099] p-4 hover:border-[#00ff00] hover:shadow-[0_0_20px_rgba(0,255,0,0.5)] transition-all cursor-pointer h-full flex flex-col pixel-art">
+    <Link href={`/listings/${listing.id}`} className="block w-full">
+      <div className="bg-black/80 border-2 sm:border-4 border-[#660099] p-3 sm:p-4 hover:border-[#00ff00] hover:shadow-[0_0_20px_rgba(0,255,0,0.5)] transition-all cursor-pointer h-full flex flex-col pixel-art min-h-[200px]">
         {imageUrl && (
-          <div className="w-full h-48 bg-muted rounded mb-3 overflow-hidden">
+          <div className="w-full h-32 sm:h-40 md:h-48 bg-muted rounded mb-2 sm:mb-3 overflow-hidden">
             <img 
               src={imageUrl} 
               alt={listing.title}
               className="w-full h-full object-cover"
+              loading="lazy"
             />
           </div>
         )}
-        <h3 className="text-lg font-semibold mb-2 line-clamp-2">{listing.title}</h3>
-        <p className="text-muted-foreground text-sm mb-2 line-clamp-2 flex-grow">
+        <h3 className="text-base sm:text-lg font-semibold mb-2 line-clamp-2 break-words">{listing.title}</h3>
+        <p className="text-muted-foreground text-xs sm:text-sm mb-2 line-clamp-2 flex-grow break-words">
           {listing.description}
         </p>
-        <div className="flex justify-between items-center mt-auto">
-          <span className="text-primary font-bold">{formatPrice()}</span>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1 sm:gap-0 mt-auto">
+          <span className="text-primary font-bold text-sm sm:text-base">{formatPrice()}</span>
           <span className="text-xs text-muted-foreground capitalize">
             {listing.category?.replace('-', ' ')}
           </span>
