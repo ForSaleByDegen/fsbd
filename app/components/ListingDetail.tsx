@@ -94,11 +94,11 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
       const totalAmount = listing.price
       const sellerWallet = new PublicKey(listing.wallet_address)
       
-      // Check buyer balance before proceeding
+      // Check buyer balance before proceeding (Solana docs: getBalance with commitment 'confirmed')
       if (listing.price_token === 'SOL') {
         let buyerBalance: number
         try {
-          buyerBalance = await connection.getBalance(publicKey)
+          buyerBalance = await connection.getBalance(publicKey, 'confirmed')
         } catch (rpcError) {
           console.error('RPC balance fetch error:', rpcError)
           alert(
@@ -109,10 +109,10 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
           setProcessing(false)
           return
         }
-        const totalNeeded = (totalAmount + 0.001) * LAMPORTS_PER_SOL // Add buffer for tx fees
-        
+        const totalNeeded = (totalAmount + 0.001) * LAMPORTS_PER_SOL
+        const balanceSol = buyerBalance / LAMPORTS_PER_SOL
+
         if (buyerBalance < totalNeeded) {
-          const balanceSol = buyerBalance / LAMPORTS_PER_SOL
           const network = process.env.NEXT_PUBLIC_SOLANA_NETWORK || 'devnet'
           const rpcHint = !process.env.NEXT_PUBLIC_RPC_URL
             ? '\n\nRPC tip: Add NEXT_PUBLIC_RPC_URL (Helius/QuickNode) in Vercel — the public RPC often returns 0 balance.'
@@ -120,9 +120,20 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
           const phantomHint = balanceSol === 0
             ? `\n\nPhantom tip: Ensure Phantom is on ${network} (Settings → Developer Settings).`
             : ''
-          alert(`Insufficient balance. You need ${totalAmount + 0.001} SOL but only have ${(balanceSol).toFixed(4)} SOL on ${network}.${phantomHint}${rpcHint}`)
-          setProcessing(false)
-          return
+          if (balanceSol === 0) {
+            const tryAnyway = confirm(
+              `RPC reports 0 SOL (may be incorrect). You need ${totalAmount + 0.001} SOL on ${network}.${phantomHint}${rpcHint}\n\n` +
+              'If you have SOL in Phantom, try transaction anyway?'
+            )
+            if (!tryAnyway) {
+              setProcessing(false)
+              return
+            }
+          } else {
+            alert(`Insufficient balance. You need ${totalAmount + 0.001} SOL but have ${(balanceSol).toFixed(4)} SOL on ${network}.`)
+            setProcessing(false)
+            return
+          }
         }
       } else {
         // Check SPL token balance

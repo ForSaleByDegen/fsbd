@@ -15,6 +15,7 @@ export default function WalletProvider({ children }: { children: React.ReactNode
   const endpoint = useMemo(() => {
     return process.env.NEXT_PUBLIC_RPC_URL || clusterApiUrl(network)
   }, [network])
+  const config = useMemo(() => ({ commitment: 'confirmed' as const }), [])
 
   const wallets = useMemo(
     () => [
@@ -25,7 +26,7 @@ export default function WalletProvider({ children }: { children: React.ReactNode
   )
 
   return (
-    <ConnectionProvider endpoint={endpoint}>
+    <ConnectionProvider endpoint={endpoint} config={config}>
       <SolanaWalletProvider wallets={wallets} autoConnect>
         <WalletModalProvider>
           {children}

@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { hashWalletAddress } from '@/lib/supabase'
 import {
   getOrSelectThread,
+  getThreadsForListing,
   sendEncryptedMessage,
   fetchMessages,
   updateThreadEscrow,
@@ -30,6 +31,7 @@ export default function ListingChat({
 }: ListingChatProps) {
   const [threadId, setThreadId] = useState<string | null>(null)
   const [threadBuyerHash, setThreadBuyerHash] = useState<string | null>(null)
+  const [allThreads, setAllThreads] = useState<{ id: string; buyer_wallet_hash: string }[]>([])
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -62,6 +64,12 @@ export default function ListingChat({
         if (thread) {
           setThreadId(thread.id)
           setThreadBuyerHash(thread.buyerWalletHash)
+          if (isSeller) {
+            const threads = await getThreadsForListing(listing.id, sellerHash)
+            if (!cancelled) setAllThreads(threads)
+          } else {
+            setAllThreads([])
+          }
           const msgs = await fetchMessages(thread.id, sellerHash, thread.buyerWalletHash)
           if (cancelled) return
           setMessages(msgs)
@@ -194,6 +202,15 @@ export default function ListingChat({
     setSending(false)
   }
 
+  const switchThread = async (tid: string, buyerHash: string) => {
+    setThreadId(tid)
+    setThreadBuyerHash(buyerHash)
+    const msgs = await fetchMessages(tid, sellerHash, buyerHash)
+    setMessages(msgs)
+    const threadData = await getThread(tid)
+    onThreadLoaded?.(tid, !!threadData?.escrow_agreed, threadData?.escrow_status ?? null)
+  }
+
   if (!supabase) {
     return (
       <div className="p-4 border-2 border-[#660099] rounded text-center text-[#660099]">
@@ -222,10 +239,27 @@ export default function ListingChat({
 
   return (
     <div className="border-2 border-[#660099] rounded overflow-hidden">
-      <div className="bg-[#660099]/30 px-4 py-2 border-b border-[#660099]">
+      <div className="bg-[#660099]/30 px-4 py-2 border-b border-[#660099] flex flex-col gap-2">
         <span className="text-sm font-pixel-alt text-[#00ff00]" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
           💬 Encrypted Chat {isSeller ? '(Seller)' : '(Buyer)'}
         </span>
+        {isSeller && allThreads.length > 1 && (
+          <select
+            value={threadId || ''}
+            onChange={(e) => {
+              const t = allThreads.find((x) => x.id === e.target.value)
+              if (t) switchThread(t.id, t.buyer_wallet_hash)
+            }}
+            className="bg-black border border-[#660099] text-[#00ff00] text-xs font-pixel-alt px-2 py-1 rounded max-w-full"
+            style={{ fontFamily: 'var(--font-pixel-alt)' }}
+          >
+            {allThreads.map((t, i) => (
+              <option key={t.id} value={t.id}>
+                Conversation {i + 1} (buyer …{t.buyer_wallet_hash.slice(-8)})
+              </option>
+            ))}
+          </select>
+        )}
       </div>
       <div className="h-64 overflow-y-auto p-3 space-y-2 bg-black/50">
         {messages.map((m) => (
