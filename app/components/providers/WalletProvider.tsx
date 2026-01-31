@@ -9,7 +9,9 @@ import { useMemo } from 'react'
 import '@solana/wallet-adapter-react-ui/styles.css'
 
 export default function WalletProvider({ children }: { children: React.ReactNode }) {
-  const network = WalletAdapterNetwork.Devnet // Change to Mainnet for production
+  const network = process.env.NEXT_PUBLIC_SOLANA_NETWORK === 'mainnet-beta'
+    ? WalletAdapterNetwork.Mainnet
+    : WalletAdapterNetwork.Devnet
   const endpoint = useMemo(() => {
     return process.env.NEXT_PUBLIC_RPC_URL || clusterApiUrl(network)
   }, [network])
