@@ -44,7 +44,7 @@ export async function POST(
 
     const { data: listing, error: fetchError } = await supabaseAdmin
       .from('listings')
-      .select('id, buyer_wallet_hash, seller_wallet_hash, buyer_confirmed_received_at')
+      .select('id, buyer_wallet_hash, wallet_address_hash, buyer_confirmed_received_at')
       .eq('id', id)
       .single()
 
@@ -69,7 +69,7 @@ export async function POST(
       )
     }
 
-    const sellerHash = listing.wallet_address_hash
+    const sellerHash = (listing as { wallet_address_hash?: string }).wallet_address_hash
     if (!sellerHash) {
       return NextResponse.json({ error: 'Seller not found' }, { status: 400 })
     }

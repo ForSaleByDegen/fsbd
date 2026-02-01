@@ -39,7 +39,7 @@ export async function POST(
 
     const { data: listing, error: fetchError } = await supabaseAdmin
       .from('listings')
-      .select('id, buyer_wallet_hash, seller_wallet_hash, buyer_confirmed_received_at')
+      .select('id, buyer_wallet_hash, wallet_address_hash, buyer_confirmed_received_at')
       .eq('id', id)
       .single()
 
@@ -76,7 +76,7 @@ export async function POST(
     }
 
     // Increment seller's total_confirmed_received (honor system) - optional if migration not run
-    const sellerHash = listing.wallet_address_hash
+    const sellerHash = (listing as { wallet_address_hash?: string }).wallet_address_hash
     if (sellerHash) {
       try {
         const { data: profile } = await supabaseAdmin
