@@ -99,13 +99,23 @@ export default function OptionalEscrowSection({
         const signed = await signTransaction(transaction)
         const serialized = signed.serialize()
         const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL
-        const sig =
-          shouldUseRebate() && rpcUrl
-            ? await sendTransactionWithRebate(serialized, publicKey.toString(), rpcUrl, {
-                skipPreflight,
-                maxRetries: 3,
-              })
-            : await connection.sendRawTransaction(serialized, { skipPreflight, maxRetries: 3 })
+        const opts = { skipPreflight, maxRetries: 3 }
+        let sig: string
+        if (shouldUseRebate() && rpcUrl) {
+          try {
+            sig = await sendTransactionWithRebate(serialized, publicKey.toString(), rpcUrl, opts)
+          } catch (rebateErr: unknown) {
+            const rebateMsg = rebateErr instanceof Error ? rebateErr.message : String(rebateErr)
+            if (/failed to fetch|ERR_CONNECTION|network|fetch/i.test(rebateMsg)) {
+              console.warn('Helius rebate request failed, falling back to standard RPC:', rebateMsg)
+              sig = await connection.sendRawTransaction(serialized, opts)
+            } else {
+              throw rebateErr
+            }
+          }
+        } else {
+          sig = await connection.sendRawTransaction(serialized, opts)
+        }
         return { signature: sig, blockhash: freshBlockhash, lastValidBlockHeight }
       }
 

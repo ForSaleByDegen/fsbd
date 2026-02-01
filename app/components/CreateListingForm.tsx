@@ -109,14 +109,26 @@ export default function CreateListingForm() {
         transaction.recentBlockhash = blockhash
         transaction.feePayer = publicKey
 
-        // Sign and send payment (with Helius rebate when available)
+        // Sign and send payment (with Helius rebate when available, fallback on fetch failure)
         const signed = await signTransaction!(transaction)
         const serialized = signed.serialize()
         const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL
-        const signature =
-          shouldUseRebate() && rpcUrl
-            ? await sendTransactionWithRebate(serialized, publicKey.toString(), rpcUrl, { maxRetries: 3 })
-            : await connection.sendRawTransaction(serialized)
+        let signature: string
+        if (shouldUseRebate() && rpcUrl) {
+          try {
+            signature = await sendTransactionWithRebate(serialized, publicKey.toString(), rpcUrl, { maxRetries: 3 })
+          } catch (rebateErr: unknown) {
+            const msg = rebateErr instanceof Error ? rebateErr.message : String(rebateErr)
+            if (/failed to fetch|ERR_CONNECTION|network|fetch/i.test(msg)) {
+              console.warn('Helius rebate failed, using standard RPC:', msg)
+              signature = await connection.sendRawTransaction(serialized)
+            } else {
+              throw rebateErr
+            }
+          }
+        } else {
+          signature = await connection.sendRawTransaction(serialized)
+        }
         await connection.confirmTransaction(signature)
 
         // Update user profile stats
