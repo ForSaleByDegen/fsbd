@@ -9,6 +9,7 @@ import Link from 'next/link'
 import ListingCard from '@/components/ListingCard'
 import BuyerOrderActions from '@/components/BuyerOrderActions'
 import ShippingAddressGuidance from '@/components/ShippingAddressGuidance'
+import LocalShippingAddressForm from '@/components/LocalShippingAddressForm'
 
 // Dynamic import for Privy to avoid build issues
 let usePrivy: any = null
@@ -364,12 +365,13 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Delivery address guidance - we do not store addresses */}
+        {/* Delivery address - optional local save (encrypted) or guidance */}
         <section className="mb-6">
           <h2 className="text-xl font-pixel text-[#00ff00] mb-3" style={{ fontFamily: 'var(--font-pixel)' }}>
             Delivery address
           </h2>
-          <div className="p-4 bg-black/50 border-2 border-[#660099] rounded max-w-xl">
+          <div className="space-y-4 max-w-xl">
+            <LocalShippingAddressForm />
             <ShippingAddressGuidance />
           </div>
         </section>

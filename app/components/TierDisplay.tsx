@@ -2,13 +2,25 @@
 
 import { useState, useEffect } from 'react'
 import { useWallet, useConnection } from '@solana/wallet-adapter-react'
-import { getUserTier, TIER_THRESHOLDS, getTierBenefits } from '@/lib/tier-check'
+import { getUserTier, TIER_THRESHOLDS, getTierBenefits, type TierThresholds } from '@/lib/tier-check'
 
 export default function TierDisplay() {
   const { publicKey } = useWallet()
   const { connection } = useConnection()
   const [tier, setTier] = useState<'free' | 'bronze' | 'silver' | 'gold'>('free')
   const [loading, setLoading] = useState(true)
+  const [thresholds, setThresholds] = useState<TierThresholds>(TIER_THRESHOLDS)
+
+  useEffect(() => {
+    fetch('/api/config')
+      .then((r) => r.json())
+      .then((c) => {
+        if (c.tier_bronze != null && c.tier_silver != null && c.tier_gold != null) {
+          setThresholds({ bronze: c.tier_bronze, silver: c.tier_silver, gold: c.tier_gold })
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (publicKey && connection) {
@@ -16,12 +28,12 @@ export default function TierDisplay() {
     } else {
       setLoading(false)
     }
-  }, [publicKey, connection])
+  }, [publicKey, connection, thresholds])
 
   const loadTier = async () => {
     if (!publicKey || !connection) return
     try {
-      const userTier = await getUserTier(publicKey.toString(), connection)
+      const userTier = await getUserTier(publicKey.toString(), connection, thresholds)
       setTier(userTier)
     } catch (error) {
       console.error('Error loading tier:', error)
@@ -38,17 +50,17 @@ export default function TierDisplay() {
     },
     {
       name: 'Bronze',
-      threshold: TIER_THRESHOLDS.bronze,
+      threshold: thresholds.bronze,
       color: 'border-orange-400'
     },
     {
       name: 'Silver',
-      threshold: TIER_THRESHOLDS.silver,
+      threshold: thresholds.silver,
       color: 'border-gray-400'
     },
     {
       name: 'Gold',
-      threshold: TIER_THRESHOLDS.gold,
+      threshold: thresholds.gold,
       color: 'border-yellow-400'
     }
   ]

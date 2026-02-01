@@ -47,9 +47,14 @@ export default function PrivacyPage() {
               
               <h3 className="text-base font-pixel text-[#ff00ff] mb-2 mt-3">3.2 Off-Chain Data</h3>
               <p>
-                We do NOT collect or store shipping addresses, physical addresses, or delivery information. 
-                Address exchange happens directly between users via encrypted chat; we never have access to 
-                decrypted addresses.
+                We do NOT collect or store shipping addresses, physical addresses, or delivery information on our 
+                servers. Address exchange happens directly between users via encrypted chat; we never have access 
+                to decrypted addresses.
+              </p>
+              <p className="mt-2">
+                <strong>Optional local storage:</strong> Users may choose to save a shipping address on their own 
+                device (in the browser&apos;s local storage), encrypted with a PIN or wallet signature. This data 
+                stays on the user&apos;s device only and is never sent to our servers. Clearing site data removes it.
               </p>
               <p className="mt-2">
                 We may store the following information in our database:

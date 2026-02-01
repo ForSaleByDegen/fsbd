@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useWallet } from '@solana/wallet-adapter-react'
 import { supabase } from '@/lib/supabase'
 import { hashWalletAddress } from '@/lib/supabase'
 import {
@@ -12,6 +13,12 @@ import {
   getThread,
   type ChatMessage,
 } from '@/lib/chat'
+import {
+  hasStoredAddress,
+  getStoredBlob,
+  decryptAndGet,
+  formatAddressForChat,
+} from '@/lib/local-shipping-address'
 import { Button } from './ui/button'
 
 interface ListingChatProps {
@@ -36,7 +43,11 @@ export default function ListingChat({
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [sending, setSending] = useState(false)
+  const [showPinModal, setShowPinModal] = useState(false)
+  const [pinInput, setPinInput] = useState('')
+  const [loadingAddress, setLoadingAddress] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const { signMessage } = useWallet()
 
   const sellerHash = hashWalletAddress(listing.wallet_address)
   const buyerHash = hashWalletAddress(currentUserWallet)
@@ -202,6 +213,52 @@ export default function ListingChat({
     setSending(false)
   }
 
+  const hasAddress = hasStoredAddress(currentUserWallet)
+  const storedBlob = getStoredBlob(currentUserWallet)
+
+  const handleUseSavedAddress = async (pin?: string) => {
+    if (!currentUserWallet || loadingAddress) return
+    const blob = storedBlob
+    if (!blob) return
+    setLoadingAddress(true)
+    try {
+      let addr
+      if (blob.method === 'pin') {
+        if (!pin) {
+          setShowPinModal(true)
+          setLoadingAddress(false)
+          return
+        }
+        addr = await decryptAndGet(currentUserWallet, { type: 'pin', pin })
+      } else {
+        if (!signMessage) {
+          alert('Wallet sign not available')
+          setLoadingAddress(false)
+          return
+        }
+        addr = await decryptAndGet(currentUserWallet, {
+          type: 'signature',
+          signMessage: (m) => signMessage(m),
+        })
+      }
+      if (addr) {
+        setInput(formatAddressForChat(addr))
+        setShowPinModal(false)
+        setPinInput('')
+      } else {
+        alert('Could not decrypt. Wrong PIN or sign cancelled.')
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to load address')
+    } finally {
+      setLoadingAddress(false)
+    }
+  }
+
+  const handlePinSubmit = () => {
+    handleUseSavedAddress(pinInput)
+  }
+
   const switchThread = async (tid: string, buyerHash: string) => {
     setThreadId(tid)
     setThreadBuyerHash(buyerHash)
@@ -309,6 +366,18 @@ export default function ListingChat({
           Send
         </Button>
       </div>
+      {!isSeller && hasAddress && (
+        <div className="p-2 border-t border-[#660099]">
+          <Button
+            onClick={() => handleUseSavedAddress()}
+            disabled={sending || loadingAddress}
+            variant="outline"
+            className="w-full border-2 border-[#aa77ee] text-[#aa77ee] hover:bg-[#aa77ee]/20 text-sm font-pixel-alt"
+          >
+            {loadingAddress ? '...' : 'Use my saved address'}
+          </Button>
+        </div>
+      )}
       <div className="p-2 border-t border-[#660099] flex gap-2">
         <Button
           onClick={handleProposeEscrow}

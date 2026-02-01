@@ -38,24 +38,29 @@ export async function getUserTokenBalance(
   }
 }
 
+export type TierThresholds = { bronze: number; silver: number; gold: number }
+
 /**
  * Get user's tier based on $FSBD token balance
  * Checks on-chain balance - no data sharing, fully private
  * Uses mock mint for devnet testing
+ * @param thresholds - Optional overrides (e.g. from /api/config); uses TIER_THRESHOLDS or env vars if not provided
  */
 export async function getUserTier(
   walletAddress: string,
-  connection: Connection
+  connection: Connection,
+  thresholds?: TierThresholds
 ): Promise<Tier> {
-  // Use mock mint for devnet if placeholder
-  const mintToUse = FSBD_TOKEN_MINT === 'FSBD_TOKEN_MINT_PLACEHOLDER' 
-    ? MOCK_FSBD_MINT 
+  const th = thresholds ?? TIER_THRESHOLDS
+
+  const mintToUse = FSBD_TOKEN_MINT === 'FSBD_TOKEN_MINT_PLACEHOLDER'
+    ? MOCK_FSBD_MINT
     : FSBD_TOKEN_MINT
 
   try {
     const mintPublicKey = new PublicKey(mintToUse)
     const userPublicKey = new PublicKey(walletAddress)
-    
+
     const tokenAccount = await getAssociatedTokenAddress(
       mintPublicKey,
       userPublicKey
@@ -65,13 +70,11 @@ export async function getUserTier(
     const mintInfo = await getMint(connection, mintPublicKey)
     const balance = Number(accountInfo.amount) / (10 ** mintInfo.decimals)
 
-    if (balance >= TIER_THRESHOLDS.gold) return 'gold'
-    if (balance >= TIER_THRESHOLDS.silver) return 'silver'
-    if (balance >= TIER_THRESHOLDS.bronze) return 'bronze'
+    if (balance >= th.gold) return 'gold'
+    if (balance >= th.silver) return 'silver'
+    if (balance >= th.bronze) return 'bronze'
     return 'free'
-  } catch (error) {
-    // Token account doesn't exist or error - return free tier
-    // For devnet testing, you can manually set tier by holding mock tokens
+  } catch {
     return 'free'
   }
 }

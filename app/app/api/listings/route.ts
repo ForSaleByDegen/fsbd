@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PublicKey } from '@solana/web3.js'
+import { Connection, PublicKey } from '@solana/web3.js'
 import { supabase, hashWalletAddress } from '@/lib/supabase'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getUserTokenBalance } from '@/lib/tier-check'
 
 const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/
 
@@ -86,6 +87,32 @@ export async function POST(request: NextRequest) {
 
     const walletHash = hashWalletAddress(wa)
     const listingData = { ...body, wallet_address: wa, wallet_address_hash: walletHash }
+
+    // Enforce auction creation gate (tier limit)
+    if (body.is_auction === true) {
+      let auctionMinTokens = 10000000
+      if (supabaseAdmin) {
+        const { data: configRows } = await supabaseAdmin
+          .from('platform_config')
+          .select('key, value_json')
+        for (const row of configRows || []) {
+          if ((row as { key: string }).key === 'auction_min_tokens') {
+            const val = (row as { value_json: unknown }).value_json
+            auctionMinTokens = typeof val === 'number' ? val : parseInt(String(val), 10) || 10000000
+            break
+          }
+        }
+      }
+      const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || 'https://api.mainnet-beta.solana.com'
+      const connection = new Connection(rpcUrl)
+      const balance = await getUserTokenBalance(wa, connection)
+      if (balance < auctionMinTokens) {
+        return NextResponse.json(
+          { error: `Auction creation requires ${auctionMinTokens.toLocaleString()} $FSBD. Your balance: ${balance.toLocaleString()} $FSBD.` },
+          { status: 403 }
+        )
+      }
+    }
 
     // Prefer supabaseAdmin (bypasses RLS) for reliable insert
     const client = supabaseAdmin || supabase

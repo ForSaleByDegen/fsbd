@@ -5,7 +5,7 @@ import { useWallet, useConnection } from '@solana/wallet-adapter-react'
 import { useRouter } from 'next/navigation'
 import { Transaction, SystemProgram, LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js'
 import { getUserTier, getUserTokenBalance, calculateListingFee, canCreateAuctionWithBalance } from '@/lib/tier-check'
-import { supabase, hashWalletAddress } from '@/lib/supabase'
+import { hashWalletAddress } from '@/lib/supabase'
 import { uploadImageToIPFS } from '@/lib/pinata'
 import { createAuctionToken, simulateDevBuy } from '@/lib/auction-utils'
 import { Button } from './ui/button'
@@ -159,25 +159,17 @@ export default function AuctionForm() {
         highest_bidder: null
       }
 
-      if (supabase) {
-        const { data, error } = await supabase
-          .from('listings')
-          .insert([listingData])
-          .select()
-          .single()
-
-        if (error) throw error
-        router.push(`/listings/${data.id}`)
-      } else {
-        // Fallback to API route
-        const response = await fetch('/api/listings', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(listingData)
-        })
-        const data = await response.json()
-        router.push(`/listings/${data.id}`)
+      // Always use API for auction creation so server-side tier gate is enforced
+      const response = await fetch('/api/listings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(listingData)
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create auction')
       }
+      router.push(`/listings/${data.id}`)
     } catch (error: any) {
       console.error('Error creating auction:', error)
       alert('Failed to create auction: ' + (error.message || 'Unknown error'))
