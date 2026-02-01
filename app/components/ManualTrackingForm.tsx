@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useWallet } from '@solana/wallet-adapter-react'
-import { supabase } from '@/lib/supabase'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 
@@ -35,26 +34,22 @@ export default function ManualTrackingForm({ listingId, onTrackingAdded }: Manua
       setLoading(true)
       setError(null)
 
-      // Update listing with manual tracking info
-      if (supabase) {
-        const { error: updateError } = await supabase
-          .from('listings')
-          .update({
-            tracking_number: trackingNumber.trim(),
-            shipping_carrier: carrier,
-            escrow_status: 'shipped',
-            status: 'shipped',
-            shipped_at: new Date().toISOString()
-          })
-          .eq('id', listingId)
-
-        if (updateError) {
-          throw new Error(`Failed to save tracking: ${updateError.message}`)
-        }
-
-        alert('Tracking information saved! The buyer will be notified.')
-        onTrackingAdded()
+      const res = await fetch(`/api/listings/${listingId}/add-tracking`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          wallet: publicKey.toString(),
+          tracking_number: trackingNumber.trim(),
+          shipping_carrier: carrier,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(data.error || `Failed to save tracking (${res.status})`)
       }
+
+      alert('Tracking information saved! The buyer will be notified.')
+      onTrackingAdded()
     } catch (err: any) {
       console.error('Error saving tracking:', err)
       setError(err.message || 'Failed to save tracking information')

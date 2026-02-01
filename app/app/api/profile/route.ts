@@ -63,10 +63,10 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Fetch user's listings (as seller)
+    // Fetch user's listings (as seller) - include tracking for sold listings
     const { data: listings = [] } = await supabaseAdmin
       .from('listings')
-      .select('id, title, price, price_token, status, escrow_status, images, category, created_at')
+      .select('id, title, price, price_token, status, escrow_status, images, category, created_at, tracking_number, shipping_carrier, buyer_wallet_hash')
       .eq('wallet_address_hash', walletHash)
       .order('created_at', { ascending: false })
 

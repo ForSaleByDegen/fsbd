@@ -42,7 +42,19 @@ function getWalletAddress(
 
 type ProfileData = {
   profile: { listings_count: number; total_fees_paid: number; total_listings_sold: number } | null
-  listings: Array<{ id: string; title: string; price: number; price_token: string; status: string; escrow_status?: string; images?: string[]; category: string }>
+  listings: Array<{
+    id: string
+    title: string
+    price: number
+    price_token: string
+    status: string
+    escrow_status?: string
+    images?: string[]
+    category: string
+    tracking_number?: string
+    shipping_carrier?: string
+    buyer_wallet_hash?: string
+  }>
   escrows: Array<{ id: string; listing_id: string; escrow_status: string; listing_title?: string; listing_price?: number; listing_price_token?: string }>
   bids: Array<{ id: string; title: string; price: number; highest_bid: number; status: string; images?: string[]; category: string }>
   purchases: Array<{
@@ -56,6 +68,97 @@ type ProfileData = {
     tracking_number?: string
     shipping_carrier?: string
   }>
+}
+
+function SellerAddTrackingForm({
+  listingId,
+  title,
+  price,
+  priceToken,
+  walletAddress,
+  onSaved,
+}: {
+  listingId: string
+  title: string
+  price: number
+  priceToken: string
+  walletAddress: string | null
+  onSaved: () => void
+}) {
+  const [trackingNumber, setTrackingNumber] = useState('')
+  const [carrier, setCarrier] = useState('USPS')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!walletAddress || !trackingNumber.trim()) {
+      setError('Enter a tracking number')
+      return
+    }
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/listings/${listingId}/add-tracking`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          wallet: walletAddress,
+          tracking_number: trackingNumber.trim(),
+          shipping_carrier: carrier,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || `Failed (${res.status})`)
+      setTrackingNumber('')
+      onSaved()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="p-3 sm:p-4 bg-black/50 border-2 border-[#660099]">
+      <Link href={`/listings/${listingId}`} className="block mb-2">
+        <span className="text-[#00ff00] font-pixel-alt text-sm sm:text-base" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          {title} • {price} {priceToken}
+        </span>
+      </Link>
+      <form onSubmit={handleSubmit} className="flex flex-wrap gap-2 items-end">
+        <select
+          value={carrier}
+          onChange={(e) => setCarrier(e.target.value)}
+          className="bg-black border-2 border-[#660099] text-[#00ff00] font-pixel-alt text-xs p-2 min-w-[80px]"
+          style={{ fontFamily: 'var(--font-pixel-alt)' }}
+        >
+          <option value="USPS">USPS</option>
+          <option value="UPS">UPS</option>
+          <option value="FedEx">FedEx</option>
+          <option value="DHL">DHL</option>
+          <option value="Other">Other</option>
+        </select>
+        <input
+          type="text"
+          value={trackingNumber}
+          onChange={(e) => setTrackingNumber(e.target.value)}
+          placeholder="Tracking #"
+          className="flex-1 min-w-[120px] bg-black border-2 border-[#660099] text-[#00ff00] font-pixel-alt text-xs p-2"
+          style={{ fontFamily: 'var(--font-pixel-alt)' }}
+        />
+        <button
+          type="submit"
+          disabled={loading}
+          className="px-4 py-2 border-2 border-[#00ff00] text-[#00ff00] hover:bg-[#00ff00] hover:text-black font-pixel-alt text-xs disabled:opacity-50"
+          style={{ fontFamily: 'var(--font-pixel-alt)' }}
+        >
+          {loading ? 'Saving...' : 'Save'}
+        </button>
+      </form>
+      {error && <p className="text-red-500 text-xs font-pixel-alt mt-1">{error}</p>}
+    </div>
+  )
 }
 
 function getTrackingUrl(carrier: string | undefined, trackingNumber: string): string {
@@ -282,6 +385,44 @@ export default function ProfilePage() {
               View All Listings
             </button>
           </Link>
+        </section>
+
+        {/* Add Shipping Info - sold listings needing tracking */}
+        <section className="mb-6">
+          <h2 className="text-xl font-pixel text-[#00ff00] mb-3" style={{ fontFamily: 'var(--font-pixel)' }}>
+            📦 Add Shipping Info
+          </h2>
+          {loading ? (
+            <p className="text-[#660099] font-pixel-alt text-sm">Loading...</p>
+          ) : (() => {
+            const soldNeedingTracking = listings.filter(
+              (l: (typeof listings)[0]) =>
+                (l.status === 'sold' || l.status === 'in_escrow' || l.status === 'shipped') &&
+                !(l.tracking_number && String(l.tracking_number).trim())
+            )
+            return soldNeedingTracking.length === 0 ? (
+              <p className="text-[#660099] font-pixel-alt text-sm mb-4">
+                No sold items awaiting tracking. Add tracking from the listing page after you ship.
+              </p>
+            ) : (
+              <div className="space-y-4 mb-4">
+                {soldNeedingTracking.map((l: (typeof listings)[0]) => (
+                  <SellerAddTrackingForm
+                    key={l.id}
+                    listingId={l.id}
+                    title={l.title}
+                    price={l.price}
+                    priceToken={l.price_token || 'SOL'}
+                    walletAddress={walletAddress}
+                    onSaved={loadProfile}
+                  />
+                ))}
+              </div>
+            )
+          })()}
+          <p className="text-[#660099] font-pixel-alt text-xs mt-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+            Add tracking after you ship so the buyer can track their package.
+          </p>
         </section>
 
         {/* Escrows */}
