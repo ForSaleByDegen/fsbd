@@ -402,7 +402,7 @@ export default function ProfilePage() {
             )
             return soldNeedingTracking.length === 0 ? (
               <p className="text-[#660099] font-pixel-alt text-sm mb-4">
-                No sold items awaiting tracking. Add tracking from the listing page after you ship.
+                No sold items awaiting tracking. Sold something? Open the listing and add tracking there.
               </p>
             ) : (
               <div className="space-y-4 mb-4">

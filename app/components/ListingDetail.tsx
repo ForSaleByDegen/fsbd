@@ -11,6 +11,7 @@ import { Button } from './ui/button'
 import BiddingSection from './BiddingSection'
 import ListingChat from './ListingChat'
 import OptionalEscrowSection from './OptionalEscrowSection'
+import ManualTrackingForm from './ManualTrackingForm'
 import TermsAgreementModal from './TermsAgreementModal'
 import { hasAcceptedTerms, acceptTerms } from '@/lib/chat'
 
@@ -581,7 +582,7 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
           )}
 
           {publicKey && publicKey.toString() === listing.wallet_address && (
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-4">
               <p className="text-[#660099] font-pixel-alt text-sm sm:text-base" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                 This is your listing
               </p>
@@ -589,6 +590,14 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
                 <UnlistButton
                   listingId={listingId}
                   onSuccess={() => { router.push('/profile'); router.refresh(); }}
+                />
+              )}
+              {/* Add tracking for sold items without tracking yet */}
+              {(listing.status === 'sold' || listing.status === 'shipped') &&
+                !(listing.tracking_number && String(listing.tracking_number).trim()) && (
+                <ManualTrackingForm
+                  listingId={listingId}
+                  onTrackingAdded={() => { fetchListing(); router.refresh(); }}
                 />
               )}
             </div>
