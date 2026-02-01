@@ -23,17 +23,15 @@ import {
 import { transfer, createTransferInstruction } from '@solana/spl-token'
 import { WalletContextState } from '@solana/wallet-adapter-react'
 
-// Mock dev wallet for testing (replace with actual dev wallet keypair in production)
-const DEV_WALLET_SECRET = process.env.NEXT_PUBLIC_DEV_WALLET_SECRET || ''
-let devWallet: Keypair | null = null
-
-if (DEV_WALLET_SECRET) {
+// Dev wallet PUBLIC address only - safe to expose (it's a public key, not a secret).
+// NEVER use NEXT_PUBLIC_* for private keys or keypairs.
+const DEV_WALLET_ADDRESS = process.env.NEXT_PUBLIC_DEV_WALLET_ADDRESS || process.env.DEV_WALLET_ADDRESS || ''
+let devWalletPubkey: PublicKey | null = null
+if (DEV_WALLET_ADDRESS) {
   try {
-    devWallet = Keypair.fromSecretKey(
-      new Uint8Array(JSON.parse(DEV_WALLET_SECRET))
-    )
-  } catch (e) {
-    console.warn('Dev wallet not configured')
+    devWalletPubkey = new PublicKey(DEV_WALLET_ADDRESS)
+  } catch {
+    devWalletPubkey = null
   }
 }
 
@@ -148,15 +146,15 @@ export async function createAuctionToken(
     )
   )
 
-  // Create dev token account and mint dev's portion if dev wallet exists
-  if (devWallet) {
-    const devTokenAccount = getAssociatedTokenAddressSync(mint, devWallet.publicKey)
+  // Create dev token account and mint dev's portion if dev wallet address configured (public key only)
+  if (devWalletPubkey) {
+    const devTokenAccount = getAssociatedTokenAddressSync(mint, devWalletPubkey)
     
     transaction.add(
       createAssociatedTokenAccountInstruction(
         seller, // payer
         devTokenAccount, // ATA address
-        devWallet.publicKey, // owner
+        devWalletPubkey, // owner
         mint // mint
       )
     )
@@ -191,8 +189,9 @@ export async function createAuctionToken(
 }
 
 /**
- * Simulate dev buy of tokens (mock transaction)
- * Transfers SOL from dev wallet to buy tokens based on item value
+ * Simulate dev buy of tokens (mock transaction).
+ * SECURITY: Requires dev wallet private key to sign - must run server-side only.
+ * In client, this is a no-op (returns null). Use POST /api/auction/simulate-dev-buy for server-side execution.
  */
 export async function simulateDevBuy(
   connection: Connection,
@@ -200,65 +199,12 @@ export async function simulateDevBuy(
   seller: PublicKey,
   itemValue: number // in SOL
 ): Promise<string | null> {
-  if (!devWallet) {
-    console.warn('Dev wallet not configured, skipping dev buy simulation')
+  // Never load or use private keys in client bundle
+  if (typeof window !== 'undefined') {
     return null
   }
-
-  try {
-    // Calculate buy amount: 0.1 SOL base, scale by item value
-    let buyAmountSOL = 0.1
-    if (itemValue > 1) {
-      buyAmountSOL = 0.2 // Scale up for higher value items
-    }
-
-    const buyAmountLamports = buyAmountSOL * LAMPORTS_PER_SOL
-
-    // Check dev wallet balance
-    const balance = await connection.getBalance(devWallet.publicKey)
-    if (balance < buyAmountLamports) {
-      console.warn('Dev wallet insufficient balance for buy simulation')
-      return null
-    }
-
-    // Get token accounts
-    const devTokenAccount = await getAssociatedTokenAddress(tokenMint, devWallet.publicKey)
-    const sellerTokenAccount = await getAssociatedTokenAddress(tokenMint, seller)
-
-    // Calculate token amount to buy (simple: 1 SOL = 10M tokens)
-    const tokenAmount = BigInt(Math.floor(buyAmountSOL * 10_000_000)) * BigInt(10 ** 9)
-
-    // Create transaction: SOL transfer + token transfer
-    const transaction = new Transaction()
-
-    // Transfer SOL to seller
-    transaction.add(
-      SystemProgram.transfer({
-        fromPubkey: devWallet.publicKey,
-        toPubkey: seller,
-        lamports: buyAmountLamports,
-      })
-    )
-
-    // Transfer tokens from seller to dev (simulating purchase)
-    // Note: In production, this would be a proper swap/DEX interaction
-    // For now, we'll just simulate the SOL transfer
-    // The actual token transfer would require seller's signature in a real scenario
-
-    // Sign and send (dev wallet signs)
-    transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
-    transaction.feePayer = devWallet.publicKey
-    transaction.sign(devWallet)
-
-    const signature = await connection.sendRawTransaction(transaction.serialize())
-    await connection.confirmTransaction(signature)
-
-    console.log(`Dev buy simulated: ${buyAmountSOL} SOL for listing`)
-    return signature
-  } catch (error) {
-    console.error('Error simulating dev buy:', error)
-    return null
-  }
+  // Server-side: would require API route with DEV_WALLET_SECRET (never NEXT_PUBLIC_)
+  return null
 }
 
 /**

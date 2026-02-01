@@ -32,6 +32,15 @@ If you discover a security vulnerability, please:
 3. Include details about the vulnerability
 4. Allow time for a fix before public disclosure
 
+## Private Key Handling (Critical)
+
+**We never send, receive, or store user private keys.**
+
+- **User wallets**: Users connect via Phantom, Solflare, etc. Private keys stay in the wallet extension. We only receive `publicKey` and `signTransaction` (the wallet signs; we never see the key).
+- **No `NEXT_PUBLIC_*` secrets**: Never put private keys, API secrets, or signing keys in `NEXT_PUBLIC_*` env vars—they are bundled into client JavaScript and exposed.
+- **Server-side only**: Any keypair (e.g. cNFT tree creator, deploy scripts) must use server-only env vars (`KEYPAIR_PATH`, `TREE_CREATOR_KEYPAIR`) and run only in API routes or Node scripts, never in client code.
+- **Encryption**: If we ever need to handle sensitive data, it is encrypted before storage and keys are never stored insecurely.
+
 ## Best Practices for Users
 
 1. **Never share your private keys** - this app never asks for them
