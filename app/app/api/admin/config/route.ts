@@ -1,6 +1,6 @@
 /**
  * Admin-only: update platform config
- * Body: { wallet: string, auction_min_tokens?: number, tier_bronze?: number, tier_silver?: number, tier_gold?: number }
+ * Body: { wallet: string, auction_min_tokens?: number, tier_bronze?: number, tier_silver?: number, tier_gold?: number, fsbd_token_mint?: string }
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
@@ -30,7 +30,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const walletHash = hashWalletAddress(wallet)
-    const updates: Record<string, number> = {}
+    const updates: Record<string, number | string> = {}
     if (typeof body.auction_min_tokens === 'number' && body.auction_min_tokens >= 0) {
       updates.auction_min_tokens = Math.floor(body.auction_min_tokens)
     }
@@ -42,6 +42,9 @@ export async function PATCH(request: NextRequest) {
     }
     if (typeof body.tier_gold === 'number' && body.tier_gold >= 0) {
       updates.tier_gold = Math.floor(body.tier_gold)
+    }
+    if (typeof body.fsbd_token_mint === 'string' && body.fsbd_token_mint.trim()) {
+      updates.fsbd_token_mint = body.fsbd_token_mint.trim()
     }
 
     if (Object.keys(updates).length === 0) {

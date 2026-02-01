@@ -20,18 +20,25 @@ export async function GET() {
       return NextResponse.json(getDefaults())
     }
 
-    const config: Record<string, number> = {}
+    const config: Record<string, number | string> = {}
     for (const row of data || []) {
+      const key = (row as { key: string }).key
       const val = (row as { value_json: unknown }).value_json
-      if (typeof val === 'number') config[row.key] = val
-      else if (typeof val === 'string') config[row.key] = parseInt(val, 10) || 0
+      if (key === 'fsbd_token_mint' && typeof val === 'string') {
+        config.fsbd_token_mint = val
+      } else if (typeof val === 'number') {
+        config[key] = val
+      } else if (typeof val === 'string') {
+        config[key] = parseInt(val, 10) || 0
+      }
     }
 
     return NextResponse.json({
-      auction_min_tokens: config.auction_min_tokens ?? 10000000,
-      tier_bronze: config.tier_bronze ?? 100000,
-      tier_silver: config.tier_silver ?? 1000000,
-      tier_gold: config.tier_gold ?? 10000000,
+      auction_min_tokens: (config.auction_min_tokens as number) ?? 10000000,
+      tier_bronze: (config.tier_bronze as number) ?? 100000,
+      tier_silver: (config.tier_silver as number) ?? 1000000,
+      tier_gold: (config.tier_gold as number) ?? 10000000,
+      fsbd_token_mint: (config.fsbd_token_mint as string) ?? process.env.NEXT_PUBLIC_FSBD_TOKEN_MINT ?? 'FSBD_TOKEN_MINT_PLACEHOLDER',
     })
   } catch (e) {
     console.error('Config error:', e)
@@ -45,5 +52,6 @@ function getDefaults() {
     tier_bronze: 100000,
     tier_silver: 1000000,
     tier_gold: 10000000,
+    fsbd_token_mint: process.env.NEXT_PUBLIC_FSBD_TOKEN_MINT ?? 'FSBD_TOKEN_MINT_PLACEHOLDER',
   }
 }

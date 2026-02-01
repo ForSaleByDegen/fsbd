@@ -88,24 +88,27 @@ export async function POST(request: NextRequest) {
     const walletHash = hashWalletAddress(wa)
     const listingData = { ...body, wallet_address: wa, wallet_address_hash: walletHash }
 
-    // Enforce auction creation gate (tier limit)
+    // Enforce auction creation gate (tier limit) - uses $FSBD holdings
     if (body.is_auction === true) {
       let auctionMinTokens = 10000000
+      let fsbdMint: string | null = null
       if (supabaseAdmin) {
         const { data: configRows } = await supabaseAdmin
           .from('platform_config')
           .select('key, value_json')
         for (const row of configRows || []) {
-          if ((row as { key: string }).key === 'auction_min_tokens') {
-            const val = (row as { value_json: unknown }).value_json
+          const key = (row as { key: string }).key
+          const val = (row as { value_json: unknown }).value_json
+          if (key === 'auction_min_tokens') {
             auctionMinTokens = typeof val === 'number' ? val : parseInt(String(val), 10) || 10000000
-            break
+          } else if (key === 'fsbd_token_mint' && typeof val === 'string') {
+            fsbdMint = val
           }
         }
       }
       const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || 'https://api.mainnet-beta.solana.com'
       const connection = new Connection(rpcUrl)
-      const balance = await getUserTokenBalance(wa, connection)
+      const balance = await getUserTokenBalance(wa, connection, fsbdMint || undefined)
       if (balance < auctionMinTokens) {
         return NextResponse.json(
           { error: `Auction creation requires ${auctionMinTokens.toLocaleString()} $FSBD. Your balance: ${balance.toLocaleString()} $FSBD.` },

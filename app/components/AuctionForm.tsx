@@ -42,7 +42,7 @@ export default function AuctionForm() {
     tokenSymbol: ''
   })
 
-  // Check tier on mount
+  // Check tier, balance, and config on mount
   useEffect(() => {
     if (publicKey && connection) {
       checkTier()
@@ -56,8 +56,19 @@ export default function AuctionForm() {
     
     try {
       setTierLoading(true)
-      const userTier = await getUserTier(publicKey.toString(), connection)
+      const configRes = await fetch('/api/config').then((r) => r.json()).catch(() => ({}))
+      const mintOverride = configRes.fsbd_token_mint && configRes.fsbd_token_mint !== 'FSBD_TOKEN_MINT_PLACEHOLDER'
+        ? configRes.fsbd_token_mint
+        : undefined
+      const [balance, userTier] = await Promise.all([
+        getUserTokenBalance(publicKey.toString(), connection, mintOverride),
+        getUserTier(publicKey.toString(), connection, undefined, mintOverride),
+      ])
       setTier(userTier)
+      setUserBalance(balance)
+      if (typeof configRes.auction_min_tokens === 'number') {
+        setAuctionMinTokens(configRes.auction_min_tokens)
+      }
     } catch (error) {
       console.error('Error checking tier:', error)
     } finally {

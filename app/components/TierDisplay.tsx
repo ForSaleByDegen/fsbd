@@ -10,6 +10,7 @@ export default function TierDisplay() {
   const [tier, setTier] = useState<'free' | 'bronze' | 'silver' | 'gold'>('free')
   const [loading, setLoading] = useState(true)
   const [thresholds, setThresholds] = useState<TierThresholds>(TIER_THRESHOLDS)
+  const [fsbdMint, setFsbdMint] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/config')
@@ -17,6 +18,9 @@ export default function TierDisplay() {
       .then((c) => {
         if (c.tier_bronze != null && c.tier_silver != null && c.tier_gold != null) {
           setThresholds({ bronze: c.tier_bronze, silver: c.tier_silver, gold: c.tier_gold })
+        }
+        if (c.fsbd_token_mint && c.fsbd_token_mint !== 'FSBD_TOKEN_MINT_PLACEHOLDER') {
+          setFsbdMint(c.fsbd_token_mint)
         }
       })
       .catch(() => {})
@@ -33,7 +37,7 @@ export default function TierDisplay() {
   const loadTier = async () => {
     if (!publicKey || !connection) return
     try {
-      const userTier = await getUserTier(publicKey.toString(), connection, thresholds)
+      const userTier = await getUserTier(publicKey.toString(), connection, thresholds, fsbdMint ?? undefined)
       setTier(userTier)
     } catch (error) {
       console.error('Error loading tier:', error)

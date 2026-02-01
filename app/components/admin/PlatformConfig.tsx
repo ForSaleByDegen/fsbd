@@ -12,6 +12,7 @@ export default function PlatformConfig() {
     tier_bronze: 100000,
     tier_silver: 1000000,
     tier_gold: 10000000,
+    fsbd_token_mint: '',
   })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -113,6 +114,20 @@ export default function PlatformConfig() {
               onChange={(e) => setConfig((c) => ({ ...c, tier_gold: parseInt(e.target.value, 10) || 0 }))}
               className="bg-black border-2 border-[#660099] text-[#00ff00]"
             />
+          </div>
+
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-pixel-alt text-[#00ff00] mb-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+              $FSBD Token Mint (lock after launch)
+            </label>
+            <Input
+              type="text"
+              placeholder="FSBD_TOKEN_MINT_PLACEHOLDER or base58 mint address"
+              value={config.fsbd_token_mint}
+              onChange={(e) => setConfig((c) => ({ ...c, fsbd_token_mint: e.target.value }))}
+              className="bg-black border-2 border-[#660099] text-[#00ff00] font-mono text-sm"
+            />
+            <p className="text-xs text-[#aa77ee] mt-1">Set your $FSBD mint address after launch. Tiers use this for balance checks.</p>
           </div>
         </div>
 

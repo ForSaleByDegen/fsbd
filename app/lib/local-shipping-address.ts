@@ -51,20 +51,29 @@ function sha256ToKey(hex: string): Uint8Array {
   return bytes
 }
 
+/** Ensure Uint8Array has ArrayBuffer for Web Crypto API compatibility (strict TypeScript) */
+function toBufferSource(arr: Uint8Array): ArrayBuffer {
+  const copy = new Uint8Array(arr.length)
+  copy.set(arr)
+  return copy.buffer as ArrayBuffer
+}
+
 /** Derive 32-byte key from PIN using PBKDF2 */
 async function deriveKeyFromPin(pin: string, salt: string): Promise<Uint8Array> {
   const enc = new TextEncoder()
+  const pinBuf = toBufferSource(enc.encode(pin))
   const keyMaterial = await crypto.subtle.importKey(
     'raw',
-    enc.encode(pin),
+    pinBuf,
     'PBKDF2',
     false,
     ['deriveBits']
   )
+  const saltBuf = toBufferSource(enc.encode(salt))
   const bits = await crypto.subtle.deriveBits(
     {
       name: 'PBKDF2',
-      salt: enc.encode(salt),
+      salt: saltBuf,
       iterations: PBKDF2_ITERATIONS,
       hash: 'SHA-256',
     },

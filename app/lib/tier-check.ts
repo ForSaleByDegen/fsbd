@@ -19,13 +19,25 @@ export const TIER_THRESHOLDS = {
 export type Tier = 'free' | 'bronze' | 'silver' | 'gold'
 
 /**
+ * Resolve which $FSBD mint to use (config/env override, or placeholder for devnet)
+ */
+export function getFsbdMintAddress(mintOverride?: string | null): string {
+  const fromOverride = mintOverride?.trim()
+  if (fromOverride && fromOverride !== 'FSBD_TOKEN_MINT_PLACEHOLDER') return fromOverride
+  if (FSBD_TOKEN_MINT !== 'FSBD_TOKEN_MINT_PLACEHOLDER') return FSBD_TOKEN_MINT
+  return MOCK_FSBD_MINT
+}
+
+/**
  * Get user's raw $FSBD token balance (for flexible thresholds like auction gate)
+ * @param mintOverride - Optional mint from platform_config; when set, uses real $FSBD
  */
 export async function getUserTokenBalance(
   walletAddress: string,
-  connection: Connection
+  connection: Connection,
+  mintOverride?: string | null
 ): Promise<number> {
-  const mintToUse = FSBD_TOKEN_MINT === 'FSBD_TOKEN_MINT_PLACEHOLDER' ? MOCK_FSBD_MINT : FSBD_TOKEN_MINT
+  const mintToUse = getFsbdMintAddress(mintOverride)
   try {
     const mintPublicKey = new PublicKey(mintToUse)
     const userPublicKey = new PublicKey(walletAddress)
@@ -45,17 +57,16 @@ export type TierThresholds = { bronze: number; silver: number; gold: number }
  * Checks on-chain balance - no data sharing, fully private
  * Uses mock mint for devnet testing
  * @param thresholds - Optional overrides (e.g. from /api/config); uses TIER_THRESHOLDS or env vars if not provided
+ * @param mintOverride - Optional mint from platform_config; when set, uses real $FSBD
  */
 export async function getUserTier(
   walletAddress: string,
   connection: Connection,
-  thresholds?: TierThresholds
+  thresholds?: TierThresholds,
+  mintOverride?: string | null
 ): Promise<Tier> {
   const th = thresholds ?? TIER_THRESHOLDS
-
-  const mintToUse = FSBD_TOKEN_MINT === 'FSBD_TOKEN_MINT_PLACEHOLDER'
-    ? MOCK_FSBD_MINT
-    : FSBD_TOKEN_MINT
+  const mintToUse = getFsbdMintAddress(mintOverride)
 
   try {
     const mintPublicKey = new PublicKey(mintToUse)
