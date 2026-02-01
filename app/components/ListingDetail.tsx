@@ -15,15 +15,6 @@ import OptionalEscrowSection from './OptionalEscrowSection'
 import TermsAgreementModal from './TermsAgreementModal'
 import { hasAcceptedTerms, acceptTerms } from '@/lib/chat'
 
-// Base58 alphabet (Solana addresses) - excludes 0, O, I, l, /
-const BASE58_REGEX = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/
-
-function isValidSolanaAddress(str: string): boolean {
-  if (!str || typeof str !== 'string') return false
-  const trimmed = str.trim()
-  return BASE58_REGEX.test(trimmed) && !trimmed.includes('/') && !trimmed.startsWith('http')
-}
-
 // Resolve price_token to actual mint when needed (USDC or token_mint)
 function resolveTokenMint(listing: { price_token?: string; token_mint?: string | null }): string | null {
   const pt = listing.price_token
@@ -120,15 +111,16 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
       
       const totalAmount = listing.price
       
-      // Validate seller wallet address (prevents "invalid base58" from URLs or corrupted data)
-      const walletAddr = String(listing.wallet_address || '').trim()
-      if (!isValidSolanaAddress(walletAddr)) {
-        console.error('Invalid wallet_address:', { raw: listing.wallet_address, length: walletAddr?.length })
-        throw new Error(
-          'This listing has an invalid seller address. It may be corrupted. Please try another listing or contact support.'
-        )
+      // Parse seller wallet (catch invalid base58 from URLs/corrupted data)
+      let sellerWallet: PublicKey
+      try {
+        const walletAddr = String(listing.wallet_address ?? (listing as any).walletAddress ?? '').trim()
+        if (!walletAddr) throw new Error('Missing seller address')
+        sellerWallet = new PublicKey(walletAddr)
+      } catch (e) {
+        console.error('Invalid wallet_address:', listing.wallet_address, e)
+        throw new Error('Invalid listing data (seller address). Please try another listing.')
       }
-      const sellerWallet = new PublicKey(walletAddr)
       
       // Check buyer balance before proceeding (Solana docs: getBalance with commitment 'confirmed')
       if (listing.price_token === 'SOL') {
@@ -190,12 +182,15 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
       } else {
         // Check SPL token balance (resolve USDC/token_mint)
         const mintStr = resolveTokenMint(listing) ?? listing.token_mint
-        if (!mintStr || !isValidSolanaAddress(mintStr)) {
-          throw new Error(
-            `This listing uses an unsupported payment token (${listing.price_token}). Only SOL and USDC are supported.`
-          )
+        if (!mintStr) {
+          throw new Error(`Unsupported payment token. Only SOL and USDC are supported.`)
         }
-        const mintPublicKey = new PublicKey(mintStr)
+        let mintPublicKey: PublicKey
+        try {
+          mintPublicKey = new PublicKey(mintStr)
+        } catch {
+          throw new Error(`Unsupported payment token (${listing.price_token}). Only SOL and USDC are supported.`)
+        }
         const buyerTokenAccount = await getAssociatedTokenAddress(mintPublicKey, publicKey)
         
         try {
@@ -228,10 +223,13 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
         )
       } else {
         const mintStr = resolveTokenMint(listing) ?? listing.token_mint
-        if (!mintStr || !isValidSolanaAddress(mintStr)) {
+        if (!mintStr) throw new Error(`Unsupported payment token. Only SOL and USDC are supported.`)
+        let mintPublicKey: PublicKey
+        try {
+          mintPublicKey = new PublicKey(mintStr)
+        } catch {
           throw new Error(`Unsupported payment token. Only SOL and USDC are supported.`)
         }
-        const mintPublicKey = new PublicKey(mintStr)
         const buyerTokenAccount = await getAssociatedTokenAddress(mintPublicKey, publicKey)
         const sellerTokenAccount = await getAssociatedTokenAddress(mintPublicKey, sellerWallet)
         const mintInfo = await getMint(connection, mintPublicKey)
