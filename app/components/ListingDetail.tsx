@@ -3,8 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useWallet, useConnection } from '@solana/wallet-adapter-react'
 import { useRouter } from 'next/navigation'
-import { Transaction, SystemProgram, LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js'
-import { getAssociatedTokenAddress, createTransferInstruction, getAccount, createAssociatedTokenAccountIdempotentInstruction, getMint } from '@solana/spl-token'
+import { Transaction, LAMPORTS_PER_SOL } from '@solana/web3.js'
 import { supabase } from '@/lib/supabase'
 import { sendTransactionWithRebate, shouldUseRebate } from '@/lib/helius-rebate'
 import { getIPFSGatewayURL } from '@/lib/pinata'
@@ -159,154 +158,31 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
     try {
       setProcessing(true)
 
-      // Server-validated params - avoids base58/corruption from raw listing data
-      const paramsRes = await fetch(`/api/listings/${listingId}/purchase-params`, { cache: 'no-store' })
-      if (!paramsRes.ok) {
-        const err = await paramsRes.json().catch(() => ({}))
-        throw new Error(err.error || paramsRes.statusText || 'Could not load purchase details.')
+      // Server builds transaction - seller wallet NEVER reaches client (avoids base58/corruption)
+      const prepRes = await fetch(`/api/listings/${listingId}/prepare-transfer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ buyer: publicKey.toString() }),
+      })
+      if (!prepRes.ok) {
+        const err = await prepRes.json().catch(() => ({}))
+        throw new Error(err.error || prepRes.statusText || 'Could not prepare transaction.')
       }
-      const params = await paramsRes.json() as {
-        recipient: string
+      const prep = await prepRes.json() as {
+        transactionBase64: string
+        blockhash: string
+        lastValidBlockHeight: number
         amount: number
-        token: 'SOL' | 'USDC'
-        mint?: string
-        listingId: string
+        token: string
+        sellerWalletHash: string
       }
-      const totalAmount = params.amount
-      const sellerWallet = new PublicKey(params.recipient) // Server already validated base58
+      const totalAmount = prep.amount
 
-      // Check buyer balance before proceeding (Solana docs: getBalance with commitment 'confirmed')
-      if (params.token === 'SOL') {
-        let buyerBalance: number
-        try {
-          buyerBalance = await connection.getBalance(publicKey, 'confirmed')
-        } catch (rpcError) {
-          console.error('RPC balance fetch error:', rpcError)
-          alert(
-            'Could not fetch your balance. The RPC may be rate-limited or down.\n\n' +
-            'Add a dedicated RPC in Vercel: NEXT_PUBLIC_RPC_URL = https://mainnet.helius-rpc.com/?api-key=YOUR_KEY\n\n' +
-            'See RPC_SETUP.md for Helius, QuickNode, or Alchemy.'
-          )
-          setProcessing(false)
-          return
-        }
-        const totalNeeded = (totalAmount + 0.001) * LAMPORTS_PER_SOL
-        const balanceSol = buyerBalance / LAMPORTS_PER_SOL
-
-        if (buyerBalance < totalNeeded) {
-          const network = process.env.NEXT_PUBLIC_SOLANA_NETWORK || 'devnet'
-          const rpcHint = !process.env.NEXT_PUBLIC_RPC_URL
-            ? '\n\nRPC tip: Add NEXT_PUBLIC_RPC_URL (Helius/QuickNode) in Vercel — the public RPC often returns 0 balance.'
-            : ''
-          const phantomHint = balanceSol === 0
-            ? `\n\nPhantom tip: Ensure Phantom is on ${network} (Settings → Developer Settings).`
-            : ''
-          if (balanceSol === 0) {
-            let tryAnyway = false
-            try {
-              const verifyRes = await fetch(`/api/balance/verify?wallet=${encodeURIComponent(publicKey.toString())}`)
-              const verify = await verifyRes.json()
-              if (verify.balance != null && verify.balance > totalAmount + 0.001) {
-                tryAnyway = confirm(
-                  `Bitquery confirms you have ${verify.balance.toFixed(4)} SOL. RPC reported 0 (incorrect).\n\nProceed with purchase?`
-                )
-              } else {
-                tryAnyway = confirm(
-                  `RPC reports 0 SOL (may be incorrect). You need ${totalAmount + 0.001} SOL on ${network}.${phantomHint}${rpcHint}\n\n` +
-                  'If you have SOL in Phantom, try transaction anyway?'
-                )
-              }
-            } catch {
-              tryAnyway = confirm(
-                `RPC reports 0 SOL (may be incorrect). You need ${totalAmount + 0.001} SOL on ${network}.${phantomHint}${rpcHint}\n\n` +
-                'If you have SOL in Phantom, try transaction anyway?'
-              )
-            }
-            if (!tryAnyway) {
-              setProcessing(false)
-              return
-            }
-          } else {
-            alert(`Insufficient balance. You need ${totalAmount + 0.001} SOL but have ${(balanceSol).toFixed(4)} SOL on ${network}.`)
-            setProcessing(false)
-            return
-          }
-        }
-      } else {
-        // Check SPL token balance (params.mint from server)
-        const mintStr = params.mint
-        if (!mintStr) {
-          throw new Error(`Unsupported payment token. Only SOL and USDC are supported.`)
-        }
-        const mintPublicKey = new PublicKey(mintStr)
-        const buyerTokenAccount = await getAssociatedTokenAddress(mintPublicKey, publicKey)
-        
-        try {
-          const tokenAccount = await getAccount(connection, buyerTokenAccount)
-          const mintInfo = await getMint(connection, mintPublicKey)
-          const buyerBalance = Number(tokenAccount.amount) / (10 ** mintInfo.decimals)
-          
-          if (buyerBalance < totalAmount) {
-            alert(`Insufficient token balance. You need ${totalAmount} ${listing.price_token} but only have ${buyerBalance.toFixed(4)}`)
-            setProcessing(false)
-            return
-          }
-        } catch (error) {
-          alert(`Token account not found. Please ensure you have ${params.token} tokens in your wallet.`)
-          setProcessing(false)
-          return
-        }
-      }
-
-      // Direct peer-to-peer transfer: buyer → seller (full amount, no escrow, no platform fee)
-      const transaction = new Transaction()
-      
-      if (listing.price_token === 'SOL') {
-        transaction.add(
-          SystemProgram.transfer({
-            fromPubkey: publicKey,
-            toPubkey: sellerWallet,
-            lamports: Math.floor(totalAmount * LAMPORTS_PER_SOL),
-          })
-        )
-      } else {
-        const mintStr = params.mint
-        if (!mintStr) throw new Error(`Unsupported payment token. Only SOL and USDC are supported.`)
-        const mintPublicKey = new PublicKey(mintStr)
-        const buyerTokenAccount = await getAssociatedTokenAddress(mintPublicKey, publicKey)
-        const sellerTokenAccount = await getAssociatedTokenAddress(mintPublicKey, sellerWallet)
-        const mintInfo = await getMint(connection, mintPublicKey)
-        const decimals = mintInfo.decimals
-        
-        try {
-          await getAccount(connection, sellerTokenAccount)
-        } catch {
-          transaction.add(
-            createAssociatedTokenAccountIdempotentInstruction(
-              publicKey,
-              sellerTokenAccount,
-              sellerWallet,
-              mintPublicKey
-            )
-          )
-        }
-        
-        const amountLamports = BigInt(Math.floor(totalAmount * (10 ** decimals)))
-        transaction.add(
-          createTransferInstruction(
-            buyerTokenAccount,
-            sellerTokenAccount,
-            publicKey,
-            amountLamports,
-          )
-        )
-      }
-
-      transaction.feePayer = publicKey
-
-      // Use placeholder blockhash for simulation; we fetch fresh one right before sign
-      const { blockhash: simBlockhash } = await connection.getLatestBlockhash('finalized')
-      transaction.recentBlockhash = simBlockhash
+      // Deserialize transaction (no PublicKey on client - built server-side)
+      const binary = atob(prep.transactionBase64)
+      const bytes = new Uint8Array(binary.length)
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+      const transaction = Transaction.from(bytes)
 
       // Simulate transaction first; if RPC simulation fails (e.g. AccountNotFound), retry with skipPreflight
       let skipPreflight = false
@@ -336,10 +212,8 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
         }
       }
 
-      const doSignAndSend = async (): Promise<{ signature: string; blockhash: string; lastValidBlockHeight: number }> => {
-        const { blockhash: freshBlockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('finalized')
-        transaction.recentBlockhash = freshBlockhash
-        const signed = await signTransaction(transaction)
+      const doSignAndSend = async (tx: Transaction): Promise<{ signature: string; blockhash: string; lastValidBlockHeight: number }> => {
+        const signed = await signTransaction(tx)
         const serialized = signed.serialize()
         const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL
         const opts = { skipPreflight, maxRetries: 3 }
@@ -359,14 +233,14 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
         } else {
           sig = await connection.sendRawTransaction(serialized, opts)
         }
-        return { signature: sig, blockhash: freshBlockhash, lastValidBlockHeight }
+        return { signature: sig, blockhash: prep.blockhash, lastValidBlockHeight: prep.lastValidBlockHeight }
       }
 
       let signature: string
       let blockhash: string
       let lastValidBlockHeight: number
       try {
-        const result = await doSignAndSend()
+        const result = await doSignAndSend(transaction)
         signature = result.signature
         blockhash = result.blockhash
         lastValidBlockHeight = result.lastValidBlockHeight
@@ -375,10 +249,21 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
         const isBlockHeightExceeded = /block height exceeded|TransactionExpiredBlockheightExceeded|expired/i.test(msg)
         if (isBlockHeightExceeded) {
           const retry = confirm(
-            'Transaction expired (blockhash timed out). Sign again with a fresh blockhash?'
+            'Transaction expired (blockhash timed out). Prepare fresh transaction and sign again?'
           )
           if (retry) {
-            const result = await doSignAndSend()
+            const prepRes2 = await fetch(`/api/listings/${listingId}/prepare-transfer`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ buyer: publicKey.toString() }),
+            })
+            if (!prepRes2.ok) throw new Error('Could not prepare fresh transaction')
+            const prep2 = await prepRes2.json()
+            const binary2 = atob(prep2.transactionBase64)
+            const bytes2 = new Uint8Array(binary2.length)
+            for (let i = 0; i < binary2.length; i++) bytes2[i] = binary2.charCodeAt(i)
+            const tx2 = Transaction.from(bytes2)
+            const result = await doSignAndSend(tx2)
             signature = result.signature
             blockhash = result.blockhash
             lastValidBlockHeight = result.lastValidBlockHeight
@@ -413,18 +298,18 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
       }
 
       if (supabase) {
+        const { hashWalletAddress } = await import('@/lib/supabase')
         await supabase
           .from('listings')
           .update({ 
             status: 'sold',
-            buyer_wallet_hash: publicKey.toString(),
+            buyer_wallet_hash: hashWalletAddress(publicKey.toString()),
           })
           .eq('id', listingId)
         
-        // Update seller's total listings sold count (use validated recipient, not raw listing)
+        // Update seller's total listings sold count
         try {
-          const { hashWalletAddress } = await import('@/lib/supabase')
-          const sellerHash = hashWalletAddress(params.recipient)
+          const sellerHash = prep.sellerWalletHash
           const { data: sellerProfile } = await supabase
             .from('profiles')
             .select('total_listings_sold')
@@ -446,7 +331,7 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
       }
 
       alert(
-        `Purchase successful! ${totalAmount} ${params.token} sent directly to seller.\n\n` +
+        `Purchase successful! ${totalAmount} ${prep.token} sent directly to seller.\n\n` +
         `Transaction: ${signature}\n\n` +
         `Coordinate with the seller for shipping. This platform does not handle payments or shipping.`
       )
