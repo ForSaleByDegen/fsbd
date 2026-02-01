@@ -78,7 +78,7 @@ export async function POST(
 
     const { data, error } = await supabaseAdmin
       .from('listings')
-      .select('id, wallet_address, price, price_token, token_mint, status')
+      .select('id, wallet_address, price, price_token, token_mint, status, quantity')
       .eq('id', id)
       .single()
 
@@ -92,6 +92,14 @@ export async function POST(
     if (data.status !== 'active') {
       return NextResponse.json(
         { error: 'This listing is no longer available for purchase.' },
+        { status: 400 }
+      )
+    }
+
+    const qty = data.quantity != null ? Number(data.quantity) : 1
+    if (qty < 1) {
+      return NextResponse.json(
+        { error: 'This item is sold out.' },
         { status: 400 }
       )
     }

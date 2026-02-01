@@ -32,6 +32,7 @@ export default function CreateListingForm() {
     category: 'for-sale',
     price: '',
     priceToken: 'SOL',
+    quantity: 1,
     images: [] as File[],
     launchToken: false,
     tokenName: '',
@@ -178,6 +179,7 @@ export default function CreateListingForm() {
         category: formData.category,
         price: parseFloat(formData.price),
         price_token: formData.priceToken,
+        quantity: Math.max(1, Math.floor(Number(formData.quantity) || 1)),
         images: imageUrls, // Store full URLs
         wallet_address_hash: hashWalletAddress(publicKey.toString()),
         wallet_address: publicKey.toString(), // Encrypted in DB
@@ -293,6 +295,17 @@ export default function CreateListingForm() {
               </SelectContent>
             </Select>
           </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-2">Quantity</label>
+          <Input
+            type="number"
+            min={1}
+            value={formData.quantity}
+            onChange={(e) => setFormData(prev => ({ ...prev, quantity: Math.max(1, parseInt(e.target.value, 10) || 1) }))}
+          />
+          <p className="text-xs text-muted-foreground mt-1">How many of this item are you selling? (Default: 1)</p>
         </div>
       </div>
 

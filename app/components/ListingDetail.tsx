@@ -336,45 +336,38 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
         throw confirmErr
       }
 
-      if (supabase) {
-        const { hashWalletAddress } = await import('@/lib/supabase')
-        await supabase
-          .from('listings')
-          .update({ 
-            status: 'sold',
-            buyer_wallet_hash: hashWalletAddress(publicKey.toString()),
-          })
-          .eq('id', listingId)
-        
-        // Update seller's total listings sold count
-        try {
-          const sellerHash = prep.sellerWalletHash
-          const { data: sellerProfile } = await supabase
-            .from('profiles')
-            .select('total_listings_sold')
-            .eq('wallet_address_hash', sellerHash)
-            .single()
-          
-          if (sellerProfile) {
-            await supabase
-              .from('profiles')
-              .update({ 
-                total_listings_sold: (sellerProfile.total_listings_sold || 0) + 1 
-              })
-              .eq('wallet_address_hash', sellerHash)
-          }
-        } catch (error) {
-          console.error('Error updating seller stats:', error)
-          // Don't fail purchase if stats update fails
+      const markRes = await fetch(`/api/listings/${listingId}/mark-sold`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          buyer: publicKey.toString(),
+          signature,
+          sellerWalletHash: prep.sellerWalletHash,
+        }),
+      })
+
+      if (!markRes.ok) {
+        const errData = await markRes.json().catch(() => ({}))
+        console.error('Mark sold failed:', errData)
+        if (markRes.status === 409) {
+          setListing((prev) => (prev ? { ...prev, status: 'sold' } : prev))
+          alert('This item was already sold. Your payment was sent — check with the seller.')
+        } else {
+          alert(
+            'Purchase sent! However we could not update the listing status. The seller received your payment. ' +
+            `Tx: ${signature}`
+          )
         }
+      } else {
+        setListing((prev) => (prev ? { ...prev, status: 'sold' } : prev))
+        alert(
+          `Purchase successful! ${totalAmount} ${prep.token} sent directly to seller.\n\n` +
+          `Transaction: ${signature}\n\n` +
+          `Coordinate with the seller for shipping. This platform does not handle payments or shipping.`
+        )
       }
 
-      alert(
-        `Purchase successful! ${totalAmount} ${prep.token} sent directly to seller.\n\n` +
-        `Transaction: ${signature}\n\n` +
-        `Coordinate with the seller for shipping. This platform does not handle payments or shipping.`
-      )
-      router.push('/')
+      router.push('/profile')
       router.refresh()
     } catch (error: any) {
       console.error('Error purchasing:', error)
@@ -479,10 +472,15 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
       ) : null}
 
       <div className="mb-4 sm:mb-6">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 flex-wrap">
           <span className="text-xl sm:text-2xl md:text-3xl font-pixel text-[#00ff00] font-bold" style={{ fontFamily: 'var(--font-pixel)' }}>
             {listing.price} {listing.price_token || 'SOL'}
           </span>
+          {(listing as { quantity?: number }).quantity != null && (listing as { quantity?: number }).quantity > 1 && (
+            <span className="text-sm sm:text-base text-[#00ff00] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+              ×{(listing as { quantity?: number }).quantity} available
+            </span>
+          )}
           <span className="text-sm sm:text-base text-[#660099] font-pixel-alt capitalize" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             {listing.category?.replace('-', ' ')}
           </span>

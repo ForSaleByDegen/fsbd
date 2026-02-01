@@ -12,6 +12,7 @@ interface ListingCardProps {
     images?: string[]
     has_token?: boolean
     status?: string
+    quantity?: number
   }
 }
 
@@ -89,6 +90,11 @@ export default function ListingCard({ listing }: ListingCardProps) {
           {listing.has_token && (
             <span className="inline-block text-xs bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 px-2 py-1 rounded">
               🪙 Has Token
+            </span>
+          )}
+          {listing.quantity != null && listing.quantity > 1 && (
+            <span className="inline-block text-xs bg-blue-600 text-white px-2 py-1 rounded">
+              ×{listing.quantity} available
             </span>
           )}
           {listing.status && listing.status !== 'active' && (
