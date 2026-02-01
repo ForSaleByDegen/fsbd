@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "create-cnft-tree": "tsx scripts/create-cnft-tree.ts"
+    "create-cnft-tree": "tsx scripts/create-cnft-tree.ts",
+    "launch-fsbd-token": "tsx scripts/launch-fsbd-token.ts"
   },
   "dependencies": {
     "next": "14.2.35",

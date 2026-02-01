@@ -13,6 +13,9 @@ interface ListingCardProps {
     has_token?: boolean
     status?: string
     quantity?: number
+    delivery_method?: string
+    location_city?: string
+    location_region?: string
   }
 }
 
@@ -84,6 +87,9 @@ export default function ListingCard({ listing }: ListingCardProps) {
           <span className="text-primary font-bold text-sm sm:text-base">{formatPrice()}</span>
           <span className="text-xs text-muted-foreground capitalize">
             {listing.category?.replace('-', ' ')}
+            {(listing.location_city || listing.location_region) && (
+              <> · {[listing.location_city, listing.location_region].filter(Boolean).join(', ')}</>
+            )}
           </span>
         </div>
         <div className="flex flex-wrap gap-1 mt-2">

@@ -1,8 +1,10 @@
-# For Sale By Degen ($FBSD)
+# For Sale By Degen ($FSBD)
 
-Anonymous decentralized marketplace on Solana. Craigslist-like classifieds with crypto payments, optional token launches per listing, and tiered access via $FBSD holdings.
+Anonymous decentralized marketplace on Solana. Craigslist-like classifieds with crypto payments, local pickup or ship, optional escrow, and tiered access via $FSBD holdings.
 
 **Privacy-First**: No tracking, no analytics, no data sharing. Wallet-only authentication.
+
+**Live**: [fsbd.fun](https://fsbd.fun)
 
 ## Features
 
@@ -10,7 +12,7 @@ Anonymous decentralized marketplace on Solana. Craigslist-like classifieds with 
 - 📝 **Listings**: Create, view, search classified-style listings with IPFS images
 - 💰 **Crypto Payments**: SOL/USDC payments with basic escrow
 - 🪙 **Token Launching**: Optional SPL token creation for listings (fun/marketing only)
-- 🎯 **Tiered Access**: Hold $FBSD to unlock fee reductions and premium features
+- 🎯 **Tiered Access**: Hold $FSBD to unlock fee reductions and premium features
 - 🔒 **Privacy**: Wallet addresses hashed, encrypted storage, no tracking
 
 ## Tech Stack
@@ -141,14 +143,14 @@ app/
 
 ### Tier System
 
-Hold $FBSD tokens to unlock tiers:
+Hold $FSBD tokens to unlock tiers:
 
-- **Free**: Basic listings, 0.1 SOL fee
-- **Bronze** (1,000 $FBSD): 25% fee reduction
-- **Silver** (10,000 $FBSD): 50% fee reduction, priority visibility
-- **Gold** (100,000 $FBSD): 75% fee reduction, priority visibility, governance
+- **Free**: Free listings (message signing only), 0.42% platform fee
+- **Bronze** (100,000 $FSBD): 25% fee reduction, auction creation
+- **Silver** (1,000,000 $FSBD): 50% fee reduction, priority visibility
+- **Gold** (10,000,000 $FSBD): 75% fee reduction, priority visibility
 
-Tiers are checked on-chain - no data sharing, fully private.
+Tiers are checked on-chain—no data sharing, fully private.
 
 ### Privacy & Security
 
@@ -179,12 +181,19 @@ Works with any platform supporting Next.js:
 - Railway
 - Render
 
-## TODO
+## $FSBD Token Launch
 
-- [ ] Deploy $FBSD token and update `NEXT_PUBLIC_FBSD_TOKEN_MINT`
-- [ ] Implement proper escrow Solana program (currently simplified)
-- [ ] Add Solana Pay QR codes
-- [ ] Optional: Pump.fun integration for token launches
+```bash
+cd app
+KEYPAIR_PATH=./your-keypair.json npm run launch-fsbd-token
+# Set NEXT_PUBLIC_FSBD_TOKEN_MINT to the output mint address
+```
+
+See [app/TOKEN_LAUNCH_SETUP.md](app/TOKEN_LAUNCH_SETUP.md) for details.
+
+## Hackathon
+
+See [HACKATHON.md](HACKATHON.md) for submission info.
 
 ## Security Notes
 

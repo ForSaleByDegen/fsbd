@@ -26,6 +26,7 @@ CREATE INDEX IF NOT EXISTS seller_feedback_listing_idx ON seller_feedback(listin
 ALTER TABLE seller_feedback ENABLE ROW LEVEL SECURITY;
 
 -- Allow public read for seller stats (anyone can see feedback)
+DROP POLICY IF EXISTS "Public can read seller feedback" ON seller_feedback;
 CREATE POLICY "Public can read seller feedback"
   ON seller_feedback FOR SELECT
   USING (true);

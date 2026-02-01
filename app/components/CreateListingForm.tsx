@@ -36,7 +36,11 @@ export default function CreateListingForm() {
     images: [] as File[],
     launchToken: false,
     tokenName: '',
-    tokenSymbol: ''
+    tokenSymbol: '',
+    deliveryMethod: 'ship' as 'ship' | 'local_pickup' | 'both',
+    locationCity: '',
+    locationRegion: '',
+    externalListingUrl: ''
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -188,7 +192,11 @@ export default function CreateListingForm() {
         token_name: formData.tokenName || null,
         token_symbol: formData.tokenSymbol || null,
         fee_paid: fee, // 0 for regular listings, fee amount for token launches
-        status: 'active'
+        status: 'active',
+        delivery_method: formData.deliveryMethod,
+        location_city: formData.locationCity.trim() || null,
+        location_region: formData.locationRegion.trim() || null,
+        external_listing_url: formData.externalListingUrl.trim() || null
       }
       
       console.log('Creating listing with images:', imageUrls)
@@ -307,6 +315,51 @@ export default function CreateListingForm() {
           />
           <p className="text-xs text-muted-foreground mt-1">How many of this item are you selling? (Default: 1)</p>
         </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-2">Delivery / Meetup</label>
+        <Select
+          value={formData.deliveryMethod}
+          onValueChange={(v: 'ship' | 'local_pickup' | 'both') => setFormData(prev => ({ ...prev, deliveryMethod: v }))}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ship">Ship only</SelectItem>
+            <SelectItem value="local_pickup">Local pickup / meet in person only</SelectItem>
+            <SelectItem value="both">Both (ship or local pickup)</SelectItem>
+          </SelectContent>
+        </Select>
+        {(formData.deliveryMethod === 'local_pickup' || formData.deliveryMethod === 'both') && (
+          <div className="grid grid-cols-2 gap-2 mt-2">
+            <Input
+              placeholder="City (e.g. Austin)"
+              value={formData.locationCity}
+              onChange={(e) => setFormData(prev => ({ ...prev, locationCity: e.target.value }))}
+            />
+            <Input
+              placeholder="State/Region (e.g. TX)"
+              value={formData.locationRegion}
+              onChange={(e) => setFormData(prev => ({ ...prev, locationRegion: e.target.value }))}
+            />
+            <p className="text-xs text-muted-foreground col-span-2">
+              Approximate area only. Exact meetup details via chat. We don&apos;t store exact addresses.
+            </p>
+          </div>
+        )}
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-2">Also listed elsewhere? (optional)</label>
+        <Input
+          type="url"
+          placeholder="https://..."
+          value={formData.externalListingUrl}
+          onChange={(e) => setFormData(prev => ({ ...prev, externalListingUrl: e.target.value }))}
+        />
+        <p className="text-xs text-muted-foreground mt-1">Link to the same item on another platform — helps buyers find you.</p>
       </div>
 
       <div>

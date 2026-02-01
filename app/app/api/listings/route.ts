@@ -10,6 +10,9 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const q = searchParams.get('q')
     const category = searchParams.get('category')
+    const delivery = searchParams.get('delivery') // 'local_pickup' | 'ship' | all
+    const locationCity = searchParams.get('location_city')?.trim()
+    const locationRegion = searchParams.get('location_region')?.trim()
 
     if (supabase) {
       let query = supabase
@@ -25,6 +28,19 @@ export async function GET(request: NextRequest) {
 
       if (q) {
         query = query.or(`title.ilike.%${q}%,description.ilike.%${q}%`)
+      }
+
+      if (delivery === 'local_pickup') {
+        query = query.in('delivery_method', ['local_pickup', 'both'])
+      } else if (delivery === 'ship') {
+        query = query.in('delivery_method', ['ship', 'both'])
+      }
+
+      if (locationCity) {
+        query = query.ilike('location_city', `%${locationCity}%`)
+      }
+      if (locationRegion) {
+        query = query.ilike('location_region', `%${locationRegion}%`)
       }
 
       const { data, error } = await query

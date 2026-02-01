@@ -14,10 +14,13 @@ export default function ListingFeed() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [category, setCategory] = useState('all')
+  const [delivery, setDelivery] = useState('all')
+  const [locationCity, setLocationCity] = useState('')
+  const [locationRegion, setLocationRegion] = useState('')
 
   useEffect(() => {
     fetchListings()
-  }, [category, searchQuery])
+  }, [category, searchQuery, delivery, locationCity, locationRegion])
 
   // Refresh listings when component becomes visible (user navigates back)
   useEffect(() => {
@@ -34,12 +37,18 @@ export default function ListingFeed() {
     try {
       setLoading(true)
       
+      const params = new URLSearchParams()
+      if (searchQuery) params.set('q', searchQuery)
+      if (category !== 'all') params.set('category', category)
+      if (delivery !== 'all') params.set('delivery', delivery)
+      if (locationCity.trim()) params.set('location_city', locationCity.trim())
+      if (locationRegion.trim()) params.set('location_region', locationRegion.trim())
+
       if (!supabase) {
-        // Fallback: use localStorage or API route
         console.warn('Supabase not configured, using API fallback')
-        const response = await fetch(`/api/listings?q=${searchQuery}&category=${category}`)
+        const response = await fetch(`/api/listings?${params}`)
         const data = await response.json()
-        setListings(data)
+        setListings(Array.isArray(data) ? data : [])
         return
       }
 
@@ -56,6 +65,19 @@ export default function ListingFeed() {
 
       if (searchQuery) {
         query = query.or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`)
+      }
+
+      if (delivery === 'local_pickup') {
+        query = query.in('delivery_method', ['local_pickup', 'both'])
+      } else if (delivery === 'ship') {
+        query = query.in('delivery_method', ['ship', 'both'])
+      }
+
+      if (locationCity.trim()) {
+        query = query.ilike('location_city', `%${locationCity.trim()}%`)
+      }
+      if (locationRegion.trim()) {
+        query = query.ilike('location_region', `%${locationRegion.trim()}%`)
       }
 
       const { data, error } = await query
@@ -97,6 +119,12 @@ export default function ListingFeed() {
         category={category}
         setCategory={setCategory}
         categories={categories}
+        delivery={delivery}
+        setDelivery={setDelivery}
+        locationCity={locationCity}
+        setLocationCity={setLocationCity}
+        locationRegion={locationRegion}
+        setLocationRegion={setLocationRegion}
       />
 
       {loading ? (

@@ -492,7 +492,28 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
           <span className="text-sm sm:text-base text-[#660099] font-pixel-alt capitalize" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             {listing.category?.replace('-', ' ')}
           </span>
+          {(listing.delivery_method === 'local_pickup' || listing.delivery_method === 'both') && (
+            <span className="text-sm text-green-400 font-pixel-alt px-2 py-1 rounded border border-green-600 bg-green-900/40" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+              📍 Local pickup
+            </span>
+          )}
         </div>
+        {(listing.location_city || listing.location_region) && (
+          <p className="text-sm text-[#660099] font-pixel-alt mt-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+            Area: {[listing.location_city, listing.location_region].filter(Boolean).join(', ')} — meetup details via chat.
+          </p>
+        )}
+        {listing.external_listing_url && (
+          <a
+            href={listing.external_listing_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block text-sm text-[#ff00ff] hover:text-[#00ff00] font-pixel-alt mt-2 underline"
+            style={{ fontFamily: 'var(--font-pixel-alt)' }}
+          >
+            Also listed elsewhere →
+          </a>
+        )}
       </div>
 
       <div className="mb-4 sm:mb-6">

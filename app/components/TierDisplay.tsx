@@ -101,10 +101,19 @@ export default function TierDisplay() {
       <div className="mt-8 p-4 bg-muted rounded-lg">
         <h3 className="font-semibold mb-2">How to Upgrade</h3>
         <p className="text-sm text-muted-foreground">
-          Purchase $FSBD tokens on the Solana blockchain. Your tier is automatically 
-          calculated based on your on-chain token balance. No registration, no data sharing, 
-          fully private. TODO: Add token address after $FSBD launch.
+          Hold $FSBD tokens to unlock tiers. Your balance is checked on-chain—no registration, 
+          no data sharing, fully private.
         </p>
+        {typeof process !== 'undefined' && process.env.NEXT_PUBLIC_FSBD_TOKEN_MINT && process.env.NEXT_PUBLIC_FSBD_TOKEN_MINT !== 'FSBD_TOKEN_MINT_PLACEHOLDER' && (
+          <a
+            href={`https://explorer.solana.com/address/${process.env.NEXT_PUBLIC_FSBD_TOKEN_MINT}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block mt-2 text-sm text-primary hover:underline"
+          >
+            View $FSBD on Solana Explorer →
+          </a>
+        )}
       </div>
     </>
   )

@@ -16,6 +16,13 @@ export default function Footer() {
           
           <div className="flex flex-wrap justify-center sm:justify-end gap-3 sm:gap-4 text-xs sm:text-sm">
             <Link 
+              href="/why" 
+              className="text-[#00ff00] hover:text-[#ff00ff] underline font-pixel-alt transition-colors"
+            >
+              Why $FSBD
+            </Link>
+            <span className="text-[#660099]">|</span>
+            <Link 
               href="/terms" 
               className="text-[#00ff00] hover:text-[#ff00ff] underline font-pixel-alt transition-colors"
             >

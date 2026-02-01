@@ -36,6 +36,8 @@ Thumbs.db
 # Solana
 *.keypair
 *.json.keypair
+*-mint-authority.json
+*-authority.json
 test-ledger/
 
 # Database

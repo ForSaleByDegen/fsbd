@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import Header from '@/components/Header'
 import ListingFeed from '@/components/ListingFeed'
+import ExternalListingsSection from '@/components/ExternalListingsSection'
 import DisclaimerBanner from '@/components/DisclaimerBanner'
 import AsciiLogo from '@/components/AsciiLogo'
 import LoadingScreen from '@/components/LoadingScreen'
@@ -24,6 +25,8 @@ export default function Home() {
         <Suspense fallback={<LoadingScreen />}>
           <ListingFeed />
         </Suspense>
+
+        <ExternalListingsSection />
       </main>
       
       <Footer />

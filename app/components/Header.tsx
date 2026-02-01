@@ -63,6 +63,9 @@ export default function Header() {
             <Link href="/" className="text-xs md:text-sm font-pixel-alt text-[#660099] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-2 py-1 border-2 border-transparent hover:border-[#660099]" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
               Browse
             </Link>
+            <Link href="/why" className="text-xs md:text-sm font-pixel-alt text-[#660099] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-2 py-1 border-2 border-transparent hover:border-[#660099] hidden lg:inline" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+              Why $FSBD
+            </Link>
             <Link href="/listings/create" className="text-xs md:text-sm font-pixel-alt text-[#660099] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-2 py-1 border-2 border-transparent hover:border-[#660099]" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
               Create
             </Link>
@@ -114,6 +117,14 @@ export default function Header() {
                 style={{ fontFamily: 'var(--font-pixel-alt)' }}
               >
                 Browse
+              </Link>
+              <Link 
+                href="/why" 
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-sm font-pixel-alt text-[#660099] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-3 py-2 border-2 border-transparent hover:border-[#660099] min-h-[44px] flex items-center" 
+                style={{ fontFamily: 'var(--font-pixel-alt)' }}
+              >
+                Why $FSBD
               </Link>
               <Link 
                 href="/listings/create" 
