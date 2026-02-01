@@ -162,7 +162,6 @@ export default function ListingFeed() {
         locationRegion={locationRegion}
         setLocationRegion={setLocationRegion}
       />
-      )}
 
       {tab === 'activity' && (
         <p className="text-sm text-[#aa77ee] font-pixel-alt mb-4" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
