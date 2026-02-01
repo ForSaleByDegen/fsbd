@@ -41,6 +41,7 @@ export async function sendTransactionWithRebate(
       params: [
         base64,
         {
+          encoding: 'base64',
           skipPreflight: options.skipPreflight ?? false,
           maxRetries: options.maxRetries ?? 3,
           preflightCommitment: options.preflightCommitment ?? 'processed',
