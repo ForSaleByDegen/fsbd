@@ -429,6 +429,10 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
     ? listing.images.map(getImageUrl).filter((url: string | null): url is string => url !== null)
     : []
 
+  const listingQty = typeof (listing as Record<string, unknown>).quantity === 'number'
+    ? (listing as Record<string, unknown>).quantity as number
+    : undefined
+
   return (
     <div className="pixel-box bg-black border-2 sm:border-4 border-[#660099] p-4 sm:p-6 md:p-8 relative z-10">
       <h1 className="text-2xl sm:text-3xl md:text-4xl font-pixel text-[#00ff00] mb-4 sm:mb-6 break-words" style={{ fontFamily: 'var(--font-pixel)' }}>
@@ -476,9 +480,9 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
           <span className="text-xl sm:text-2xl md:text-3xl font-pixel text-[#00ff00] font-bold" style={{ fontFamily: 'var(--font-pixel)' }}>
             {listing.price} {listing.price_token || 'SOL'}
           </span>
-          {(listing as { quantity?: number }).quantity != null && (listing as { quantity?: number }).quantity > 1 && (
+          {listingQty != null && listingQty > 1 && (
             <span className="text-sm sm:text-base text-[#00ff00] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-              ×{(listing as { quantity?: number }).quantity} available
+              ×{listingQty} available
             </span>
           )}
           <span className="text-sm sm:text-base text-[#660099] font-pixel-alt capitalize" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
