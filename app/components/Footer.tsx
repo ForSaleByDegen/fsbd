@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import BuyFsbdSection from './BuyFsbdSection'
 
 export default function Footer() {
   const currentYear = new Date().getFullYear()
@@ -14,7 +15,7 @@ export default function Footer() {
             <p className="text-[#660099] mt-1">For Sale By Degen</p>
           </div>
           
-          <div className="flex flex-wrap justify-center sm:justify-end gap-3 sm:gap-4 text-xs sm:text-sm">
+          <div className="flex flex-wrap justify-center sm:justify-end items-center gap-3 sm:gap-4 text-xs sm:text-sm">
             <Link 
               href="/report" 
               className="text-[#00ff00] hover:text-[#ff00ff] underline font-pixel-alt transition-colors"
@@ -42,6 +43,7 @@ export default function Footer() {
             >
               Privacy Policy
             </Link>
+            <BuyFsbdSection variant="compact" />
           </div>
         </div>
         

@@ -5,6 +5,7 @@ import { useWallet } from '@solana/wallet-adapter-react'
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui'
 import Link from 'next/link'
 import { Button } from './ui/button'
+import BuyFsbdSection from './BuyFsbdSection'
 
 export default function BetaLanding() {
   const { connected, publicKey } = useWallet()
@@ -81,7 +82,11 @@ export default function BetaLanding() {
           </div>
         </div>
 
-        <div className="flex flex-wrap justify-center gap-4 text-sm">
+        <div className="mt-6 flex justify-center">
+          <BuyFsbdSection variant="card" />
+        </div>
+
+        <div className="flex flex-wrap justify-center gap-4 text-sm mt-8">
           <Link href="/why" className="text-[#660099] hover:text-[#00ff00] font-pixel-alt transition-colors" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             Why $FSBD
           </Link>

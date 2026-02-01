@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useWallet, useConnection } from '@solana/wallet-adapter-react'
 import { getUserTier, TIER_THRESHOLDS, getTierBenefits, type TierThresholds } from '@/lib/tier-check'
+import BuyFsbdSection from './BuyFsbdSection'
 
 export default function TierDisplay() {
   const { publicKey } = useWallet()
@@ -32,7 +33,7 @@ export default function TierDisplay() {
     } else {
       setLoading(false)
     }
-  }, [publicKey, connection, thresholds])
+  }, [publicKey, connection, thresholds, fsbdMint])
 
   const loadTier = async () => {
     if (!publicKey || !connection) return
@@ -120,16 +121,9 @@ export default function TierDisplay() {
           Hold $FSBD tokens to unlock tiers. Your balance is checked on-chain—no registration, 
           no data sharing, fully private.
         </p>
-        {typeof process !== 'undefined' && process.env.NEXT_PUBLIC_FSBD_TOKEN_MINT && process.env.NEXT_PUBLIC_FSBD_TOKEN_MINT !== 'FSBD_TOKEN_MINT_PLACEHOLDER' && (
-          <a
-            href={`https://explorer.solana.com/address/${process.env.NEXT_PUBLIC_FSBD_TOKEN_MINT}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block mt-2 text-sm text-primary hover:underline"
-          >
-            View $FSBD on Solana Explorer →
-          </a>
-        )}
+        <div className="mt-3">
+          <BuyFsbdSection variant="card" mint={fsbdMint ?? undefined} />
+        </div>
       </div>
     </>
   )

@@ -2,6 +2,8 @@
 
 Launch the $FSBD platform token for tier gating and fee discounts.
 
+**→ Full checklist: [TOKEN_LAUNCH_CHECKLIST.md](./TOKEN_LAUNCH_CHECKLIST.md)**
+
 ## 1. Prerequisites
 
 - Node.js 18+
@@ -46,6 +48,7 @@ NEXT_PUBLIC_FSBD_TOKEN_MINT=<mint_address>
 Add this to:
 - `.env` and `.env.local`
 - Vercel project environment variables
+- Admin Panel → Platform Config → **$FSBD Token Mint** (so you can update without redeploy)
 
 ## 5. Verify
 
