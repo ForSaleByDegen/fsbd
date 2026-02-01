@@ -58,29 +58,36 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
 
   const fetchListing = async () => {
     try {
-      if (supabase) {
-        const { data, error } = await supabase
+      // Prefer API route (service role) to ensure wallet_address is returned correctly
+      const response = await fetch(`/api/listings/${listingId}`)
+      let data: Record<string, unknown> | null = null
+      if (response.ok) {
+        data = await response.json()
+      } else if (response.status === 503 && supabase) {
+        // Fallback to anon client if service role not configured
+        const { data: supabaseData, error } = await supabase
           .from('listings')
           .select('*')
           .eq('id', listingId)
           .single()
-
         if (error) throw error
-        
-        // Normalize images array - handle both array and JSON string formats
-        const normalizedListing = {
-          ...data,
-          images: Array.isArray(data.images) ? data.images : 
-                  typeof data.images === 'string' ? JSON.parse(data.images || '[]') : 
-                  []
-        }
-        
-        setListing(normalizedListing)
+        data = supabaseData
       } else {
-        const response = await fetch(`/api/listings/${listingId}`)
-        const data = await response.json()
-        setListing(data)
+        if (response.status === 404) throw new Error('Listing not found')
+        throw new Error(await response.text())
       }
+      
+      if (!data) throw new Error('No listing data')
+      
+      // Normalize images array - handle both array and JSON string formats
+      const normalizedListing = {
+        ...data,
+        images: Array.isArray(data.images) ? data.images : 
+                typeof data.images === 'string' ? JSON.parse(data.images || '[]') : 
+                []
+      }
+      
+      setListing(normalizedListing)
     } catch (error) {
       console.error('Error fetching listing:', error)
     } finally {
@@ -458,9 +465,6 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
   const imageUrls = listing.images && Array.isArray(listing.images) && listing.images.length > 0
     ? listing.images.map(getImageUrl).filter((url: string | null): url is string => url !== null)
     : []
-  
-  console.log('Listing images:', listing.images)
-  console.log('Processed image URLs:', imageUrls)
 
   return (
     <div className="pixel-box bg-black border-2 sm:border-4 border-[#660099] p-4 sm:p-6 md:p-8 relative z-10">
