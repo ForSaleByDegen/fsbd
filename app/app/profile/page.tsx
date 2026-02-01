@@ -45,7 +45,27 @@ type ProfileData = {
   listings: Array<{ id: string; title: string; price: number; price_token: string; status: string; escrow_status?: string; images?: string[]; category: string }>
   escrows: Array<{ id: string; listing_id: string; escrow_status: string; listing_title?: string; listing_price?: number; listing_price_token?: string }>
   bids: Array<{ id: string; title: string; price: number; highest_bid: number; status: string; images?: string[]; category: string }>
-  purchases: Array<{ id: string; title: string; price: number; price_token: string; status: string; images?: string[]; category: string }>
+  purchases: Array<{
+    id: string
+    title: string
+    price: number
+    price_token: string
+    status: string
+    images?: string[]
+    category: string
+    tracking_number?: string
+    shipping_carrier?: string
+  }>
+}
+
+function getTrackingUrl(carrier: string | undefined, trackingNumber: string): string {
+  const tn = encodeURIComponent(trackingNumber.trim())
+  const c = (carrier || '').toUpperCase()
+  if (c.includes('USPS')) return `https://tools.usps.com/go/TrackConfirmAction?tLabels=${tn}`
+  if (c.includes('FEDEX')) return `https://www.fedex.com/fedextrack/?trknbr=${tn}`
+  if (c.includes('UPS')) return `https://www.ups.com/track?tracknum=${tn}`
+  if (c.includes('DHL')) return `https://www.dhl.com/en/express/tracking.html?AWB=${tn}`
+  return `https://www.google.com/search?q=track+${tn}`
 }
 
 export default function ProfilePage() {
@@ -323,6 +343,57 @@ export default function ProfilePage() {
               ))}
             </div>
           )}
+        </section>
+
+        {/* Shipping / Order Tracking - for purchases with tracking info */}
+        <section className="mb-6">
+          <h2 className="text-xl font-pixel text-[#00ff00] mb-3" style={{ fontFamily: 'var(--font-pixel)' }}>
+            📦 Shipping & Tracking
+          </h2>
+          {loading ? (
+            <p className="text-[#660099] font-pixel-alt text-sm">Loading...</p>
+          ) : (() => {
+            const withTracking = purchases.filter(
+              (p: (typeof purchases)[0]) => p.tracking_number && String(p.tracking_number).trim()
+            )
+            return withTracking.length === 0 ? (
+              <p className="text-[#660099] font-pixel-alt text-sm mb-4">
+                No shipping info yet. Sellers add tracking after shipping — check back or coordinate via chat.
+              </p>
+            ) : (
+              <div className="space-y-3 mb-4">
+                {withTracking.map((p: (typeof purchases)[0]) => {
+                  const trackUrl = getTrackingUrl(p.shipping_carrier, p.tracking_number!)
+                  return (
+                    <div
+                      key={p.id}
+                      className="p-3 sm:p-4 bg-black/50 border-2 border-[#660099] hover:border-[#00ff00] transition-colors"
+                    >
+                      <Link href={`/listings/${p.id}`} className="block">
+                        <span className="text-[#00ff00] font-pixel-alt text-sm sm:text-base block" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                          {p.title} • {p.price} {p.price_token || 'SOL'}
+                        </span>
+                      </Link>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <span className="text-[#660099] font-pixel-alt text-xs" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                          {p.shipping_carrier || 'Carrier'}: {p.tracking_number}
+                        </span>
+                        <a
+                          href={trackUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[#ff00ff] font-pixel-alt text-xs underline hover:text-[#00ff00]"
+                          style={{ fontFamily: 'var(--font-pixel-alt)' }}
+                        >
+                          Track package →
+                        </a>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          })()}
         </section>
 
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full">

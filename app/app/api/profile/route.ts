@@ -109,10 +109,10 @@ export async function GET(request: NextRequest) {
       .eq('highest_bidder', wallet)
       .order('created_at', { ascending: false })
 
-    // Also get listings where user is buyer (purchases)
+    // Also get listings where user is buyer (purchases) - include shipping/tracking for buyer profile
     const { data: purchases = [] } = await supabaseAdmin
       .from('listings')
-      .select('id, title, price, price_token, status, escrow_status, images, category, created_at')
+      .select('id, title, price, price_token, status, escrow_status, images, category, created_at, tracking_number, shipping_carrier')
       .eq('buyer_wallet_hash', walletHash)
       .order('created_at', { ascending: false })
 
