@@ -9,7 +9,7 @@ import { getUserTier } from '@/lib/tier-check'
 import Link from 'next/link'
 import ListingCard from '@/components/ListingCard'
 import BuyerOrderActions from '@/components/BuyerOrderActions'
-import ShippingAddressForm from '@/components/ShippingAddressForm'
+import ShippingAddressGuidance from '@/components/ShippingAddressGuidance'
 
 // Dynamic import for Privy to avoid build issues
 let usePrivy: any = null
@@ -368,29 +368,13 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Delivery Address - for buyers (General Delivery / PO Box keeps home private) */}
+        {/* Delivery address guidance - we do not store addresses */}
         <section className="mb-6">
           <h2 className="text-xl font-pixel text-[#00ff00] mb-3" style={{ fontFamily: 'var(--font-pixel)' }}>
-            📬 Delivery address
+            Delivery address
           </h2>
-          <p className="text-[#660099] font-pixel-alt text-sm mb-4" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-            Sellers need this to ship your purchases. Use General Delivery or a PO Box to keep your home address private.
-          </p>
           <div className="p-4 bg-black/50 border-2 border-[#660099] rounded max-w-xl">
-            <ShippingAddressForm
-              initialAddress={(profileData?.profile as { shipping_address?: Record<string, unknown> })?.shipping_address as Record<string, unknown> | undefined}
-              onSave={async (addr) => {
-                if (!walletAddress) return
-                const res = await fetch('/api/profile/shipping-address', {
-                  method: 'PATCH',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ wallet: walletAddress, address: addr }),
-                })
-                const data = await res.json().catch(() => ({}))
-                if (!res.ok) throw new Error(data.error || 'Failed to save')
-                loadProfile()
-              }}
-            />
+            <ShippingAddressGuidance />
           </div>
         </section>
 

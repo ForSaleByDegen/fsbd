@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useWallet } from '@solana/wallet-adapter-react'
-import { supabase, hashWalletAddress } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import { createShippingLabel } from '@/lib/shipping-labels'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -45,29 +45,6 @@ export default function ShippingLabelForm({ listingId, buyerAddress, onLabelCrea
   })
 
   const [service, setService] = useState('Priority')
-
-  useEffect(() => {
-    // Load seller address from profile
-    if (publicKey && supabase) {
-      const sb = supabase
-      const loadSellerAddress = async () => {
-        const walletHash = hashWalletAddress(publicKey.toString())
-        const { data: profile } = await sb
-          .from('profiles')
-          .select('shipping_address, email')
-          .eq('wallet_address_hash', walletHash)
-          .single()
-
-        if (profile?.shipping_address) {
-          setSellerAddress(prev => ({ ...prev, ...profile.shipping_address }))
-        }
-        if (profile?.email) {
-          setSellerAddress(prev => ({ ...prev, email: profile.email }))
-        }
-      }
-      loadSellerAddress()
-    }
-  }, [publicKey])
 
   const handleCreateLabel = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -133,17 +110,6 @@ export default function ShippingLabelForm({ listingId, buyerAddress, onLabelCrea
             shipping_carrier: labelData.carrier
           })
           .eq('id', listingId)
-      }
-
-      // Save seller address to profile for future use
-      if (supabase && publicKey) {
-        const walletHash = hashWalletAddress(publicKey.toString())
-        await supabase
-          .from('profiles')
-          .update({
-            shipping_address: sellerAddress
-          })
-          .eq('wallet_address_hash', walletHash)
       }
 
       onLabelCreated(labelData)

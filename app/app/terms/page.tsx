@@ -119,6 +119,17 @@ export default function TermsPage() {
             </section>
 
             <section>
+              <h2 className="text-lg sm:text-xl font-pixel text-[#ff00ff] mb-3">5a. Shipping Addresses</h2>
+              <p>
+                We do not collect, store, or process shipping addresses. Buyers and sellers coordinate shipping 
+                and exchange addresses directly (e.g., through the encrypted chat). Any shipping-related 
+                information shared between users is solely their responsibility. We are not liable for the 
+                handling, security, or use of addresses exchanged between users. Shipping logistics and 
+                address handling are entirely between buyer and seller.
+              </p>
+            </section>
+
+            <section>
               <h2 className="text-lg sm:text-xl font-pixel text-[#ff00ff] mb-3">6. User Responsibilities</h2>
               <p>You are solely responsible for:</p>
               <ul className="list-disc list-inside ml-4 space-y-2">

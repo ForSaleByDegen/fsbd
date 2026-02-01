@@ -1,5 +1,7 @@
 # Privacy-Preserving Shipping Addresses
 
+We do **not** collect or store shipping addresses. Buyers and sellers exchange addresses directly via encrypted chat on the listing page. This keeps us out of the data flow and limits our liability.
+
 Buyers can keep their home address private by using **General Delivery** or a **PO Box**.
 
 ## General Delivery (free)
@@ -18,6 +20,6 @@ Buyers can keep their home address private by using **General Delivery** or a **
 
 ## Flow
 
-1. Buyer sets delivery address on profile (General Delivery, PO Box, or home)
-2. When seller ships, they use the buyer's saved address
+1. Buyer shares their delivery address with the seller via encrypted chat (we never see or store it)
+2. Seller uses that address for shipping
 3. With General Delivery or PO Box, the seller never sees the buyer's home address

@@ -49,6 +49,11 @@ export default function PrivacyPage() {
               
               <h3 className="text-base font-pixel text-[#ff00ff] mb-2 mt-3">3.2 Off-Chain Data</h3>
               <p>
+                We do NOT collect or store shipping addresses, physical addresses, or delivery information. 
+                Address exchange happens directly between users via encrypted chat; we never have access to 
+                decrypted addresses.
+              </p>
+              <p className="mt-2">
                 We may store the following information in our database:
               </p>
               <ul className="list-disc list-inside ml-4 space-y-2">
