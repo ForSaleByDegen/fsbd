@@ -15,6 +15,28 @@ import OptionalEscrowSection from './OptionalEscrowSection'
 import TermsAgreementModal from './TermsAgreementModal'
 import { hasAcceptedTerms, acceptTerms } from '@/lib/chat'
 
+// Base58 alphabet (Solana addresses) - excludes 0, O, I, l, /
+const BASE58_REGEX = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/
+
+function isValidSolanaAddress(str: string): boolean {
+  if (!str || typeof str !== 'string') return false
+  const trimmed = str.trim()
+  return BASE58_REGEX.test(trimmed) && !trimmed.includes('/') && !trimmed.startsWith('http')
+}
+
+// Resolve price_token to actual mint when needed (USDC or token_mint)
+function resolveTokenMint(listing: { price_token?: string; token_mint?: string | null }): string | null {
+  const pt = listing.price_token
+  if (!pt || pt === 'SOL') return null
+  if (pt === 'USDC') {
+    const net = process.env.NEXT_PUBLIC_SOLANA_NETWORK
+    return net === 'mainnet-beta'
+      ? 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
+      : '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU'
+  }
+  return pt
+}
+
 interface ListingDetailProps {
   listingId: string
 }
@@ -80,6 +102,10 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
       alert('Please connect your wallet')
       return
     }
+    if (!listing) {
+      alert('Please wait for the listing to load.')
+      return
+    }
     const termsAccepted = await hasAcceptedTerms(publicKey.toString())
     if (!termsAccepted) {
       setShowTermsModal(true)
@@ -93,7 +119,16 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
       setProcessing(true)
       
       const totalAmount = listing.price
-      const sellerWallet = new PublicKey(listing.wallet_address)
+      
+      // Validate seller wallet address (prevents "invalid base58" from URLs or corrupted data)
+      const walletAddr = String(listing.wallet_address || '').trim()
+      if (!isValidSolanaAddress(walletAddr)) {
+        console.error('Invalid wallet_address:', { raw: listing.wallet_address, length: walletAddr?.length })
+        throw new Error(
+          'This listing has an invalid seller address. It may be corrupted. Please try another listing or contact support.'
+        )
+      }
+      const sellerWallet = new PublicKey(walletAddr)
       
       // Check buyer balance before proceeding (Solana docs: getBalance with commitment 'confirmed')
       if (listing.price_token === 'SOL') {
@@ -153,8 +188,14 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
           }
         }
       } else {
-        // Check SPL token balance
-        const mintPublicKey = new PublicKey(listing.price_token)
+        // Check SPL token balance (resolve USDC/token_mint)
+        const mintStr = resolveTokenMint(listing) ?? listing.token_mint
+        if (!mintStr || !isValidSolanaAddress(mintStr)) {
+          throw new Error(
+            `This listing uses an unsupported payment token (${listing.price_token}). Only SOL and USDC are supported.`
+          )
+        }
+        const mintPublicKey = new PublicKey(mintStr)
         const buyerTokenAccount = await getAssociatedTokenAddress(mintPublicKey, publicKey)
         
         try {
@@ -186,7 +227,11 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
           })
         )
       } else {
-        const mintPublicKey = new PublicKey(listing.price_token)
+        const mintStr = resolveTokenMint(listing) ?? listing.token_mint
+        if (!mintStr || !isValidSolanaAddress(mintStr)) {
+          throw new Error(`Unsupported payment token. Only SOL and USDC are supported.`)
+        }
+        const mintPublicKey = new PublicKey(mintStr)
         const buyerTokenAccount = await getAssociatedTokenAddress(mintPublicKey, publicKey)
         const sellerTokenAccount = await getAssociatedTokenAddress(mintPublicKey, sellerWallet)
         const mintInfo = await getMint(connection, mintPublicKey)
@@ -370,7 +415,9 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
       }
       
       // Check for common errors
-      if (errorMessage.includes('insufficient funds') || errorMessage.includes('Insufficient')) {
+      if (errorMessage.includes('invalid base58') || errorMessage.includes('InvalidCharacter')) {
+        errorMessage = 'Invalid listing data (seller address or token). This listing may be corrupted. Please try another listing.'
+      } else if (errorMessage.includes('insufficient funds') || errorMessage.includes('Insufficient')) {
         errorMessage = 'Insufficient funds. Please ensure you have enough balance to cover the purchase and transaction fees.'
       } else if (errorMessage.includes('ReadonlyLamportChange')) {
         errorMessage = 'Transaction error: Account permissions issue. Please try again or contact support.'
