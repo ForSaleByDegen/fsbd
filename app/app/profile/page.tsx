@@ -49,8 +49,10 @@ type ProfileData = {
 }
 
 export default function ProfilePage() {
-  const privyHooks = usePrivy ? usePrivy() : { user: null, authenticated: false, ready: true }
-  const walletsHook = useWallets ? useWallets() : { wallets: [] }
+  const privyAppId = typeof window !== 'undefined' ? process.env.NEXT_PUBLIC_PRIVY_APP_ID : undefined
+  const privyEnabled = !!(privyAppId && usePrivy && useWallets)
+  const privyHooks = privyEnabled ? usePrivy() : { user: null, authenticated: false, ready: true }
+  const walletsHook = privyEnabled ? useWallets() : { wallets: [] }
   const { user, authenticated, ready } = privyHooks
   const { wallets } = walletsHook
   const { publicKey, connected } = useWallet()

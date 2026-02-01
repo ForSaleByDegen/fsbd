@@ -20,7 +20,8 @@ if (typeof window !== 'undefined') {
 
 export default function Header() {
   const { connected, publicKey } = useWallet()
-  const privyAuth = usePrivyHook ? usePrivyHook() : { authenticated: false }
+  const privyEnabled = !!(process.env.NEXT_PUBLIC_PRIVY_APP_ID && usePrivyHook)
+  const privyAuth = privyEnabled ? usePrivyHook() : { authenticated: false }
   const authenticated = privyAuth.authenticated || false
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [userIsAdmin, setUserIsAdmin] = useState(false)
