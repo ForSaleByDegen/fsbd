@@ -11,6 +11,7 @@ import Footer from '@/components/Footer'
 export const dynamic = 'force-dynamic'
 
 const BetaLanding = dynamicImport(() => import('@/components/BetaLanding'), { ssr: false })
+const FsbdTokenHero = dynamicImport(() => import('@/components/FsbdTokenHero'), { ssr: false })
 
 const isBetaMode = process.env.NEXT_PUBLIC_BETA_MODE === 'true'
 
@@ -35,6 +36,8 @@ export default function Home() {
         <div className="mb-6 sm:mb-8 md:mb-10 text-center w-full">
           <AsciiLogo />
         </div>
+
+        <FsbdTokenHero />
 
         <Suspense fallback={<LoadingScreen />}>
           <ListingFeed />

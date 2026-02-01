@@ -7,6 +7,8 @@ import { Button } from './ui/button'
 import PrivyConnectButton from './PrivyConnectButton'
 import { isAdmin } from '@/lib/admin'
 
+const isBetaMode = process.env.NEXT_PUBLIC_BETA_MODE === 'true'
+
 // Dynamic import for Privy
 let usePrivyHook: any = null
 if (typeof window !== 'undefined') {
@@ -60,15 +62,17 @@ export default function Header() {
           
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-2 lg:gap-4">
-            <Link href="/" className="text-xs md:text-sm font-pixel-alt text-[#660099] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-2 py-1 border-2 border-transparent hover:border-[#660099]" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-              Browse
-            </Link>
-            <Link href="/why" className="text-xs md:text-sm font-pixel-alt text-[#660099] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-2 py-1 border-2 border-transparent hover:border-[#660099] hidden lg:inline" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-              Why $FSBD
-            </Link>
-            <Link href="/listings/create" className="text-xs md:text-sm font-pixel-alt text-[#660099] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-2 py-1 border-2 border-transparent hover:border-[#660099]" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-              Create
-            </Link>
+            {!isBetaMode && (
+              <>
+                <Link href="/" className="text-xs md:text-sm font-pixel-alt text-[#660099] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-2 py-1 border-2 border-transparent hover:border-[#660099]" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                  Browse
+                </Link>
+                <Link href="/?tab=activity" className="text-xs md:text-sm font-pixel-alt text-[#660099] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-2 py-1 border-2 border-transparent hover:border-[#660099]" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                  Activity
+                </Link>
+                <Link href="/listings/create" className="text-xs md:text-sm font-pixel-alt text-[#660099] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-2 py-1 border-2 border-transparent hover:border-[#660099]" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                  Create
+                </Link>
             {connected && (
               <>
                 <Link href="/listings/create-auction">
@@ -84,6 +88,16 @@ export default function Header() {
                   Tiers
                 </Link>
               </>
+            )}
+              </>
+            )}
+            <Link href="/why" className="text-xs md:text-sm font-pixel-alt text-[#660099] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-2 py-1 border-2 border-transparent hover:border-[#660099] hidden lg:inline" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+              Why $FSBD
+            </Link>
+            {userIsAdmin && (
+              <Link href="/admin" className="text-xs md:text-sm font-pixel-alt text-[#ff00ff] hover:text-[#00ff00] transition-colors touch-manipulation px-2 py-1 border-2 border-[#ff00ff] hover:border-[#00ff00]" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                Admin
+              </Link>
             )}
             <div className="touch-manipulation">
               <PrivyConnectButton />
@@ -110,14 +124,70 @@ export default function Header() {
         {mobileMenuOpen && (
           <nav className="md:hidden mt-3 pb-2 border-t-2 border-[#660099]">
             <div className="flex flex-col gap-2 pt-2">
-              <Link 
-                href="/" 
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-sm font-pixel-alt text-[#660099] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-3 py-2 border-2 border-transparent hover:border-[#660099] min-h-[44px] flex items-center" 
-                style={{ fontFamily: 'var(--font-pixel-alt)' }}
-              >
-                Browse
-              </Link>
+              {!isBetaMode && (
+                <>
+                  <Link 
+                    href="/" 
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="text-sm font-pixel-alt text-[#660099] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-3 py-2 border-2 border-transparent hover:border-[#660099] min-h-[44px] flex items-center" 
+                    style={{ fontFamily: 'var(--font-pixel-alt)' }}
+                  >
+                    Browse
+                  </Link>
+                  <Link 
+                    href="/?tab=activity" 
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="text-sm font-pixel-alt text-[#660099] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-3 py-2 border-2 border-transparent hover:border-[#660099] min-h-[44px] flex items-center" 
+                    style={{ fontFamily: 'var(--font-pixel-alt)' }}
+                  >
+                    Activity
+                  </Link>
+                  <Link 
+                    href="/listings/create" 
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="text-sm font-pixel-alt text-[#660099] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-3 py-2 border-2 border-transparent hover:border-[#660099] min-h-[44px] flex items-center" 
+                    style={{ fontFamily: 'var(--font-pixel-alt)' }}
+                  >
+                    Create Listing
+                  </Link>
+                  {connected && (
+                    <>
+                      <Link 
+                        href="/listings/create-auction" 
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="text-sm font-pixel-alt text-[#660099] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-3 py-2 border-2 border-transparent hover:border-[#660099] min-h-[44px] flex items-center" 
+                        style={{ fontFamily: 'var(--font-pixel-alt)' }}
+                      >
+                        Create Auction
+                      </Link>
+                      <Link 
+                        href="/listings/my" 
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="text-sm font-pixel-alt text-[#660099] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-3 py-2 border-2 border-transparent hover:border-[#660099] min-h-[44px] flex items-center" 
+                        style={{ fontFamily: 'var(--font-pixel-alt)' }}
+                      >
+                        My Listings
+                      </Link>
+                      <Link 
+                        href="/profile" 
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="text-sm font-pixel-alt text-[#660099] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-3 py-2 border-2 border-transparent hover:border-[#660099] min-h-[44px] flex items-center" 
+                        style={{ fontFamily: 'var(--font-pixel-alt)' }}
+                      >
+                        Profile
+                      </Link>
+                      <Link 
+                        href="/tiers" 
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="text-sm font-pixel-alt text-[#660099] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-3 py-2 border-2 border-transparent hover:border-[#660099] min-h-[44px] flex items-center" 
+                        style={{ fontFamily: 'var(--font-pixel-alt)' }}
+                      >
+                        Tiers
+                      </Link>
+                    </>
+                  )}
+                </>
+              )}
               <Link 
                 href="/why" 
                 onClick={() => setMobileMenuOpen(false)}
@@ -126,59 +196,15 @@ export default function Header() {
               >
                 Why $FSBD
               </Link>
-              <Link 
-                href="/listings/create" 
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-sm font-pixel-alt text-[#660099] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-3 py-2 border-2 border-transparent hover:border-[#660099] min-h-[44px] flex items-center" 
-                style={{ fontFamily: 'var(--font-pixel-alt)' }}
-              >
-                Create Listing
-              </Link>
-              {connected && (
-                <>
-                  <Link 
-                    href="/listings/create-auction" 
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="text-sm font-pixel-alt text-[#660099] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-3 py-2 border-2 border-transparent hover:border-[#660099] min-h-[44px] flex items-center" 
-                    style={{ fontFamily: 'var(--font-pixel-alt)' }}
-                  >
-                    Create Auction
-                  </Link>
-                  <Link 
-                    href="/listings/my" 
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="text-sm font-pixel-alt text-[#660099] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-3 py-2 border-2 border-transparent hover:border-[#660099] min-h-[44px] flex items-center" 
-                    style={{ fontFamily: 'var(--font-pixel-alt)' }}
-                  >
-                    My Listings
-                  </Link>
-                  <Link 
-                    href="/profile" 
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="text-sm font-pixel-alt text-[#660099] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-3 py-2 border-2 border-transparent hover:border-[#660099] min-h-[44px] flex items-center" 
-                    style={{ fontFamily: 'var(--font-pixel-alt)' }}
-                  >
-                    Profile
-                  </Link>
-                  <Link 
-                    href="/tiers" 
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="text-sm font-pixel-alt text-[#660099] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-3 py-2 border-2 border-transparent hover:border-[#660099] min-h-[44px] flex items-center" 
-                    style={{ fontFamily: 'var(--font-pixel-alt)' }}
-                  >
-                    Tiers
-                  </Link>
-                  {userIsAdmin && (
-                    <Link 
-                      href="/admin" 
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="text-sm font-pixel-alt text-[#ff00ff] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-3 py-2 border-2 border-[#ff00ff] hover:border-[#00ff00] min-h-[44px] flex items-center" 
-                      style={{ fontFamily: 'var(--font-pixel-alt)' }}
-                    >
-                      Admin
-                    </Link>
-                  )}
-                </>
+              {userIsAdmin && (
+                <Link 
+                  href="/admin" 
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-sm font-pixel-alt text-[#ff00ff] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-3 py-2 border-2 border-[#ff00ff] hover:border-[#00ff00] min-h-[44px] flex items-center" 
+                  style={{ fontFamily: 'var(--font-pixel-alt)' }}
+                >
+                  Admin
+                </Link>
               )}
             </div>
           </nav>

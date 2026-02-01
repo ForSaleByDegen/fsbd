@@ -2,6 +2,20 @@ import Link from 'next/link'
 import { getIPFSGatewayURL } from '@/lib/pinata'
 import { getSubcategoryLabel } from '@/lib/categories'
 
+function formatRelativeTime(dateStr: string | undefined): string {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+  const diffDays = Math.floor(diffMs / 86400000)
+  if (diffMins < 60) return `${diffMins}m ago`
+  if (diffHours < 24) return `${diffHours}h ago`
+  if (diffDays < 7) return `${diffDays}d ago`
+  return date.toLocaleDateString()
+}
+
 interface ListingCardProps {
   listing: {
     id: string
@@ -18,6 +32,7 @@ interface ListingCardProps {
     delivery_method?: string
     location_city?: string
     location_region?: string
+    updated_at?: string
   }
 }
 
@@ -107,7 +122,12 @@ export default function ListingCard({ listing }: ListingCardProps) {
               ×{listing.quantity} available
             </span>
           )}
-          {listing.status && listing.status !== 'active' && (
+          {listing.status === 'sold' && (
+            <span className="inline-block text-xs bg-amber-600 text-amber-100 px-2 py-1 rounded">
+              {listing.updated_at ? `Sold ${formatRelativeTime(listing.updated_at)}` : 'Sold'}
+            </span>
+          )}
+          {listing.status && listing.status !== 'active' && listing.status !== 'sold' && (
             <span className="inline-block text-xs bg-gray-600 text-gray-200 px-2 py-1 rounded capitalize">
               {listing.status}
             </span>

@@ -1,8 +1,16 @@
 # Beta Mode & $FSBD Lock Setup
 
-## Beta Landing Page
+## Beta Landing & Platform Lockdown
 
-When `NEXT_PUBLIC_BETA_MODE=true`, the home page shows a landing with wallet connect + beta signup instead of the marketplace.
+When `NEXT_PUBLIC_BETA_MODE=true`:
+
+1. **Home page** shows a beta landing with wallet connect + beta signup instead of the marketplace.
+2. **Platform is fully locked**: All marketplace routes (`/listings`, `/profile`, `/seller`, `/tiers`, `/report`) redirect to the home page.
+3. **Header** hides Browse, Activity, Create, Auction, My Listings, Profile, Tiers. Why $FSBD, Terms, Privacy, and Admin (if applicable) remain.
+4. **Listing creation API** rejects POST requests with 403.
+5. Users hitting locked routes see a banner on the beta landing explaining the lockdown.
+
+Use this until the $FSBD token is live and tier-based access is ready.
 
 ### Setup
 
@@ -20,7 +28,7 @@ When `NEXT_PUBLIC_BETA_MODE=true`, the home page shows a landing with wallet con
 
 ### Turn Off Beta Mode
 
-When ready to go live:
+When ready to go live (token launched, tiers enforced):
 ```
 NEXT_PUBLIC_BETA_MODE=false
 ```

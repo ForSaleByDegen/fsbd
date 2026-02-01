@@ -16,6 +16,7 @@ import { hasAcceptedTerms } from '@/lib/chat'
 import { hashWalletAddress } from '@/lib/supabase'
 import BuyerOrderActions from './BuyerOrderActions'
 import SellerStatsCard from './SellerStatsCard'
+import ListingTokenChart from './ListingTokenChart'
 import { getSubcategoryLabel } from '@/lib/categories'
 
 /** Solana Pay link - alternative when in-app transaction fails */
@@ -578,14 +579,11 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
       )}
 
       {listing.has_token && listing.token_mint && (
-        <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-[#660099]/20 border-2 border-[#660099] rounded">
-          <h3 className="font-pixel text-[#ff00ff] mb-2 text-base sm:text-lg" style={{ fontFamily: 'var(--font-pixel)' }}>
-            🪙 Listing Token
-          </h3>
-          <p className="text-sm sm:text-base text-[#00ff00] font-pixel-alt break-all" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-            This listing has its own token! Mint: {listing.token_mint}
-          </p>
-        </div>
+        <ListingTokenChart
+          tokenMint={listing.token_mint}
+          tokenName={listing.token_name}
+          tokenSymbol={listing.token_symbol}
+        />
       )}
 
       {/* Show bidding section for auctions */}

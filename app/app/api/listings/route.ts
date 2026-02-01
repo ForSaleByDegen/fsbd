@@ -69,6 +69,14 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const wa = String(body.wallet_address ?? '').trim()
 
+    // Beta mode: block listing creation until platform is open
+    if (process.env.NEXT_PUBLIC_BETA_MODE === 'true') {
+      return NextResponse.json(
+        { error: 'Platform is in beta. Listings will be enabled when we launch.' },
+        { status: 403 }
+      )
+    }
+
     // Validate wallet_address before storing (prevents corrupted data)
     if (!wa || !BASE58.test(wa)) {
       return NextResponse.json(

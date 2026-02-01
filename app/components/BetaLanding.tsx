@@ -1,13 +1,19 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { Button } from './ui/button'
 import BuyFsbdSection from './BuyFsbdSection'
 
 export default function BetaLanding() {
+  const searchParams = useSearchParams()
+  const [showLockedBanner, setShowLockedBanner] = useState(false)
+  useEffect(() => {
+    setShowLockedBanner(searchParams.get('locked') === '1')
+  }, [searchParams])
   const { connected, publicKey } = useWallet()
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
@@ -48,6 +54,11 @@ export default function BetaLanding() {
         </div>
 
         <div className="p-6 sm:p-8 border-2 sm:border-4 border-[#660099] bg-black/50 rounded">
+          {showLockedBanner && (
+            <p className="text-[#00ff00] font-pixel-alt text-sm mb-4 px-3 py-2 border border-[#660099] rounded bg-black/30" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+              Platform is locked for beta. Sign up below to get notified when we launch with tier-based access.
+            </p>
+          )}
           <p className="text-[#aa77ee] font-pixel-alt text-base sm:text-lg mb-6" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             Degen Craigslist on Solana — crypto payments, token-gated tiers, auctions. Launching soon.
           </p>

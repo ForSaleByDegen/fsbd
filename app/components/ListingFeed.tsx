@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useWallet } from '@solana/wallet-adapter-react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { CATEGORIES } from '@/lib/categories'
@@ -9,20 +10,39 @@ import ListingCard from './ListingCard'
 import SearchBar from './SearchBar'
 import { Button } from './ui/button'
 
+type TabType = 'browse' | 'activity'
+
 export default function ListingFeed() {
   const { publicKey, connected } = useWallet()
+  const searchParams = useSearchParams()
+  const tabParam = searchParams.get('tab')
+  const categoryParam = searchParams.get('category')
+  const [tab, setTab] = useState<TabType>(tabParam === 'activity' ? 'activity' : 'browse')
+
+  useEffect(() => {
+    if (tabParam === 'activity') setTab('activity')
+  }, [tabParam])
+  useEffect(() => {
+    if (categoryParam && CATEGORIES.some((c) => c.value === categoryParam)) {
+      setCategory(categoryParam)
+    }
+  }, [categoryParam])
   const [listings, setListings] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
-  const [category, setCategory] = useState('all')
+  const [category, setCategory] = useState(categoryParam && CATEGORIES.some((c) => c.value === categoryParam) ? categoryParam : 'all')
   const [subcategory, setSubcategory] = useState('')
   const [delivery, setDelivery] = useState('all')
   const [locationCity, setLocationCity] = useState('')
   const [locationRegion, setLocationRegion] = useState('')
 
   useEffect(() => {
-    fetchListings()
-  }, [category, subcategory, searchQuery, delivery, locationCity, locationRegion])
+    if (tab === 'activity') {
+      fetchActivity()
+    } else {
+      fetchListings()
+    }
+  }, [tab, category, subcategory, searchQuery, delivery, locationCity, locationRegion])
 
   // Refresh listings when component becomes visible (user navigates back)
   useEffect(() => {
@@ -34,6 +54,25 @@ export default function ListingFeed() {
     document.addEventListener('visibilitychange', handleVisibilityChange)
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
   }, [])
+
+  const fetchActivity = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch('/api/listings/activity', { cache: 'no-store' })
+      const data = await response.json()
+      const arr = Array.isArray(data) ? data : []
+      const normalized = arr.map((listing: any) => ({
+        ...listing,
+        images: Array.isArray(listing.images) ? listing.images : typeof listing.images === 'string' ? JSON.parse(listing.images || '[]') : [],
+      }))
+      setListings(normalized)
+    } catch (err) {
+      console.error('Error fetching activity:', err)
+      setListings([])
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const fetchListings = async () => {
     try {
@@ -123,6 +162,13 @@ export default function ListingFeed() {
         locationRegion={locationRegion}
         setLocationRegion={setLocationRegion}
       />
+      )}
+
+      {tab === 'activity' && (
+        <p className="text-sm text-[#aa77ee] font-pixel-alt mb-4" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          Recently sold items
+        </p>
+      )}
 
       {loading ? (
         <div className="text-center py-16">
@@ -137,15 +183,19 @@ export default function ListingFeed() {
             <p className="text-muted-foreground mb-6">
               Be the first to create a listing on For Sale By Degen!
             </p>
-            {connected ? (
+            {tab === 'browse' && connected ? (
               <Link href="/listings/create">
                 <Button size="lg" className="gap-2">
                   <span>+</span> Create First Listing
                 </Button>
               </Link>
-            ) : (
+            ) : tab === 'browse' ? (
               <p className="text-sm text-muted-foreground">
                 Connect your wallet to create a listing
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Check back soon for activity.
               </p>
             )}
           </div>
