@@ -350,7 +350,7 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
         const errData = await markRes.json().catch(() => ({}))
         console.error('Mark sold failed:', errData)
         if (markRes.status === 409) {
-          setListing((prev) => (prev ? { ...prev, status: 'sold' } : prev))
+          setListing((prev: Record<string, unknown> | null) => (prev ? { ...prev, status: 'sold' } : prev))
           alert('This item was already sold. Your payment was sent — check with the seller.')
         } else {
           alert(
@@ -359,7 +359,7 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
           )
         }
       } else {
-        setListing((prev) => (prev ? { ...prev, status: 'sold' } : prev))
+        setListing((prev: Record<string, unknown> | null) => (prev ? { ...prev, status: 'sold' } : prev))
         alert(
           `Purchase successful! ${totalAmount} ${prep.token} sent directly to seller.\n\n` +
           `Transaction: ${signature}\n\n` +
