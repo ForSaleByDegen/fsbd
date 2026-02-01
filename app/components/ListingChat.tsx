@@ -378,24 +378,7 @@ export default function ListingChat({
           </Button>
         </div>
       )}
-      <div className="p-2 border-t border-[#660099] flex gap-2">
-        <Button
-          onClick={handleProposeEscrow}
-          disabled={sending}
-          variant="outline"
-          className="flex-1 border-2 border-[#ff00ff] text-[#ff00ff] hover:bg-[#ff00ff]/20 text-sm"
-        >
-          Propose Escrow
-        </Button>
-        <Button
-          onClick={handleAcceptEscrow}
-          disabled={sending}
-          variant="outline"
-          className="flex-1 border-2 border-[#00ff00] text-[#00ff00] hover:bg-[#00ff00]/20 text-sm"
-        >
-          Accept Escrow
-        </Button>
-      </div>
+      {/* Escrow buttons hidden until program launch */}
     </div>
   )
 }

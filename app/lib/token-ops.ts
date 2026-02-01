@@ -12,7 +12,52 @@ import {
 import { WalletContextState } from '@solana/wallet-adapter-react'
 
 const PUMP_TRADE_LOCAL = 'https://pumpportal.fun/api/trade-local'
-const PUMP_IPFS = 'https://pump.fun/api/ipfs'
+
+/** Use our API proxy to avoid CORS (pump.fun blocks browser requests) */
+async function uploadToPumpIpfs(
+  tokenName: string,
+  tokenSymbol: string,
+  options: { imageFile?: File; imageUrl?: string; description?: string }
+): Promise<string> {
+  if (options.imageFile) {
+    const formData = new FormData()
+    formData.append('file', options.imageFile)
+    formData.append('name', tokenName)
+    formData.append('symbol', tokenSymbol)
+    formData.append('description', options.description || `Token for listing on $FSBD`)
+
+    const res = await fetch('/api/pump-ipfs', { method: 'POST', body: formData })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error || `IPFS upload failed (${res.status})`)
+    }
+    const data = await res.json()
+    const uri = data.metadataUri || data.uri
+    if (!uri) throw new Error('No metadata URI returned')
+    return uri
+  }
+  if (options.imageUrl) {
+    const res = await fetch('/api/pump-ipfs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        imageUrl: options.imageUrl,
+        name: tokenName,
+        symbol: tokenSymbol,
+        description: options.description,
+      }),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error || `IPFS upload failed (${res.status})`)
+    }
+    const data = await res.json()
+    const uri = data.metadataUri || data.uri
+    if (!uri) throw new Error('No metadata URI returned')
+    return uri
+  }
+  throw new Error('Token launch requires an image. Add an image to your listing first.')
+}
 
 /** Create token via pump.fun (bonding curve, dev buy, pump.fun discoverability) */
 export async function createPumpFunToken(
@@ -31,32 +76,15 @@ export async function createPumpFunToken(
   const mintKeypair = Keypair.generate()
   const devBuySol = options.devBuySol ?? 0.01
 
-  // 1. Upload metadata to pump.fun IPFS
-  const formData = new FormData()
-  formData.append('name', tokenName)
-  formData.append('symbol', tokenSymbol)
-  formData.append('description', options.description || `Token for listing on $FSBD`)
-  formData.append('showName', 'true')
-  if (options.imageFile) {
-    formData.append('file', options.imageFile)
-  } else if (options.imageUrl) {
-    // Pump.fun IPFS expects file; fetch and add as blob
-    const imgRes = await fetch(options.imageUrl)
-    const blob = await imgRes.blob()
-    const ext = options.imageUrl.split('.').pop()?.split('?')[0] || 'png'
-    formData.append('file', blob, `image.${ext}`)
-  } else {
-    throw new Error('Token launch requires at least one image. Add an image to your listing first.')
+  // 1. Upload metadata via our proxy (avoids pump.fun CORS)
+  if (!options.imageFile && !options.imageUrl) {
+    throw new Error('Token launch requires an image. Add an image to your listing first.')
   }
-
-  const ipfsRes = await fetch(PUMP_IPFS, { method: 'POST', body: formData })
-  if (!ipfsRes.ok) {
-    const err = await ipfsRes.text()
-    throw new Error(`Pump.fun IPFS upload failed: ${err}`)
-  }
-  const ipfsJson = await ipfsRes.json()
-  const metadataUri = ipfsJson.metadataUri || ipfsJson.uri
-  if (!metadataUri) throw new Error('No metadata URI from pump.fun')
+  const metadataUri = await uploadToPumpIpfs(tokenName, tokenSymbol, {
+    imageFile: options.imageFile,
+    imageUrl: options.imageUrl,
+    description: options.description,
+  })
 
   // 2. Get create transaction from PumpPortal (no API key needed for trade-local)
   const body = {
@@ -91,8 +119,12 @@ export async function createPumpFunToken(
 
   if (!signTransaction) throw new Error('Wallet signTransaction not available')
   const signed = await signTransaction(tx)
-  const sig = await connection.sendTransaction(signed as VersionedTransaction)
-  await connection.confirmTransaction(sig)
+  const sig = await connection.sendTransaction(signed as VersionedTransaction, {
+    skipPreflight: true,
+    maxRetries: 5,
+    preflightCommitment: 'confirmed',
+  })
+  await connection.confirmTransaction(sig, 'confirmed')
 
   return mintKeypair.publicKey.toBase58()
 }
@@ -142,7 +174,8 @@ export async function createListingToken(
     )
 
     // CRITICAL: Set blockhash and feePayer BEFORE partialSign (avoids "recentBlockhash required")
-    const { blockhash } = await connection.getLatestBlockhash('finalized')
+    // Use 'confirmed' for fresher blockhash; add retries for "Blockhash not found"
+    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed')
     transaction.recentBlockhash = blockhash
     transaction.feePayer = wallet
 
@@ -150,8 +183,13 @@ export async function createListingToken(
 
     if (!signTransaction) throw new Error('Wallet signTransaction is not available')
     const signed = await signTransaction(transaction)
-    const signature = await connection.sendRawTransaction(signed.serialize())
-    await connection.confirmTransaction(signature)
+    const serialized = signed.serialize()
+    const signature = await connection.sendRawTransaction(serialized, {
+      skipPreflight: true,
+      maxRetries: 5,
+      preflightCommitment: 'confirmed',
+    })
+    await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed')
 
     return mint.toString()
   } catch (error) {

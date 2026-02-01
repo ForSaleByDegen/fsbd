@@ -33,7 +33,7 @@ export default function TermsPage() {
               <p>
                 $FSBD is a decentralized peer-to-peer marketplace where users can list, buy, and sell items 
                 using cryptocurrency (SOL, USDC, or custom tokens). The platform operates on the Solana 
-                blockchain and uses smart contracts for escrow and transactions.
+                blockchain for peer-to-peer transactions.
               </p>
             </section>
 
@@ -60,7 +60,7 @@ export default function TermsPage() {
                 blockchain. We do not:
               </p>
               <ul className="list-disc list-inside ml-4 space-y-2">
-                <li>Hold, control, or escrow funds (except optional user-initiated escrow)</li>
+                <li>Hold, control, or escrow funds</li>
                 <li>Act as an intermediary in transactions</li>
                 <li>Guarantee the quality, safety, or legality of listed items</li>
                 <li>Verify the identity of users</li>

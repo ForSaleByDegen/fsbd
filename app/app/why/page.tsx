@@ -58,10 +58,19 @@ export default function WhyFsbdPage() {
 
             <section>
               <h2 className="text-lg font-pixel text-[#ff00ff] mb-2" style={{ fontFamily: 'var(--font-pixel)' }}>
-                Free listings, optional escrow
+                Launch a token with your listing
               </h2>
               <p className="text-[#00ff00]" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-                Basic listings are free (message signing only). Optional escrow is between you and the other party—we&apos;re not in the middle. Keep it simple or add protection when you want it.
+                Unlike other similar platforms, FSBD lets you launch a token with each listing—right from the create form. Your token can represent the item, your shop, or your brand. Set the starting price (e.g. 1 item = 100 YOURTOKEN or 0.5 SOL) and accept payment in your token or SOL. With multiple items and tokens, your profile becomes an Etsy-style shop with your own mini-economy—your tokens, your pricing, your community.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-lg font-pixel text-[#ff00ff] mb-2" style={{ fontFamily: 'var(--font-pixel)' }}>
+                Free listings
+              </h2>
+              <p className="text-[#00ff00]" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                Basic listings are free (message signing only). Coordinate directly with buyers and sellers via encrypted chat.
               </p>
             </section>
 

@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: '$FSBD',
     description: 'Degen Craigslist: Crypto payments, token-gated listings, and mini-launches on Solana. Anon side project.',
     start_url: '/',
-    display: 'standalone',
+    display: 'browser',
     background_color: '#000000',
     theme_color: '#660099',
     orientation: 'portrait-primary',

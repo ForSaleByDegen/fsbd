@@ -3,7 +3,7 @@
   "short_name": "$FSBD",
   "description": "Anonymous decentralized marketplace on Solana. Craigslist-like classifieds with crypto payments.",
   "start_url": "/",
-  "display": "standalone",
+  "display": "browser",
   "background_color": "#000000",
   "theme_color": "#660099",
   "orientation": "portrait-primary",

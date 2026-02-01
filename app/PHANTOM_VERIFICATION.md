@@ -30,7 +30,7 @@ Include:
 
 - **Domain:** `fsbd.fun`
 - **Project:** For Sale By Degen — P2P Solana marketplace
-- **Description:** Decentralized listings, crypto payments, optional escrow. No custody of funds.
+- **Description:** Decentralized listings, crypto payments. No custody of funds.
 
 Response can take up to a week.
 

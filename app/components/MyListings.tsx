@@ -25,7 +25,7 @@ export default function MyListings() {
     e.preventDefault()
     e.stopPropagation()
     if (!publicKey) return
-    if (!confirm('Remove this listing from the marketplace? You can create a new listing later.')) return
+    if (!confirm('Remove this listing from the marketplace? You can relist it anytime.')) return
     try {
       const res = await fetch(`/api/listings/${listingId}`, {
         method: 'PATCH',
@@ -38,6 +38,26 @@ export default function MyListings() {
       router.refresh()
     } catch (err) {
       alert('Failed to unlist: ' + (err instanceof Error ? err.message : 'Unknown error'))
+    }
+  }
+
+  const handleRelist = async (listingId: string, e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!publicKey) return
+    if (!confirm('Put this listing back on the marketplace?')) return
+    try {
+      const res = await fetch(`/api/listings/${listingId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wallet: publicKey.toString(), action: 'relist' }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Failed to relist')
+      setListings((prev) => prev.map((l) => (l.id === listingId ? { ...l, status: 'active' } : l)))
+      router.refresh()
+    } catch (err) {
+      alert('Failed to relist: ' + (err instanceof Error ? err.message : 'Unknown error'))
     }
   }
 
@@ -96,6 +116,15 @@ export default function MyListings() {
                   className="border-[#ff6600] text-[#ff6600] hover:bg-[#ff6600]/20 w-fit text-sm"
                 >
                   Unlist / Remove
+                </Button>
+              )}
+              {listing.status === 'removed' && (
+                <Button
+                  onClick={(e) => handleRelist(listing.id, e)}
+                  variant="outline"
+                  className="border-[#00ff00] text-[#00ff00] hover:bg-[#00ff00]/20 w-fit text-sm"
+                >
+                  Relist
                 </Button>
               )}
             </div>

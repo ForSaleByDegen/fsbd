@@ -18,10 +18,7 @@ export default function WalletProvider({ children }: { children: React.ReactNode
   const config = useMemo(() => ({ commitment: 'confirmed' as const }), [])
 
   const wallets = useMemo(
-    () => [
-      new PhantomWalletAdapter(),
-      new SolflareWalletAdapter(),
-    ],
+    () => [new PhantomWalletAdapter(), new SolflareWalletAdapter()],
     []
   )
 

@@ -4,6 +4,8 @@ const withPWA = require('next-pwa')({
   register: true,
   skipWaiting: true,
   maximumFileSizeToCacheInBytes: 6 * 1024 * 1024, // 6MB - avoid hang on large chunks
+  // Don't cache failed navigations (e.g. DNS error pages) - only cache 200 responses
+  cacheStartUrl: false,
   runtimeCaching: [
     {
       urlPattern: /\.(?:mp3|ogg|wav|m4a)$/i,

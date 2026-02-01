@@ -396,30 +396,7 @@ export default function ProfilePage() {
           </Link>
         </section>
 
-        {/* Escrows */}
-        <section className="mb-6">
-          <h2 className="text-xl font-pixel text-[#00ff00] mb-3" style={{ fontFamily: 'var(--font-pixel)' }}>
-            Active Escrows
-          </h2>
-          {loading ? (
-            <p className="text-[#660099] font-pixel-alt text-sm">Loading...</p>
-          ) : escrows.length === 0 ? (
-            <p className="text-[#660099] font-pixel-alt text-sm mb-4">No active escrows.</p>
-          ) : (
-            <div className="space-y-2 mb-4">
-              {escrows.slice(0, 5).map((e: (typeof escrows)[0]) => (
-                <Link key={e.id} href={`/listings/${e.listing_id}`} className="block p-3 bg-black/50 border-2 border-[#660099] hover:border-[#00ff00] transition-colors">
-                  <span className="text-[#00ff00] font-pixel-alt text-sm block" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-                    {e.listing_title || 'Listing'} • {e.listing_price != null ? `${e.listing_price} ${e.listing_price_token || 'SOL'}` : ''}
-                  </span>
-                  <span className="text-[#660099] font-pixel-alt text-xs" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-                    Escrow: {e.escrow_status || 'pending'}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          )}
-        </section>
+        {/* Escrows hidden until program launch */}
 
         {/* Bids */}
         <section className="mb-6">

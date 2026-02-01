@@ -59,7 +59,7 @@ export default function ComplianceModal() {
         <ul className="text-sm text-[#00ff00] font-pixel-alt space-y-2 mb-4 list-disc list-inside" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
           <li>We host listings only. Buyers and sellers transact peer-to-peer. We are NOT a party to any transaction.</li>
           <li>No seller is affiliated with this platform. We do NOT verify listings, item authenticity, or delivery.</li>
-          <li>Direct (Degen) payment sends funds straight to the seller with no protections. Escrow is encouraged.</li>
+          <li>Direct (Degen) payment sends funds straight to the seller with no protections.</li>
           <li>All risk is yours. Use at your own risk. All transactions are final.</li>
         </ul>
         <div className="flex flex-wrap gap-3 mb-6">

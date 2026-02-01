@@ -10,13 +10,11 @@ By using this marketplace, you agree that:
 
 • This platform hosts listings only. Buyers and sellers transact directly peer-to-peer. We are NOT a party to any transaction.
 
-• We do NOT verify listings, item condition, or that items will be shipped or delivered. We do not hold funds (except optional escrow by user choice), facilitate shipping, or resolve disputes.
+• We do NOT verify listings, item condition, or that items will be shipped or delivered. We do not hold funds, facilitate shipping, or resolve disputes.
 
 • All risk is yours. Items may not match descriptions. Delivery may fail. We assume NO liability. Use at your own risk. All transactions are final.
 
 • BUYER AND SELLER BEWARE: Conduct due diligence. Coordinate directly with the other party.
-
-• If you choose optional escrow, funds are held in a smart contract; release depends on mutual agreement and optional tracking confirmation.
 
 • You are responsible for compliance with applicable laws.
 

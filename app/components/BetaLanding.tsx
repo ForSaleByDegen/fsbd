@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { Button } from './ui/button'
 import BuyFsbdSection from './BuyFsbdSection'
+import PwaWalletHint from './PwaWalletHint'
 
 export default function BetaLanding() {
   const searchParams = useSearchParams()
@@ -68,6 +69,7 @@ export default function BetaLanding() {
               <div className="flex flex-col items-center gap-4">
                 <p className="text-sm text-[#00ff00] font-pixel-alt">Connect your wallet to request beta access</p>
                 <WalletMultiButton className="!inline-flex !items-center !justify-center !px-6 !py-3 !border-2 !border-[#660099] !text-[#00ff00] hover:!bg-[#660099] hover:!text-black !font-pixel-alt !text-base !rounded !transition-colors" style={{ fontFamily: 'var(--font-pixel-alt)' }} />
+                <PwaWalletHint />
               </div>
             ) : (
               <div className="flex flex-col items-center gap-4">

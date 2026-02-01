@@ -10,7 +10,6 @@ import { getIPFSGatewayURL } from '@/lib/pinata'
 import { Button } from './ui/button'
 import BiddingSection from './BiddingSection'
 import ListingChat from './ListingChat'
-import OptionalEscrowSection from './OptionalEscrowSection'
 import ManualTrackingForm from './ManualTrackingForm'
 import { hasAcceptedTerms } from '@/lib/chat'
 import { hashWalletAddress } from '@/lib/supabase'
@@ -92,7 +91,7 @@ function UnlistButton({ listingId, onSuccess }: { listingId: string; onSuccess: 
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Failed to unlist')
-      alert('Listing removed. You can create a new listing whenever you\'re ready.')
+      alert('Listing removed. You can relist it anytime from My Listings.')
       onSuccess()
     } catch (e) {
       alert('Failed to unlist: ' + (e instanceof Error ? e.message : 'Unknown error'))
@@ -113,6 +112,44 @@ function UnlistButton({ listingId, onSuccess }: { listingId: string; onSuccess: 
   )
 }
 
+/** Relist button - puts removed listing back on marketplace */
+function RelistButton({ listingId, onSuccess }: { listingId: string; onSuccess: () => void }) {
+  const { publicKey } = useWallet()
+  const [loading, setLoading] = useState(false)
+
+  const handleRelist = async () => {
+    if (!publicKey) return
+    if (!confirm('Put this listing back on the marketplace?')) return
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/listings/${listingId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wallet: publicKey.toString(), action: 'relist' }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Failed to relist')
+      alert('Listing is live again!')
+      onSuccess()
+    } catch (e) {
+      alert('Failed to relist: ' + (e instanceof Error ? e.message : 'Unknown error'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Button
+      onClick={handleRelist}
+      disabled={loading}
+      variant="outline"
+      className="border-[#00ff00] text-[#00ff00] hover:bg-[#00ff00]/20 w-fit text-sm"
+    >
+      {loading ? 'Relisting...' : 'Relist'}
+    </Button>
+  )
+}
+
 interface ListingDetailProps {
   listingId: string
 }
@@ -124,17 +161,6 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
   const [listing, setListing] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState(false)
-  const [escrowThread, setEscrowThread] = useState<{ threadId: string; escrowAgreed: boolean; escrowStatus: string | null } | null>(null)
-
-  const handleThreadLoaded = useCallback((threadId: string, escrowAgreed: boolean, escrowStatus: string | null) => {
-    setEscrowThread({ threadId, escrowAgreed, escrowStatus })
-  }, [])
-  const handleEscrowProposed = useCallback(() => {
-    setEscrowThread((t) => (t ? { ...t, escrowStatus: 'pending' } : t))
-  }, [])
-  const handleEscrowAccepted = useCallback(() => {
-    setEscrowThread((t) => (t ? { ...t, escrowAgreed: true, escrowStatus: 'pending' } : t))
-  }, [])
 
   useEffect(() => {
     fetchListing()
@@ -197,10 +223,9 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
     const confirmToken = (listing.price_token as string) || 'SOL'
     const confirmMsg =
       `⚠️ DEGEN PAYMENT — DIRECT TO SELLER\n\n` +
-      `You are about to send ${confirmAmount} ${confirmToken} DIRECTLY to the seller's wallet. No escrow, no protections.\n\n` +
+      `You are about to send ${confirmAmount} ${confirmToken} DIRECTLY to the seller's wallet. No protections.\n\n` +
       `• No seller is affiliated with this platform.\n` +
-      `• We do NOT stand by any item's authenticity or condition.\n` +
-      `• We strongly encourage using Escrow (propose in chat first) for buyer protection.\n\n` +
+      `• We do NOT stand by any item's authenticity or condition.\n\n` +
       `Proceed with direct (Degen) payment anyway?`
     if (!confirm(confirmMsg)) {
       return
@@ -542,34 +567,11 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
           <ListingChat
             listing={{ id: listing.id, wallet_address: listing.wallet_address }}
             currentUserWallet={publicKey.toString()}
-            onThreadLoaded={handleThreadLoaded}
-            onEscrowProposed={handleEscrowProposed}
-            onEscrowAccepted={handleEscrowAccepted}
           />
         </div>
       )}
 
-      {/* Optional escrow when both parties agreed */}
-      {publicKey && escrowThread?.escrowAgreed && escrowThread.threadId && (
-        <OptionalEscrowSection
-          listing={{
-            id: listing.id,
-            title: listing.title,
-            price: listing.price,
-            price_token: listing.price_token,
-            wallet_address: listing.wallet_address,
-            escrow_pda: listing.escrow_pda,
-            escrow_status: listing.escrow_status,
-            tracking_number: listing.tracking_number,
-            shipping_carrier: listing.shipping_carrier,
-          }}
-          threadId={escrowThread.threadId}
-          escrowAgreed={escrowThread.escrowAgreed}
-          escrowStatus={escrowThread.escrowStatus}
-          userRole={publicKey.toString() === listing.wallet_address ? 'seller' : 'buyer'}
-          onUpdate={() => fetchListing()}
-        />
-      )}
+      {/* Escrow hidden until program launch */}
 
       {/* Seller stats (public) */}
       {listing.wallet_address && (
@@ -599,13 +601,13 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
                   🎲 DEGEN — Direct Payment
                 </h4>
                 <p className="text-sm text-[#aa77ee] font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-                  This sends {listing.price} {(listing.price_token as string) || 'SOL'} <strong>directly to the seller</strong>. No escrow, no buyer protection.
+                  This sends {listing.price} {(listing.price_token as string) || 'SOL'} <strong>directly to the seller</strong>. No buyer protection.
                 </p>
                 <p className="text-sm text-[#aa77ee] font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                   No seller is affiliated with this platform. We do NOT stand by any item&apos;s authenticity or condition.
                 </p>
                 <p className="text-sm text-[#00ff00] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-                  <strong>Strongly encouraged:</strong> Use the chat above to propose Escrow first. Funds are held until shipment and receipt are confirmed.
+                  Coordinate shipping and payment details with the seller via chat before paying.
                 </p>
               </div>
               <Button
@@ -629,6 +631,12 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
                 <UnlistButton
                   listingId={listingId}
                   onSuccess={() => { router.push('/profile'); router.refresh(); }}
+                />
+              )}
+              {listing.status === 'removed' && (
+                <RelistButton
+                  listingId={listingId}
+                  onSuccess={() => { fetchListing(); router.refresh(); }}
                 />
               )}
               {/* Add tracking for sold items without tracking yet */}

@@ -56,8 +56,8 @@ export async function GET(
 
 /**
  * PATCH /api/listings/[id]
- * Unlist (soft delete) a listing. Owner only.
- * Body: { wallet: string, action: 'unlist' }
+ * Unlist (soft delete) or relist a listing. Owner only.
+ * Body: { wallet: string, action: 'unlist' | 'relist' }
  */
 export async function PATCH(
   request: NextRequest,
@@ -80,9 +80,9 @@ export async function PATCH(
     const wallet = typeof body.wallet === 'string' ? body.wallet.trim() : ''
     const action = body.action
 
-    if (!wallet || action !== 'unlist') {
+    if (!wallet || (action !== 'unlist' && action !== 'relist')) {
       return NextResponse.json(
-        { error: 'Invalid request. Provide wallet and action: "unlist".' },
+        { error: 'Invalid request. Provide wallet and action: "unlist" or "relist".' },
         { status: 400 }
       )
     }
@@ -106,27 +106,46 @@ export async function PATCH(
     }
 
     if (listing.wallet_address_hash !== walletHash) {
-      return NextResponse.json({ error: 'You can only unlist your own listings.' }, { status: 403 })
+      return NextResponse.json({ error: 'You can only unlist/relist your own listings.' }, { status: 403 })
     }
 
-    if (listing.status !== 'active') {
+    if (action === 'unlist') {
+      if (listing.status !== 'active') {
+        return NextResponse.json(
+          { error: `Cannot unlist: listing is ${listing.status}.` },
+          { status: 400 }
+        )
+      }
+      const { error: updateError } = await supabaseAdmin
+        .from('listings')
+        .update({ status: 'removed' })
+        .eq('id', id)
+      if (updateError) {
+        console.error('Unlist error:', updateError)
+        return NextResponse.json({ error: updateError.message }, { status: 500 })
+      }
+      return NextResponse.json({ success: true, status: 'removed' })
+    }
+
+    // action === 'relist' — only removed (unlisted) items, never sold
+    if (listing.status !== 'removed') {
       return NextResponse.json(
-        { error: `Cannot unlist: listing is ${listing.status}.` },
+        { error: `Cannot relist: listing is ${listing.status}. Only unlisted items can be relisted.` },
         { status: 400 }
       )
     }
 
     const { error: updateError } = await supabaseAdmin
       .from('listings')
-      .update({ status: 'removed' })
+      .update({ status: 'active' })
       .eq('id', id)
 
     if (updateError) {
-      console.error('Unlist error:', updateError)
+      console.error('Relist error:', updateError)
       return NextResponse.json({ error: updateError.message }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true, status: 'removed' })
+    return NextResponse.json({ success: true, status: 'active' })
   } catch (err) {
     console.error('Unlist API error:', err)
     return NextResponse.json(
