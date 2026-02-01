@@ -11,6 +11,7 @@ interface ListingCardProps {
     category: string
     images?: string[]
     has_token?: boolean
+    status?: string
   }
 }
 
@@ -84,11 +85,18 @@ export default function ListingCard({ listing }: ListingCardProps) {
             {listing.category?.replace('-', ' ')}
           </span>
         </div>
-        {listing.has_token && (
-          <span className="inline-block mt-2 text-xs bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 px-2 py-1 rounded">
-            🪙 Has Token
-          </span>
-        )}
+        <div className="flex flex-wrap gap-1 mt-2">
+          {listing.has_token && (
+            <span className="inline-block text-xs bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 px-2 py-1 rounded">
+              🪙 Has Token
+            </span>
+          )}
+          {listing.status && listing.status !== 'active' && (
+            <span className="inline-block text-xs bg-gray-600 text-gray-200 px-2 py-1 rounded capitalize">
+              {listing.status}
+            </span>
+          )}
+        </div>
       </div>
     </Link>
   )

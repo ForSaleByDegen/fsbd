@@ -70,6 +70,44 @@ function SolanaPayLink({ listingId }: { listingId: string }) {
   )
 }
 
+/** Unlist button - removes listing from marketplace (owner can re-list later) */
+function UnlistButton({ listingId, onSuccess }: { listingId: string; onSuccess: () => void }) {
+  const { publicKey } = useWallet()
+  const [loading, setLoading] = useState(false)
+
+  const handleUnlist = async () => {
+    if (!publicKey) return
+    if (!confirm('Remove this listing from the marketplace? You can create a new listing later if you want to sell again.')) return
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/listings/${listingId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wallet: publicKey.toString(), action: 'unlist' }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Failed to unlist')
+      alert('Listing removed. You can create a new listing whenever you\'re ready.')
+      onSuccess()
+    } catch (e) {
+      alert('Failed to unlist: ' + (e instanceof Error ? e.message : 'Unknown error'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Button
+      onClick={handleUnlist}
+      disabled={loading}
+      variant="outline"
+      className="border-[#ff6600] text-[#ff6600] hover:bg-[#ff6600]/20 w-fit text-sm"
+    >
+      {loading ? 'Removing...' : 'Unlist / Remove'}
+    </Button>
+  )
+}
+
 interface ListingDetailProps {
   listingId: string
 }
@@ -541,9 +579,17 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
           )}
 
           {publicKey && publicKey.toString() === listing.wallet_address && (
-            <p className="text-[#660099] font-pixel-alt text-sm sm:text-base" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-              This is your listing
-            </p>
+            <div className="flex flex-col gap-2">
+              <p className="text-[#660099] font-pixel-alt text-sm sm:text-base" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                This is your listing
+              </p>
+              {listing.status === 'active' && (
+                <UnlistButton
+                  listingId={listingId}
+                  onSuccess={() => { router.push('/profile'); router.refresh(); }}
+                />
+              )}
+            </div>
           )}
 
           {!publicKey && listing.status === 'active' && (

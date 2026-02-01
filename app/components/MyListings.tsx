@@ -5,6 +5,7 @@ import { useWallet } from '@solana/wallet-adapter-react'
 import { useRouter } from 'next/navigation'
 import { supabase, hashWalletAddress } from '@/lib/supabase'
 import ListingCard from './ListingCard'
+import { Button } from './ui/button'
 
 export default function MyListings() {
   const { publicKey, connected } = useWallet()
@@ -19,6 +20,26 @@ export default function MyListings() {
     }
     fetchMyListings()
   }, [connected, publicKey])
+
+  const handleUnlist = async (listingId: string, e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!publicKey) return
+    if (!confirm('Remove this listing from the marketplace? You can create a new listing later.')) return
+    try {
+      const res = await fetch(`/api/listings/${listingId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wallet: publicKey.toString(), action: 'unlist' }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Failed to unlist')
+      setListings((prev) => prev.map((l) => (l.id === listingId ? { ...l, status: 'removed' } : l)))
+      router.refresh()
+    } catch (err) {
+      alert('Failed to unlist: ' + (err instanceof Error ? err.message : 'Unknown error'))
+    }
+  }
 
   const fetchMyListings = async () => {
     if (!publicKey) return
@@ -66,7 +87,18 @@ export default function MyListings() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {listings.map((listing) => (
-            <ListingCard key={listing.id} listing={listing} />
+            <div key={listing.id} className="flex flex-col gap-2">
+              <ListingCard listing={listing} />
+              {listing.status === 'active' && (
+                <Button
+                  onClick={(e) => handleUnlist(listing.id, e)}
+                  variant="outline"
+                  className="border-[#ff6600] text-[#ff6600] hover:bg-[#ff6600]/20 w-fit text-sm"
+                >
+                  Unlist / Remove
+                </Button>
+              )}
+            </div>
           ))}
         </div>
       )}
