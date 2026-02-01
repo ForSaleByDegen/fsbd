@@ -246,7 +246,6 @@ export default function ProfilePage() {
       <div className="min-h-screen bg-background w-full overflow-x-hidden">
         <Header />
         <main className="max-w-4xl mx-auto px-2 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 w-full">
-          <DisclaimerBanner />
           <div className="text-center py-8 sm:py-12 md:py-16">
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-pixel text-[#660099] mb-4 break-words" style={{ fontFamily: 'var(--font-pixel)' }}>
               Profile
