@@ -39,7 +39,8 @@
     "@metaplex-foundation/umi": "^0.9.2",
     "@metaplex-foundation/umi-bundle-defaults": "^0.9.2",
     "@metaplex-foundation/mpl-bubblegum": "^2.0.0",
-    "@metaplex-foundation/umi-signer-wallet-adapters": "^1.2.0"
+    "@metaplex-foundation/umi-signer-wallet-adapters": "^1.2.0",
+    "resend": "^4.0.0"
   },
   "devDependencies": {
     "@types/node": "^20",
