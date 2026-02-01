@@ -84,9 +84,15 @@ export default function OptionalEscrowSection({
         }
       }
 
+      const sellerAddr = String(listing.wallet_address ?? '').trim()
+      if (!sellerAddr || /[^1-9A-HJ-NP-Za-km-z]/.test(sellerAddr) || sellerAddr.length < 32 || sellerAddr.length > 44) {
+        alert('This listing has an invalid seller address. The seller may need to re-list.')
+        setProcessing(false)
+        return
+      }
       const { transaction, escrowPda } = await transferToUserEscrowTx(
         publicKey,
-        listing.wallet_address,
+        sellerAddr,
         totalAmount,
         token,
         connection

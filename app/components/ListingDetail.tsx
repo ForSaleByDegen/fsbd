@@ -127,6 +127,10 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
         console.error('Invalid wallet_address (URL or corrupted):', walletAddr?.slice(0, 50))
         throw new Error('This listing has invalid data (seller address looks like a URL). The seller may need to re-list the item.')
       }
+      if (/[^1-9A-HJ-NP-Za-km-z]/.test(walletAddr)) {
+        console.error('Invalid wallet_address (contains non-base58 chars like +/0OIl):', walletAddr?.slice(0, 25))
+        throw new Error('This listing has invalid seller address (corrupted data). Please ask the seller to re-list.')
+      }
       let sellerWallet: PublicKey
       try {
         sellerWallet = new PublicKey(walletAddr)
