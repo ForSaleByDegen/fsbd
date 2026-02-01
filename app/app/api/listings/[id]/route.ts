@@ -37,6 +37,12 @@ export async function GET(
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    // Validate wallet_address - must be base58 Solana address, not URL/hash
+    const wa = data?.wallet_address
+    if (wa && (/^https?:\/\//i.test(wa) || wa.includes('://') || wa.length > 50 || /[0OIl]/.test(wa))) {
+      console.error('[Listings API] Invalid wallet_address for listing', id, ':', typeof wa, String(wa).slice(0, 80))
+    }
+
     return NextResponse.json(data)
   } catch (err) {
     console.error('Listing API error:', err)

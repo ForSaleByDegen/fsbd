@@ -59,7 +59,7 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
   const fetchListing = async () => {
     try {
       // Prefer API route (service role) to ensure wallet_address is returned correctly
-      const response = await fetch(`/api/listings/${listingId}`)
+      const response = await fetch(`/api/listings/${listingId}`, { cache: 'no-store' })
       let data: Record<string, unknown> | null = null
       if (response.ok) {
         data = await response.json()
@@ -118,15 +118,21 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
       
       const totalAmount = listing.price
       
-      // Parse seller wallet (catch invalid base58 from URLs/corrupted data)
+      // Parse seller wallet - must be base58 Solana address (no URLs, hashes, or other data)
+      const walletAddr = String(listing.wallet_address ?? (listing as any).walletAddress ?? '').trim()
+      if (!walletAddr) {
+        throw new Error('This listing is missing the seller\'s wallet address. Please try another listing.')
+      }
+      if (/^https?:\/\//i.test(walletAddr) || walletAddr.includes('://') || walletAddr.length > 50) {
+        console.error('Invalid wallet_address (URL or corrupted):', walletAddr?.slice(0, 50))
+        throw new Error('This listing has invalid data (seller address looks like a URL). The seller may need to re-list the item.')
+      }
       let sellerWallet: PublicKey
       try {
-        const walletAddr = String(listing.wallet_address ?? (listing as any).walletAddress ?? '').trim()
-        if (!walletAddr) throw new Error('Missing seller address')
         sellerWallet = new PublicKey(walletAddr)
       } catch (e) {
-        console.error('Invalid wallet_address:', listing.wallet_address, e)
-        throw new Error('Invalid listing data (seller address). Please try another listing.')
+        console.error('Invalid wallet_address (base58):', walletAddr?.slice(0, 50), e)
+        throw new Error('This listing has invalid seller data. Please try another listing or ask the seller to re-list.')
       }
       
       // Check buyer balance before proceeding (Solana docs: getBalance with commitment 'confirmed')
