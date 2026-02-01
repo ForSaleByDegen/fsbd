@@ -123,7 +123,6 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
   const [listing, setListing] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState(false)
-  const [showTermsModal, setShowTermsModal] = useState(false)
   const [escrowThread, setEscrowThread] = useState<{ threadId: string; escrowAgreed: boolean; escrowStatus: string | null } | null>(null)
 
   const handleThreadLoaded = useCallback((threadId: string, escrowAgreed: boolean, escrowStatus: string | null) => {
@@ -671,18 +670,6 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
           )}
         </>
       )}
-
-      <TermsAgreementModal
-        isOpen={showTermsModal}
-        onAccept={async () => {
-          if (publicKey) {
-            await acceptTerms(publicKey.toString())
-            setShowTermsModal(false)
-            handlePurchase()
-          }
-        }}
-        onDecline={() => setShowTermsModal(false)}
-      />
     </div>
   )
 }
