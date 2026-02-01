@@ -14,6 +14,9 @@ import OptionalEscrowSection from './OptionalEscrowSection'
 import ManualTrackingForm from './ManualTrackingForm'
 import TermsAgreementModal from './TermsAgreementModal'
 import { hasAcceptedTerms, acceptTerms } from '@/lib/chat'
+import { hashWalletAddress } from '@/lib/supabase'
+import BuyerOrderActions from './BuyerOrderActions'
+import SellerStatsCard from './SellerStatsCard'
 
 /** Solana Pay link - alternative when in-app transaction fails */
 function SolanaPayLink({ listingId }: { listingId: string }) {
@@ -536,6 +539,13 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
         />
       )}
 
+      {/* Seller stats (public) */}
+      {listing.wallet_address && (
+        <div className="mb-4 sm:mb-6">
+          <SellerStatsCard sellerWallet={listing.wallet_address} />
+        </div>
+      )}
+
       {/* Prominent disclaimer - condition & delivery (Craigslist-style) */}
       <div className="mb-4 sm:mb-6 p-4 sm:p-5 bg-red-950/40 border-2 border-[#ff0000] rounded">
         <h3 className="font-pixel text-[#ff0000] mb-2 text-base sm:text-lg font-bold" style={{ fontFamily: 'var(--font-pixel)' }}>
@@ -607,6 +617,19 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
             <p className="text-[#660099] font-pixel-alt text-sm sm:text-base" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
               Connect your wallet to purchase
             </p>
+          )}
+
+          {/* Buyer: confirm receipt + leave feedback (sold/shipped items) */}
+          {publicKey && (listing.status === 'sold' || listing.status === 'shipped') &&
+            listing.buyer_wallet_hash === hashWalletAddress(publicKey.toString()) && (
+            <div className="mt-4">
+              <BuyerOrderActions
+                listingId={listingId}
+                walletAddress={publicKey.toString()}
+                buyerConfirmedReceivedAt={listing.buyer_confirmed_received_at}
+                onUpdated={() => { fetchListing(); router.refresh(); }}
+              />
+            </div>
           )}
 
           {listing.status !== 'active' && (

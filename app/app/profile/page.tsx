@@ -8,6 +8,7 @@ import Footer from '@/components/Footer'
 import { getUserTier } from '@/lib/tier-check'
 import Link from 'next/link'
 import ListingCard from '@/components/ListingCard'
+import BuyerOrderActions from '@/components/BuyerOrderActions'
 
 // Dynamic import for Privy to avoid build issues
 let usePrivy: any = null
@@ -67,6 +68,8 @@ type ProfileData = {
     category: string
     tracking_number?: string
     shipping_carrier?: string
+    buyer_confirmed_received_at?: string | null
+    wallet_address?: string
   }>
 }
 
@@ -387,44 +390,6 @@ export default function ProfilePage() {
           </Link>
         </section>
 
-        {/* Add Shipping Info - sold listings needing tracking */}
-        <section className="mb-6">
-          <h2 className="text-xl font-pixel text-[#00ff00] mb-3" style={{ fontFamily: 'var(--font-pixel)' }}>
-            📦 Add Shipping Info
-          </h2>
-          {loading ? (
-            <p className="text-[#660099] font-pixel-alt text-sm">Loading...</p>
-          ) : (() => {
-            const soldNeedingTracking = listings.filter(
-              (l: (typeof listings)[0]) =>
-                (l.status === 'sold' || l.status === 'in_escrow' || l.status === 'shipped') &&
-                !(l.tracking_number && String(l.tracking_number).trim())
-            )
-            return soldNeedingTracking.length === 0 ? (
-              <p className="text-[#660099] font-pixel-alt text-sm mb-4">
-                No sold items awaiting tracking. Sold something? Open the listing and add tracking there.
-              </p>
-            ) : (
-              <div className="space-y-4 mb-4">
-                {soldNeedingTracking.map((l: (typeof listings)[0]) => (
-                  <SellerAddTrackingForm
-                    key={l.id}
-                    listingId={l.id}
-                    title={l.title}
-                    price={l.price}
-                    priceToken={l.price_token || 'SOL'}
-                    walletAddress={walletAddress}
-                    onSaved={loadProfile}
-                  />
-                ))}
-              </div>
-            )
-          })()}
-          <p className="text-[#660099] font-pixel-alt text-xs mt-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-            Add tracking after you ship so the buyer can track their package.
-          </p>
-        </section>
-
         {/* Escrows */}
         <section className="mb-6">
           <h2 className="text-xl font-pixel text-[#00ff00] mb-3" style={{ fontFamily: 'var(--font-pixel)' }}>
@@ -480,7 +445,18 @@ export default function ProfilePage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
               {purchases.slice(0, 6).map((p: (typeof purchases)[0]) => (
-                <ListingCard key={p.id} listing={p} />
+                <div key={p.id} className="space-y-2">
+                  <ListingCard listing={p} />
+                  {(p.status === 'sold' || p.status === 'shipped') && (
+                    <BuyerOrderActions
+                      listingId={p.id}
+                      walletAddress={walletAddress}
+                      buyerConfirmedReceivedAt={p.buyer_confirmed_received_at}
+                      onUpdated={loadProfile}
+                      compact
+                    />
+                  )}
+                </div>
               ))}
             </div>
           )}
@@ -537,12 +513,19 @@ export default function ProfilePage() {
           })()}
         </section>
 
-        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full flex-wrap">
           <Link href="/listings/my" className="flex-1 sm:flex-none">
             <button className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 border-2 sm:border-4 border-[#660099] text-[#00ff00] hover:bg-[#660099] hover:text-black font-pixel-alt transition-colors min-h-[44px] text-sm sm:text-base touch-manipulation" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
               My Listings
             </button>
           </Link>
+          {walletAddress && (
+            <Link href={`/seller?wallet=${encodeURIComponent(walletAddress)}`} className="flex-1 sm:flex-none">
+              <button className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 border-2 sm:border-4 border-[#660099] text-[#00ff00] hover:bg-[#660099] hover:text-black font-pixel-alt transition-colors min-h-[44px] text-sm sm:text-base touch-manipulation" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                Your seller profile
+              </button>
+            </Link>
+          )}
           <Link href="/tiers" className="flex-1 sm:flex-none">
             <button className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 border-2 sm:border-4 border-[#660099] text-[#00ff00] hover:bg-[#660099] hover:text-black font-pixel-alt transition-colors min-h-[44px] text-sm sm:text-base touch-manipulation" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
               View Tiers
