@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useWallet } from '@solana/wallet-adapter-react'
 import Link from 'next/link'
-import { supabase, hashWalletAddress } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
+import { CATEGORIES } from '@/lib/categories'
 import ListingCard from './ListingCard'
 import SearchBar from './SearchBar'
 import { Button } from './ui/button'
@@ -14,13 +15,14 @@ export default function ListingFeed() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [category, setCategory] = useState('all')
+  const [subcategory, setSubcategory] = useState('')
   const [delivery, setDelivery] = useState('all')
   const [locationCity, setLocationCity] = useState('')
   const [locationRegion, setLocationRegion] = useState('')
 
   useEffect(() => {
     fetchListings()
-  }, [category, searchQuery, delivery, locationCity, locationRegion])
+  }, [category, subcategory, searchQuery, delivery, locationCity, locationRegion])
 
   // Refresh listings when component becomes visible (user navigates back)
   useEffect(() => {
@@ -62,6 +64,9 @@ export default function ListingFeed() {
       if (category !== 'all') {
         query = query.eq('category', category)
       }
+      if (subcategory.trim()) {
+        query = query.eq('subcategory', subcategory.trim())
+      }
 
       if (searchQuery) {
         query = query.or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`)
@@ -101,24 +106,16 @@ export default function ListingFeed() {
     }
   }
 
-  const categories = [
-    'all',
-    'for-sale',
-    'services',
-    'gigs',
-    'housing',
-    'community',
-    'jobs'
-  ]
-
   return (
     <>
       <SearchBar 
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         category={category}
-        setCategory={setCategory}
-        categories={categories}
+        setCategory={(c) => { setCategory(c); setSubcategory('') }}
+        categories={['all', ...CATEGORIES.map((c) => c.value)]}
+        subcategory={subcategory}
+        setSubcategory={setSubcategory}
         delivery={delivery}
         setDelivery={setDelivery}
         locationCity={locationCity}

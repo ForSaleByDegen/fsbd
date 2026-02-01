@@ -10,6 +10,7 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const q = searchParams.get('q')
     const category = searchParams.get('category')
+    const subcategory = searchParams.get('subcategory')?.trim()
     const delivery = searchParams.get('delivery') // 'local_pickup' | 'ship' | all
     const locationCity = searchParams.get('location_city')?.trim()
     const locationRegion = searchParams.get('location_region')?.trim()
@@ -24,6 +25,9 @@ export async function GET(request: NextRequest) {
 
       if (category && category !== 'all') {
         query = query.eq('category', category)
+      }
+      if (subcategory) {
+        query = query.eq('subcategory', subcategory)
       }
 
       if (q) {

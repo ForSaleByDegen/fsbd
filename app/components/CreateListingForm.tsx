@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select'
+import { CATEGORIES, getSubcategories } from '@/lib/categories'
 
 export default function CreateListingForm() {
   const { publicKey, signTransaction, signMessage } = useWallet()
@@ -196,7 +197,8 @@ export default function CreateListingForm() {
         delivery_method: formData.deliveryMethod,
         location_city: formData.locationCity.trim() || null,
         location_region: formData.locationRegion.trim() || null,
-        external_listing_url: formData.externalListingUrl.trim() || null
+        external_listing_url: formData.externalListingUrl.trim() || null,
+        subcategory: formData.subcategory.trim() || null
       }
       
       console.log('Creating listing with images:', imageUrls)
@@ -264,21 +266,37 @@ export default function CreateListingForm() {
           <label className="block text-sm font-medium mb-2">Category *</label>
           <Select
             value={formData.category}
-            onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
+            onValueChange={(value) => setFormData(prev => ({ ...prev, category: value, subcategory: '' }))}
           >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="for-sale">For Sale</SelectItem>
-              <SelectItem value="services">Services</SelectItem>
-              <SelectItem value="gigs">Gigs</SelectItem>
-              <SelectItem value="housing">Housing</SelectItem>
-              <SelectItem value="community">Community</SelectItem>
-              <SelectItem value="jobs">Jobs</SelectItem>
+              {CATEGORIES.map((c) => (
+                <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
+        {getSubcategories(formData.category).length > 0 && (
+          <div>
+            <label className="block text-sm font-medium mb-2">Subcategory (optional)</label>
+            <Select
+              value={formData.subcategory || 'none'}
+              onValueChange={(v) => setFormData(prev => ({ ...prev, subcategory: v === 'none' ? '' : v }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="None" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                {getSubcategories(formData.category).map((s) => (
+                  <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         <div>
           <label className="block text-sm font-medium mb-2">Price *</label>

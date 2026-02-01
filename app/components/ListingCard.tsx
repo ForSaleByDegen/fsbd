@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { getIPFSGatewayURL } from '@/lib/pinata'
+import { getSubcategoryLabel } from '@/lib/categories'
 
 interface ListingCardProps {
   listing: {
@@ -9,6 +10,7 @@ interface ListingCardProps {
     price: number
     price_token: string
     category: string
+    subcategory?: string
     images?: string[]
     has_token?: boolean
     status?: string
@@ -86,7 +88,9 @@ export default function ListingCard({ listing }: ListingCardProps) {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1 sm:gap-0 mt-auto">
           <span className="text-primary font-bold text-sm sm:text-base">{formatPrice()}</span>
           <span className="text-xs text-muted-foreground capitalize">
-            {listing.category?.replace('-', ' ')}
+            {listing.subcategory
+              ? getSubcategoryLabel(listing.category, listing.subcategory)
+              : listing.category?.replace('-', ' ')}
             {(listing.location_city || listing.location_region) && (
               <> · {[listing.location_city, listing.location_region].filter(Boolean).join(', ')}</>
             )}

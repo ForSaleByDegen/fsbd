@@ -17,6 +17,7 @@ import { hasAcceptedTerms, acceptTerms } from '@/lib/chat'
 import { hashWalletAddress } from '@/lib/supabase'
 import BuyerOrderActions from './BuyerOrderActions'
 import SellerStatsCard from './SellerStatsCard'
+import { getSubcategoryLabel } from '@/lib/categories'
 
 /** Solana Pay link - alternative when in-app transaction fails */
 function SolanaPayLink({ listingId }: { listingId: string }) {
@@ -490,7 +491,9 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
             </span>
           )}
           <span className="text-sm sm:text-base text-[#660099] font-pixel-alt capitalize" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-            {listing.category?.replace('-', ' ')}
+            {listing.subcategory
+              ? getSubcategoryLabel(listing.category, listing.subcategory)
+              : listing.category?.replace('-', ' ')}
           </span>
           {(listing.delivery_method === 'local_pickup' || listing.delivery_method === 'both') && (
             <span className="text-sm text-green-400 font-pixel-alt px-2 py-1 rounded border border-green-600 bg-green-900/40" style={{ fontFamily: 'var(--font-pixel-alt)' }}>

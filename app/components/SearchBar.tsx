@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select'
+import { getSubcategories } from '@/lib/categories'
 
 interface SearchBarProps {
   searchQuery: string
@@ -15,6 +16,8 @@ interface SearchBarProps {
   category: string
   setCategory: (category: string) => void
   categories: string[]
+  subcategory?: string
+  setSubcategory?: (v: string) => void
   delivery?: string
   setDelivery?: (v: string) => void
   locationCity?: string
@@ -29,6 +32,8 @@ export default function SearchBar({
   category, 
   setCategory, 
   categories,
+  subcategory = '',
+  setSubcategory,
   delivery = 'all',
   setDelivery,
   locationCity = '',
@@ -38,6 +43,8 @@ export default function SearchBar({
 }: SearchBarProps) {
   const showDelivery = setDelivery != null
   const showLocation = setLocationCity != null && setLocationRegion != null
+  const subcategories = getSubcategories(category)
+  const showSubcategory = setSubcategory != null && subcategories.length > 0 && category !== 'all'
 
   return (
     <div className="mb-6 sm:mb-8 flex flex-col gap-3 sm:gap-4 bg-black/80 p-3 sm:p-4 border-2 sm:border-4 border-[#660099] pixel-art shadow-lg w-full">
@@ -65,6 +72,19 @@ export default function SearchBar({
             ))}
           </SelectContent>
         </Select>
+        {showSubcategory && (
+          <Select value={subcategory || 'all'} onValueChange={setSubcategory!}>
+            <SelectTrigger className="w-full sm:w-[140px] min-h-[44px] text-base sm:text-sm">
+              <SelectValue placeholder="Subcategory" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all" className="min-h-[44px]">All</SelectItem>
+              {subcategories.map((s) => (
+                <SelectItem key={s.value} value={s.value} className="min-h-[44px]">{s.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
         {showDelivery && (
           <Select value={delivery} onValueChange={setDelivery!}>
             <SelectTrigger className="w-full sm:w-[140px] min-h-[44px] text-base sm:text-sm">
