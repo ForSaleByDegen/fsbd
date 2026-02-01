@@ -421,10 +421,10 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
           })
           .eq('id', listingId)
         
-        // Update seller's total listings sold count
+        // Update seller's total listings sold count (use validated recipient, not raw listing)
         try {
           const { hashWalletAddress } = await import('@/lib/supabase')
-          const sellerHash = hashWalletAddress(listing.wallet_address)
+          const sellerHash = hashWalletAddress(params.recipient)
           const { data: sellerProfile } = await supabase
             .from('profiles')
             .select('total_listings_sold')
