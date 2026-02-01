@@ -10,6 +10,7 @@ import ListingCard from '@/components/ListingCard'
 import BuyerOrderActions from '@/components/BuyerOrderActions'
 import ShippingAddressGuidance from '@/components/ShippingAddressGuidance'
 import LocalShippingAddressForm from '@/components/LocalShippingAddressForm'
+import ProfileAreaTag from '@/components/ProfileAreaTag'
 
 // Dynamic import for Privy to avoid build issues
 let usePrivy: any = null
@@ -43,7 +44,7 @@ function getWalletAddress(
 }
 
 type ProfileData = {
-  profile: { listings_count: number; total_fees_paid: number; total_listings_sold: number } | null
+  profile: { listings_count: number; total_fees_paid: number; total_listings_sold: number; area_tag?: string | null } | null
   listings: Array<{
     id: string
     title: string
@@ -188,6 +189,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
   const [profileData, setProfileData] = useState<ProfileData | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [deliverySectionOpen, setDeliverySectionOpen] = useState(false)
 
   const walletAddress = getWalletAddress(publicKey, wallets)
 
@@ -362,19 +364,14 @@ export default function ProfilePage() {
                 </div>
               </div>
             )}
+
+            <ProfileAreaTag
+              walletAddress={walletAddress}
+              initialValue={profileData?.profile?.area_tag ?? null}
+              onSaved={loadProfile}
+            />
           </div>
         </div>
-
-        {/* Delivery address - optional local save (encrypted) or guidance */}
-        <section className="mb-6">
-          <h2 className="text-xl font-pixel text-[#00ff00] mb-3" style={{ fontFamily: 'var(--font-pixel)' }}>
-            Delivery address
-          </h2>
-          <div className="space-y-4 max-w-xl">
-            <LocalShippingAddressForm />
-            <ShippingAddressGuidance />
-          </div>
-        </section>
 
         {/* My Listings */}
         <section className="mb-6">
@@ -520,6 +517,28 @@ export default function ProfilePage() {
               </div>
             )
           })()}
+        </section>
+
+        {/* Delivery address — optional, collapsible */}
+        <section className="mb-6 border-2 border-[#660099] bg-black/30">
+          <button
+            type="button"
+            onClick={() => setDeliverySectionOpen(!deliverySectionOpen)}
+            className="w-full flex items-center justify-between p-3 sm:p-4 text-left font-pixel-alt text-[#00ff00] hover:bg-[#660099]/20 transition-colors"
+            style={{ fontFamily: 'var(--font-pixel-alt)' }}
+          >
+            <span>Delivery address (optional)</span>
+            <span className="text-[#660099]">{deliverySectionOpen ? '▼' : '▶'}</span>
+          </button>
+          {deliverySectionOpen && (
+            <div className="p-3 sm:p-4 pt-0 border-t border-[#660099]/30 space-y-4 max-w-xl">
+              <p className="text-[#aa77ee] font-pixel-alt text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                Save your address on this device (encrypted) to auto-fill when buying. Stored only here — clearing site data removes it.
+              </p>
+              <LocalShippingAddressForm />
+              <ShippingAddressGuidance />
+            </div>
+          )}
         </section>
 
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full flex-wrap">

@@ -129,3 +129,52 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
+
+/**
+ * PATCH /api/profile
+ * Update optional profile fields (e.g. area_tag). Body: { wallet, area_tag? }
+ */
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json().catch(() => ({}))
+    const wallet = typeof body.wallet === 'string' ? body.wallet.trim() : ''
+    if (!wallet) {
+      return NextResponse.json({ error: 'Missing wallet' }, { status: 400 })
+    }
+
+    if (!supabaseAdmin) {
+      return NextResponse.json(
+        { error: 'Server not configured. Set SUPABASE_SERVICE_ROLE_KEY.' },
+        { status: 503 }
+      )
+    }
+
+    const walletHash = hashWalletAddress(wallet)
+
+    const updates: Record<string, unknown> = {}
+    if (typeof body.area_tag === 'string') {
+      const tag = body.area_tag.trim().slice(0, 100)
+      updates.area_tag = tag || null
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ ok: true })
+    }
+
+    const { error } = await supabaseAdmin
+      .from('profiles')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('wallet_address_hash', walletHash)
+
+    if (error) {
+      console.error('Profile PATCH error:', error)
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json({ ok: true })
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    console.error('Profile PATCH error:', err)
+    return NextResponse.json({ error: message }, { status: 500 })
+  }
+}

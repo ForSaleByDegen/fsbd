@@ -1,4 +1,4 @@
-import { PublicKey, Transaction, SystemProgram, Keypair } from '@solana/web3.js'
+import { PublicKey, Transaction, SystemProgram, Keypair, VersionedTransaction } from '@solana/web3.js'
 import { Connection } from '@solana/web3.js'
 import { 
   getAssociatedTokenAddressSync,
@@ -11,9 +11,95 @@ import {
 } from '@solana/spl-token'
 import { WalletContextState } from '@solana/wallet-adapter-react'
 
+const PUMP_TRADE_LOCAL = 'https://pumpportal.fun/api/trade-local'
+const PUMP_IPFS = 'https://pump.fun/api/ipfs'
+
+/** Create token via pump.fun (bonding curve, dev buy, pump.fun discoverability) */
+export async function createPumpFunToken(
+  wallet: PublicKey,
+  signTransaction: WalletContextState['signTransaction'],
+  connection: Connection,
+  tokenName: string,
+  tokenSymbol: string,
+  options: {
+    devBuySol?: number
+    imageFile?: File
+    imageUrl?: string
+    description?: string
+  } = {}
+): Promise<string> {
+  const mintKeypair = Keypair.generate()
+  const devBuySol = options.devBuySol ?? 0.01
+
+  // 1. Upload metadata to pump.fun IPFS
+  const formData = new FormData()
+  formData.append('name', tokenName)
+  formData.append('symbol', tokenSymbol)
+  formData.append('description', options.description || `Token for listing on $FSBD`)
+  formData.append('showName', 'true')
+  if (options.imageFile) {
+    formData.append('file', options.imageFile)
+  } else if (options.imageUrl) {
+    // Pump.fun IPFS expects file; fetch and add as blob
+    const imgRes = await fetch(options.imageUrl)
+    const blob = await imgRes.blob()
+    const ext = options.imageUrl.split('.').pop()?.split('?')[0] || 'png'
+    formData.append('file', blob, `image.${ext}`)
+  } else {
+    throw new Error('Token launch requires at least one image. Add an image to your listing first.')
+  }
+
+  const ipfsRes = await fetch(PUMP_IPFS, { method: 'POST', body: formData })
+  if (!ipfsRes.ok) {
+    const err = await ipfsRes.text()
+    throw new Error(`Pump.fun IPFS upload failed: ${err}`)
+  }
+  const ipfsJson = await ipfsRes.json()
+  const metadataUri = ipfsJson.metadataUri || ipfsJson.uri
+  if (!metadataUri) throw new Error('No metadata URI from pump.fun')
+
+  // 2. Get create transaction from PumpPortal (no API key needed for trade-local)
+  const body = {
+    publicKey: wallet.toBase58(),
+    action: 'create',
+    tokenMetadata: { name: tokenName, symbol: tokenSymbol, uri: metadataUri },
+    mint: mintKeypair.publicKey.toBase58(),
+    denominatedInSol: 'true',
+    amount: devBuySol,
+    slippage: 10,
+    priorityFee: 0.00005,
+    pool: 'pump',
+    isMayhemMode: 'false',
+  }
+
+  const txRes = await fetch(PUMP_TRADE_LOCAL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+
+  if (!txRes.ok) {
+    const errText = await txRes.text()
+    throw new Error(`Pump.fun create failed: ${errText}`)
+  }
+
+  const txBuffer = await txRes.arrayBuffer()
+  const tx = VersionedTransaction.deserialize(new Uint8Array(txBuffer))
+
+  // 3. Partial sign with mint keypair, then wallet signs
+  tx.sign([mintKeypair])
+
+  if (!signTransaction) throw new Error('Wallet signTransaction not available')
+  const signed = await signTransaction(tx)
+  const sig = await connection.sendTransaction(signed as VersionedTransaction)
+  await connection.confirmTransaction(sig)
+
+  return mintKeypair.publicKey.toBase58()
+}
+
 /**
- * Create a simple SPL token for a listing
- * Basic implementation - no Pump.fun integration
+ * Create a simple SPL token for a listing (fallback when pump.fun fails)
+ * Sets blockhash and feePayer BEFORE partialSign to avoid "recentBlockhash required"
  */
 export async function createListingToken(
   wallet: PublicKey,
@@ -23,17 +109,12 @@ export async function createListingToken(
   tokenSymbol: string
 ): Promise<string> {
   try {
-    // Generate mint keypair
     const mintKeypair = Keypair.generate()
     const mint = mintKeypair.publicKey
 
-    // Get rent exemption for mint account
     const lamports = await getMinimumBalanceForRentExemptMint(connection)
 
-    // Build transaction
     const transaction = new Transaction()
-    
-    // Create mint account
     transaction.add(
       SystemProgram.createAccount({
         fromPubkey: wallet,
@@ -43,52 +124,31 @@ export async function createListingToken(
         programId: TOKEN_PROGRAM_ID,
       })
     )
-
-    // Initialize mint
     transaction.add(
-      createInitializeMint2Instruction(
-        mint,
-        9, // decimals
-        wallet, // mint authority
-        null   // freeze authority
-      )
+      createInitializeMint2Instruction(mint, 9, wallet, null)
     )
 
-    // Get associated token account address
     const tokenAccount = getAssociatedTokenAddressSync(mint, wallet)
-    
-    // Create associated token account
     transaction.add(
-      createAssociatedTokenAccountInstruction(
-        wallet, // payer
-        tokenAccount, // ATA address
-        wallet, // owner
-        mint // mint
-      )
+      createAssociatedTokenAccountInstruction(wallet, tokenAccount, wallet, mint)
     )
-
-    // Mint initial supply (1 billion tokens)
     transaction.add(
       createMintToInstruction(
         mint,
         tokenAccount,
-        wallet, // mint authority
-        BigInt(1_000_000_000) * BigInt(10 ** 9) // 1B tokens with 9 decimals
+        wallet,
+        BigInt(1_000_000_000) * BigInt(10 ** 9)
       )
     )
 
-    // Sign transaction (mint keypair needs to sign the createAccount instruction)
-    transaction.partialSign(mintKeypair)
-    
-    // Get recent blockhash
-    const { blockhash } = await connection.getLatestBlockhash()
+    // CRITICAL: Set blockhash and feePayer BEFORE partialSign (avoids "recentBlockhash required")
+    const { blockhash } = await connection.getLatestBlockhash('finalized')
     transaction.recentBlockhash = blockhash
     transaction.feePayer = wallet
 
-    // Sign with wallet and send
-    if (!signTransaction) {
-      throw new Error('Wallet signTransaction is not available')
-    }
+    transaction.partialSign(mintKeypair)
+
+    if (!signTransaction) throw new Error('Wallet signTransaction is not available')
     const signed = await signTransaction(transaction)
     const signature = await connection.sendRawTransaction(signed.serialize())
     await connection.confirmTransaction(signature)

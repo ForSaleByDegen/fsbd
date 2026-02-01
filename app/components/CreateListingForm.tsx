@@ -8,7 +8,7 @@ import { getUserTier, calculateListingFee } from '@/lib/tier-check'
 import { supabase, hashWalletAddress } from '@/lib/supabase'
 import { incrementListingCount, addToTotalFees, upsertUserProfile } from '@/lib/admin'
 import { uploadMultipleImagesToIPFS } from '@/lib/pinata'
-import { createListingToken } from '@/lib/token-ops'
+import { createPumpFunToken, createListingToken } from '@/lib/token-ops'
 import { sendTransactionWithRebate, shouldUseRebate } from '@/lib/helius-rebate'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -38,6 +38,7 @@ export default function CreateListingForm() {
     launchToken: false,
     tokenName: '',
     tokenSymbol: '',
+    devBuySol: 0.01,
     deliveryMethod: 'ship' as 'ship' | 'local_pickup' | 'both',
     locationCity: '',
     locationRegion: '',
@@ -81,22 +82,48 @@ export default function CreateListingForm() {
         }
       }
 
-      // Launch token if requested (this requires payment for token creation)
+      // Launch token if requested (pump.fun with dev buy, fallback to SPL)
       let tokenMint: string | null = null
       let fee = 0
       if (formData.launchToken && formData.tokenName && formData.tokenSymbol) {
-        // Get user tier and calculate fee for token launch
+        const imageFile = formData.images?.[0]
+        const imageUrl = imageUrls?.[0]
+        if (!imageFile && !imageUrl) {
+          throw new Error('Token launch on pump.fun requires at least one image. Add an image to your listing.')
+        }
+
         const tier = await getUserTier(publicKey.toString(), connection)
         fee = calculateListingFee(tier)
-        
-        // Create token (this costs SOL for rent and fees)
-        tokenMint = await createListingToken(
-          publicKey,
-          signTransaction!,
-          connection,
-          formData.tokenName,
-          formData.tokenSymbol
-        )
+        const devBuy = Math.max(0.001, formData.devBuySol ?? 0.01)
+
+        try {
+          tokenMint = await createPumpFunToken(
+            publicKey,
+            signTransaction!,
+            connection,
+            formData.tokenName,
+            formData.tokenSymbol,
+            {
+              devBuySol: devBuy,
+              imageFile: imageFile || undefined,
+              imageUrl: imageUrl || undefined,
+              description: formData.description?.slice(0, 500),
+            }
+          )
+        } catch (pumpErr: unknown) {
+          const msg = pumpErr instanceof Error ? pumpErr.message : String(pumpErr)
+          if (/image|IPFS|pump/i.test(msg)) {
+            throw pumpErr
+          }
+          // Fallback to simple SPL token
+          tokenMint = await createListingToken(
+            publicKey,
+            signTransaction!,
+            connection,
+            formData.tokenName,
+            formData.tokenSymbol
+          )
+        }
 
         // Pay listing fee only when launching token
         const appWallet = new PublicKey(
@@ -424,7 +451,7 @@ export default function CreateListingForm() {
         </label>
 
         {formData.launchToken && (
-          <div className="grid grid-cols-2 gap-4 ml-6">
+          <div className="grid grid-cols-2 gap-4 ml-6 space-y-2">
             <div>
               <label className="block text-sm font-medium mb-2">Token Name</label>
               <Input
@@ -441,6 +468,17 @@ export default function CreateListingForm() {
                 onChange={(e) => setFormData(prev => ({ ...prev, tokenSymbol: e.target.value }))}
                 maxLength={10}
               />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-sm font-medium mb-2">Dev buy (SOL) — initial buy on pump.fun</label>
+              <Input
+                type="number"
+                step="0.01"
+                min={0}
+                value={formData.devBuySol}
+                onChange={(e) => setFormData(prev => ({ ...prev, devBuySol: Math.max(0, parseFloat(e.target.value) || 0) }))}
+              />
+              <p className="text-xs text-muted-foreground mt-1">Uses first listing image. Add an image above for pump.fun.</p>
             </div>
           </div>
         )}
