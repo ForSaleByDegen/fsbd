@@ -39,7 +39,7 @@ export default function Footer() {
         </div>
         
         <div className="mt-4 pt-4 border-t border-[#660099]/30 text-center">
-          <p className="text-xs text-[#660099] font-pixel-alt">
+          <p className="text-sm text-[#aa77ee] font-pixel-alt">
             ⚠️ Decentralized Platform - Use at Your Own Risk - No Refunds
           </p>
         </div>

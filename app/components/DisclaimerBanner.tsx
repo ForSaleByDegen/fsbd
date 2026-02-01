@@ -25,13 +25,13 @@ export default function DisclaimerBanner() {
             WE CANNOT GUARANTEE ITEM CONDITION, AUTHENTICITY, OR SUCCESSFUL DELIVERY.
           </p>
           <p>
-            <strong className="text-[#660099]">Listing directory only — AS IS, AS AVAILABLE:</strong> We host listings only. 
+            <strong className="text-[#aa77ee]">Listing directory only — AS IS, AS AVAILABLE:</strong> We host listings only. 
             Buyers and sellers transact directly peer-to-peer. We are NOT a party to any transaction. We do NOT verify listings, 
             item condition, authenticity, or that items will be shipped or delivered. We do NOT hold funds (except optional escrow 
             by user choice), facilitate shipping, or resolve disputes.
           </p>
           <p>
-            <strong className="text-[#660099]">All risk is yours:</strong> Items may not match descriptions. Delivery may fail. 
+            <strong className="text-[#aa77ee]">All risk is yours:</strong> Items may not match descriptions. Delivery may fail. 
             We assume NO liability for listings, items, shipping, delivery, or any transaction. Use at your own risk. 
             All transactions are final. Conduct due diligence and coordinate directly with the other party. 
             <Link href="/terms" className="text-[#ff00ff] underline ml-1">Full Terms</Link>

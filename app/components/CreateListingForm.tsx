@@ -363,7 +363,7 @@ export default function CreateListingForm() {
               value={formData.locationRegion}
               onChange={(e) => setFormData(prev => ({ ...prev, locationRegion: e.target.value }))}
             />
-            <p className="text-xs text-muted-foreground col-span-2">
+            <p className="text-sm text-[#aa77ee] font-pixel-alt col-span-2">
               Approximate area only. Exact meetup details via chat. We don&apos;t store exact addresses.
             </p>
           </div>
@@ -378,7 +378,7 @@ export default function CreateListingForm() {
           value={formData.externalListingUrl}
           onChange={(e) => setFormData(prev => ({ ...prev, externalListingUrl: e.target.value }))}
         />
-        <p className="text-xs text-muted-foreground mt-1">Link to the same item on another platform — helps buyers find you.</p>
+        <p className="text-sm text-[#aa77ee] font-pixel-alt mt-1">Link to the same item on another platform — helps buyers find you.</p>
       </div>
 
       <div>
@@ -402,7 +402,7 @@ export default function CreateListingForm() {
             setFormData(prev => ({ ...prev, images: files }))
           }}
         />
-        <p className="text-xs text-muted-foreground mt-1">
+        <p className="text-sm text-[#aa77ee] font-pixel-alt mt-1">
           Images will be uploaded to IPFS via Pinata in original quality (no compression) - max 1GB per file
         </p>
         {formData.images.length > 0 && (

@@ -74,7 +74,7 @@ export default function ExternalListingsSection() {
       </button>
       {expanded && (
         <div className="mt-3 pt-3 border-t border-[#660099]/50">
-          <p className="text-xs text-[#660099] font-pixel-alt mb-3" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          <p className="text-sm text-[#aa77ee] font-pixel-alt mb-3" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             Listings from external classifieds in your area. Not affiliated. Prices in local currency. Links open in a new tab.
           </p>
           <Select value={area} onValueChange={setArea}>

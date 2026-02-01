@@ -25,6 +25,8 @@ export default function AuctionForm() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [tier, setTier] = useState<'free' | 'bronze' | 'silver' | 'gold'>('free')
+  const [userBalance, setUserBalance] = useState(0)
+  const [auctionMinTokens, setAuctionMinTokens] = useState(10000000)
   const [tierLoading, setTierLoading] = useState(true)
   const [formData, setFormData] = useState({
     title: '',
@@ -71,9 +73,9 @@ export default function AuctionForm() {
       return
     }
 
-    // Check tier gate (Bronze+ required)
-    if (tier === 'free') {
-      alert(`Auction creation requires Bronze tier or higher. You need ${TIER_THRESHOLDS.bronze.toLocaleString()} $FSBD tokens.`)
+    // Check auction gate (admin-configurable threshold)
+    if (!canCreateAuctionWithBalance(userBalance, auctionMinTokens)) {
+      alert(`Auction creation requires ${auctionMinTokens.toLocaleString()} $FSBD. Your balance: ${userBalance.toLocaleString()} $FSBD.`)
       return
     }
 
@@ -184,7 +186,7 @@ export default function AuctionForm() {
     }
   }
 
-  const canCreateAuction = tier !== 'free'
+  const canCreateAuction = canCreateAuctionWithBalance(userBalance, auctionMinTokens)
 
   if (tierLoading) {
     return <div className="text-center py-12">Checking tier...</div>
@@ -195,8 +197,8 @@ export default function AuctionForm() {
       {!canCreateAuction && (
         <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-400 rounded">
           <p className="text-sm text-yellow-800 dark:text-yellow-200">
-            <strong>Auction Creation Gated:</strong> You need Bronze tier ({TIER_THRESHOLDS.bronze.toLocaleString()} $FSBD) 
-            or higher to create auctions. Your current tier: <strong>{tier}</strong>
+            <strong>Auction Creation Gated:</strong> You need {auctionMinTokens.toLocaleString()} $FSBD to create auctions. 
+            Your balance: <strong>{userBalance.toLocaleString()} $FSBD</strong> (tier: {tier})
           </p>
         </div>
       )}

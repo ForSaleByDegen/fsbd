@@ -123,7 +123,7 @@ export default function ManualTrackingForm({ listingId, onTrackingAdded }: Manua
         </Button>
       </div>
 
-      <p className="text-[#660099] font-pixel-alt text-xs mt-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+      <p className="text-[#aa77ee] font-pixel-alt text-sm mt-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
         💡 Tip: You can add tracking information later if you don't have it yet. Just mark the item as shipped and add tracking when available.
       </p>
     </form>

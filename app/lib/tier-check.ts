@@ -19,6 +19,26 @@ export const TIER_THRESHOLDS = {
 export type Tier = 'free' | 'bronze' | 'silver' | 'gold'
 
 /**
+ * Get user's raw $FSBD token balance (for flexible thresholds like auction gate)
+ */
+export async function getUserTokenBalance(
+  walletAddress: string,
+  connection: Connection
+): Promise<number> {
+  const mintToUse = FSBD_TOKEN_MINT === 'FSBD_TOKEN_MINT_PLACEHOLDER' ? MOCK_FSBD_MINT : FSBD_TOKEN_MINT
+  try {
+    const mintPublicKey = new PublicKey(mintToUse)
+    const userPublicKey = new PublicKey(walletAddress)
+    const tokenAccount = await getAssociatedTokenAddress(mintPublicKey, userPublicKey)
+    const accountInfo = await getAccount(connection, tokenAccount)
+    const mintInfo = await getMint(connection, mintPublicKey)
+    return Number(accountInfo.amount) / (10 ** mintInfo.decimals)
+  } catch {
+    return 0
+  }
+}
+
+/**
  * Get user's tier based on $FSBD token balance
  * Checks on-chain balance - no data sharing, fully private
  * Uses mock mint for devnet testing
@@ -94,7 +114,6 @@ export function getTierBenefits(tier: Tier): string[] {
       'Free listings (message signing only)',
       `Platform fee: ${feePercent}% on sales`,
       `Token launch fee: ${listingFee.toFixed(3)} SOL (25% discount)`,
-      'Auction creation',
       'Basic listings'
     ],
     silver: [
@@ -102,7 +121,6 @@ export function getTierBenefits(tier: Tier): string[] {
       `Platform fee: ${feePercent}% on sales`,
       `Token launch fee: ${listingFee.toFixed(3)} SOL (50% discount)`,
       'Priority visibility',
-      'Auction creation',
       'Basic listings'
     ],
     gold: [
@@ -119,10 +137,18 @@ export function getTierBenefits(tier: Tier): string[] {
 }
 
 /**
- * Check if user can create auctions (Bronze+ required)
+ * Check if user can create auctions (balance-based, admin-configurable threshold)
+ * Use canCreateAuctionWithBalance(balance, auctionMinTokens) when config is available
  */
 export function canCreateAuction(tier: Tier): boolean {
-  return tier !== 'free'
+  return tier === 'gold'
+}
+
+/**
+ * Check if user can create auctions by balance (for admin-configurable threshold)
+ */
+export function canCreateAuctionWithBalance(balance: number, auctionMinTokens: number): boolean {
+  return balance >= auctionMinTokens
 }
 
 /**

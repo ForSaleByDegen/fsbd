@@ -5,18 +5,20 @@ import { type AdminUser } from '@/lib/admin'
 import ListingManagement from './ListingManagement'
 import UserManagement from './UserManagement'
 import AdminAnalytics from './AdminAnalytics'
+import PlatformConfig from './PlatformConfig'
 
 interface AdminDashboardProps {
   adminUser: AdminUser
 }
 
 export default function AdminDashboard({ adminUser }: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<'analytics' | 'listings' | 'users'>('analytics')
+  const [activeTab, setActiveTab] = useState<'analytics' | 'listings' | 'users' | 'config'>('analytics')
 
   const tabs = [
     { id: 'analytics' as const, label: 'Analytics', permission: 'view_analytics' as const },
     { id: 'listings' as const, label: 'Listings', permission: 'manage_listings' as const },
     { id: 'users' as const, label: 'Users', permission: 'manage_users' as const },
+    { id: 'config' as const, label: 'Platform Config', permission: 'view_analytics' as const },
   ]
 
   const availableTabs = tabs.filter(tab => 
@@ -48,6 +50,7 @@ export default function AdminDashboard({ adminUser }: AdminDashboardProps) {
         {activeTab === 'analytics' && <AdminAnalytics />}
         {activeTab === 'listings' && <ListingManagement />}
         {activeTab === 'users' && <UserManagement />}
+        {activeTab === 'config' && <PlatformConfig />}
       </div>
     </div>
   )

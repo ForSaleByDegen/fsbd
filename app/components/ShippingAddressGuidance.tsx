@@ -12,7 +12,7 @@ export default function ShippingAddressGuidance() {
           <h3 className="font-pixel text-[#ff00ff] text-sm mb-2" style={{ fontFamily: 'var(--font-pixel)' }}>
             General Delivery (free)
           </h3>
-          <p className="text-[#660099] font-pixel-alt text-xs mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          <p className="text-[#aa77ee] font-pixel-alt text-sm mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             Pick up at a post office with ID. Format: Name, GENERAL DELIVERY, City, State ZIP
           </p>
           <a
@@ -45,7 +45,7 @@ export default function ShippingAddressGuidance() {
         </div>
       </div>
 
-      <p className="text-[#660099] font-pixel-alt text-xs" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+      <p className="text-[#aa77ee] font-pixel-alt text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
         Use the chat on the listing page to share your delivery address with the seller. Messages are encrypted.
       </p>
     </div>
