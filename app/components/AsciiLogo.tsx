@@ -48,6 +48,8 @@ export default function AsciiLogo() {
   const twitterUrl = process.env.NEXT_PUBLIC_TWITTER_URL || process.env.NEXT_PUBLIC_X_URL || ''
   const discordUrl = process.env.NEXT_PUBLIC_DISCORD_URL || ''
   const telegramUrl = process.env.NEXT_PUBLIC_TELEGRAM_URL || ''
+  const coingeckoUrl = process.env.NEXT_PUBLIC_COINGECKO_URL || COINGECKO_REQUEST
+  const coinmarketcapUrl = process.env.NEXT_PUBLIC_COINMARKETCAP_URL || COINMARKETCAP_REQUEST
 
   return (
     <div className="pixel-logo-container w-full max-w-4xl mx-auto my-4 sm:my-6 md:my-8 px-2 sm:px-4">
@@ -130,10 +132,10 @@ export default function AsciiLogo() {
                   Verify & List
                 </p>
                 <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2">
-                  <a href={COINGECKO_REQUEST} target="_blank" rel="noopener noreferrer" className={LINK_STYLE} style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                  <a href={coingeckoUrl} target="_blank" rel="noopener noreferrer" className={LINK_STYLE} style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                     CoinGecko
                   </a>
-                  <a href={COINMARKETCAP_REQUEST} target="_blank" rel="noopener noreferrer" className={LINK_STYLE} style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                  <a href={coinmarketcapUrl} target="_blank" rel="noopener noreferrer" className={LINK_STYLE} style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                     CoinMarketCap
                   </a>
                 </div>
@@ -180,7 +182,7 @@ export default function AsciiLogo() {
             </div>
           ) : (
             <div className="text-sm text-[#660099] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-              <p className="mb-2">Configure $FSBD token mint in Admin to display CA and links.</p>
+              <p className="mb-2">Add token CA in Admin → Platform Config for instant display (no redeploy).</p>
               <Link href="/why" className="text-[#00ff00] hover:underline">
                 Why $FSBD
               </Link>
