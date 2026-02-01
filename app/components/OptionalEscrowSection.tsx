@@ -84,17 +84,26 @@ export default function OptionalEscrowSection({
         }
       }
 
-      const sellerAddr = String(listing.wallet_address ?? '').trim()
-      if (!sellerAddr || /[^1-9A-HJ-NP-Za-km-z]/.test(sellerAddr) || sellerAddr.length < 32 || sellerAddr.length > 44) {
-        alert('This listing has an invalid seller address. The seller may need to re-list.')
+      // Server-validated params - avoids base58/corruption from raw listing
+      const paramsRes = await fetch(`/api/listings/${listing.id}/purchase-params`, { cache: 'no-store' })
+      if (!paramsRes.ok) {
+        const err = await paramsRes.json().catch(() => ({}))
+        alert(err.error || 'Could not load purchase details. The seller may need to re-list.')
         setProcessing(false)
         return
       }
+      const params = await paramsRes.json() as { recipient: string; amount: number; token: string; mint?: string }
+      if (params.token !== 'SOL' && !params.mint) {
+        alert('Token payment not configured for this listing.')
+        setProcessing(false)
+        return
+      }
+      const tokenParam = params.token === 'SOL' ? 'SOL' : params.mint!
       const { transaction, escrowPda } = await transferToUserEscrowTx(
         publicKey,
-        sellerAddr,
-        totalAmount,
-        token,
+        params.recipient,
+        params.amount,
+        tokenParam,
         connection
       )
       transaction.feePayer = publicKey

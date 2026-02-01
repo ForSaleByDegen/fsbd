@@ -15,17 +15,60 @@ import OptionalEscrowSection from './OptionalEscrowSection'
 import TermsAgreementModal from './TermsAgreementModal'
 import { hasAcceptedTerms, acceptTerms } from '@/lib/chat'
 
-// Resolve price_token to actual mint when needed (USDC or token_mint)
-function resolveTokenMint(listing: { price_token?: string; token_mint?: string | null }): string | null {
-  const pt = listing.price_token
-  if (!pt || pt === 'SOL') return null
-  if (pt === 'USDC') {
-    const net = process.env.NEXT_PUBLIC_SOLANA_NETWORK
-    return net === 'mainnet-beta'
-      ? 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
-      : '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU'
+/** Solana Pay link - alternative when in-app transaction fails */
+function SolanaPayLink({ listingId }: { listingId: string }) {
+  const [url, setUrl] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleClick = async () => {
+    if (url) {
+      window.open(url, '_blank')
+      return
+    }
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/listings/${listingId}/purchase-params`, { cache: 'no-store' })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || 'Could not load payment details')
+      }
+      const p = await res.json() as { recipient: string; amount: number; token: string; mint?: string }
+      const base = `solana:${p.recipient}`
+      const params = new URLSearchParams()
+      params.set('label', 'FSBD Purchase')
+      if (p.token === 'SOL') {
+        params.set('amount', String(Math.ceil(p.amount * LAMPORTS_PER_SOL)))
+      } else if (p.mint) {
+        // SPL: amount in smallest unit (USDC=6 decimals)
+        const decimals = 6
+        params.set('amount', String(Math.ceil(p.amount * 10 ** decimals)))
+        params.set('spl-token', p.mint)
+      } else {
+        throw new Error('Token not supported for link payment')
+      }
+      const fullUrl = `${base}?${params.toString()}`
+      setUrl(fullUrl)
+      window.open(fullUrl, '_blank')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed')
+    } finally {
+      setLoading(false)
+    }
   }
-  return pt
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      disabled={loading}
+      className="text-xs sm:text-sm text-[#660099] hover:text-[#ff00ff] underline font-pixel-alt disabled:opacity-50"
+      style={{ fontFamily: 'var(--font-pixel-alt)' }}
+    >
+      {loading ? 'Loading...' : error ? `Error: ${error}` : 'Having trouble? Pay via wallet link'}
+    </button>
+  )
 }
 
 interface ListingDetailProps {
@@ -115,32 +158,25 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
 
     try {
       setProcessing(true)
-      
-      const totalAmount = listing.price
-      
-      // Parse seller wallet - must be base58 Solana address (no URLs, hashes, or other data)
-      const walletAddr = String(listing.wallet_address ?? (listing as any).walletAddress ?? '').trim()
-      if (!walletAddr) {
-        throw new Error('This listing is missing the seller\'s wallet address. Please try another listing.')
+
+      // Server-validated params - avoids base58/corruption from raw listing data
+      const paramsRes = await fetch(`/api/listings/${listingId}/purchase-params`, { cache: 'no-store' })
+      if (!paramsRes.ok) {
+        const err = await paramsRes.json().catch(() => ({}))
+        throw new Error(err.error || paramsRes.statusText || 'Could not load purchase details.')
       }
-      if (/^https?:\/\//i.test(walletAddr) || walletAddr.includes('://') || walletAddr.toLowerCase().includes('localhost') || walletAddr.length > 50) {
-        console.error('Invalid wallet_address (URL or corrupted):', walletAddr?.slice(0, 50))
-        throw new Error('This listing has invalid data (seller address looks like a URL). The seller may need to re-list the item.')
+      const params = await paramsRes.json() as {
+        recipient: string
+        amount: number
+        token: 'SOL' | 'USDC'
+        mint?: string
+        listingId: string
       }
-      if (/[^1-9A-HJ-NP-Za-km-z]/.test(walletAddr)) {
-        console.error('Invalid wallet_address (contains non-base58 chars like +/0OIl):', walletAddr?.slice(0, 25))
-        throw new Error('This listing has invalid seller address (corrupted data). Please ask the seller to re-list.')
-      }
-      let sellerWallet: PublicKey
-      try {
-        sellerWallet = new PublicKey(walletAddr)
-      } catch (e) {
-        console.error('Invalid wallet_address (base58):', walletAddr?.slice(0, 50), e)
-        throw new Error('This listing has invalid seller data. Please try another listing or ask the seller to re-list.')
-      }
-      
+      const totalAmount = params.amount
+      const sellerWallet = new PublicKey(params.recipient) // Server already validated base58
+
       // Check buyer balance before proceeding (Solana docs: getBalance with commitment 'confirmed')
-      if (listing.price_token === 'SOL') {
+      if (params.token === 'SOL') {
         let buyerBalance: number
         try {
           buyerBalance = await connection.getBalance(publicKey, 'confirmed')
@@ -197,17 +233,12 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
           }
         }
       } else {
-        // Check SPL token balance (resolve USDC/token_mint)
-        const mintStr = resolveTokenMint(listing) ?? listing.token_mint
+        // Check SPL token balance (params.mint from server)
+        const mintStr = params.mint
         if (!mintStr) {
           throw new Error(`Unsupported payment token. Only SOL and USDC are supported.`)
         }
-        let mintPublicKey: PublicKey
-        try {
-          mintPublicKey = new PublicKey(mintStr)
-        } catch {
-          throw new Error(`Unsupported payment token (${listing.price_token}). Only SOL and USDC are supported.`)
-        }
+        const mintPublicKey = new PublicKey(mintStr)
         const buyerTokenAccount = await getAssociatedTokenAddress(mintPublicKey, publicKey)
         
         try {
@@ -221,7 +252,7 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
             return
           }
         } catch (error) {
-          alert(`Token account not found. Please ensure you have ${listing.price_token} tokens in your wallet.`)
+          alert(`Token account not found. Please ensure you have ${params.token} tokens in your wallet.`)
           setProcessing(false)
           return
         }
@@ -239,14 +270,9 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
           })
         )
       } else {
-        const mintStr = resolveTokenMint(listing) ?? listing.token_mint
+        const mintStr = params.mint
         if (!mintStr) throw new Error(`Unsupported payment token. Only SOL and USDC are supported.`)
-        let mintPublicKey: PublicKey
-        try {
-          mintPublicKey = new PublicKey(mintStr)
-        } catch {
-          throw new Error(`Unsupported payment token. Only SOL and USDC are supported.`)
-        }
+        const mintPublicKey = new PublicKey(mintStr)
         const buyerTokenAccount = await getAssociatedTokenAddress(mintPublicKey, publicKey)
         const sellerTokenAccount = await getAssociatedTokenAddress(mintPublicKey, sellerWallet)
         const mintInfo = await getMint(connection, mintPublicKey)
@@ -420,7 +446,7 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
       }
 
       alert(
-        `Purchase successful! ${totalAmount} ${listing.price_token || 'SOL'} sent directly to seller.\n\n` +
+        `Purchase successful! ${totalAmount} ${params.token} sent directly to seller.\n\n` +
         `Transaction: ${signature}\n\n` +
         `Coordinate with the seller for shipping. This platform does not handle payments or shipping.`
       )
@@ -615,14 +641,17 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
       ) : (
         <>
           {publicKey && publicKey.toString() !== listing.wallet_address && listing.status === 'active' && (
-            <Button
-              onClick={handlePurchase}
-              disabled={processing}
-              className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 border-2 sm:border-4 border-[#00ff00] text-[#00ff00] hover:bg-[#00ff00] hover:text-black font-pixel-alt transition-colors min-h-[44px] text-base sm:text-lg touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ fontFamily: 'var(--font-pixel-alt)' }}
-            >
-              {processing ? 'Processing...' : 'Purchase'}
-            </Button>
+            <div className="flex flex-col gap-2">
+              <Button
+                onClick={handlePurchase}
+                disabled={processing}
+                className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 border-2 sm:border-4 border-[#00ff00] text-[#00ff00] hover:bg-[#00ff00] hover:text-black font-pixel-alt transition-colors min-h-[44px] text-base sm:text-lg touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ fontFamily: 'var(--font-pixel-alt)' }}
+              >
+                {processing ? 'Processing...' : 'Purchase'}
+              </Button>
+              <SolanaPayLink listingId={listingId} />
+            </div>
           )}
 
           {publicKey && publicKey.toString() === listing.wallet_address && (
