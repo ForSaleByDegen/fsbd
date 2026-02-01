@@ -3,7 +3,6 @@
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import Header from '@/components/Header'
-import DisclaimerBanner from '@/components/DisclaimerBanner'
 import Footer from '@/components/Footer'
 import SellerStatsCard from '@/components/SellerStatsCard'
 import Link from 'next/link'
@@ -46,7 +45,6 @@ export default function SellerPage() {
     <div className="min-h-screen bg-background w-full overflow-x-hidden">
       <Header />
       <main className="max-w-4xl mx-auto px-2 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 w-full relative z-10">
-        <DisclaimerBanner />
         <h1 className="text-2xl sm:text-3xl font-pixel text-[#660099] mb-4" style={{ fontFamily: 'var(--font-pixel)' }}>
           Seller profile
         </h1>

@@ -4,7 +4,6 @@ import { useWallet } from '@solana/wallet-adapter-react'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Header from '@/components/Header'
-import DisclaimerBanner from '@/components/DisclaimerBanner'
 import { isAdmin, getAdminUser, type AdminUser } from '@/lib/admin'
 import AdminDashboard from '@/components/admin/AdminDashboard'
 import LoadingScreen from '@/components/LoadingScreen'
@@ -66,7 +65,6 @@ export default function AdminPage() {
       <div className="min-h-screen bg-background w-full overflow-x-hidden">
         <Header />
         <main className="max-w-4xl mx-auto px-2 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 w-full">
-          <DisclaimerBanner />
           <div className="text-center py-16">
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-pixel text-[#660099] mb-4 break-words" style={{ fontFamily: 'var(--font-pixel)' }}>
               Access Denied
@@ -91,8 +89,6 @@ export default function AdminPage() {
     <div className="min-h-screen bg-background w-full overflow-x-hidden">
       <Header />
       <main className="max-w-6xl mx-auto px-2 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 w-full relative z-10">
-        <DisclaimerBanner />
-        
         <div className="mb-4 sm:mb-6">
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-pixel text-[#660099] mb-2 break-words" style={{ fontFamily: 'var(--font-pixel)' }}>
             Admin Dashboard

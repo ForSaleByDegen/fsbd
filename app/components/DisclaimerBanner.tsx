@@ -26,9 +26,11 @@ export default function DisclaimerBanner() {
           </p>
           <p>
             <strong className="text-[#aa77ee]">Listing directory only — AS IS, AS AVAILABLE:</strong> We host listings only. 
-            Buyers and sellers transact directly peer-to-peer. We are NOT a party to any transaction. We do NOT verify listings, 
-            item condition, authenticity, or that items will be shipped or delivered. We do NOT hold funds (except optional escrow 
-            by user choice), facilitate shipping, or resolve disputes.
+            Buyers and sellers transact directly peer-to-peer. We are NOT a party to any transaction. No seller is affiliated with this platform. 
+            We do NOT stand by any item&apos;s authenticity or condition. We do NOT verify listings, 
+            item condition, authenticity, or that items will be shipped or delivered. 
+            <strong className="text-amber-400"> Direct (Degen) payment</strong> sends funds straight to the seller with no protections — we strongly encourage Escrow.
+            We do NOT hold funds (except optional escrow by user choice), facilitate shipping, or resolve disputes.
           </p>
           <p>
             <strong className="text-[#aa77ee]">All risk is yours:</strong> Items may not match descriptions. Delivery may fail. 

@@ -2,7 +2,6 @@ import { Suspense } from 'react'
 import Header from '@/components/Header'
 import ListingFeed from '@/components/ListingFeed'
 import ExternalListingsSection from '@/components/ExternalListingsSection'
-import DisclaimerBanner from '@/components/DisclaimerBanner'
 import AsciiLogo from '@/components/AsciiLogo'
 import LoadingScreen from '@/components/LoadingScreen'
 import Footer from '@/components/Footer'
@@ -16,8 +15,6 @@ export default function Home() {
       <Header />
       
       <main className="max-w-6xl mx-auto px-2 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 w-full">
-        <DisclaimerBanner />
-        
         <div className="mb-6 sm:mb-8 md:mb-10 text-center w-full">
           <AsciiLogo />
         </div>

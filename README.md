@@ -181,6 +181,10 @@ Works with any platform supporting Next.js:
 - Railway
 - Render
 
+## Phantom "Malicious dApp" Warning
+
+If Phantom shows "This dApp could be malicious" on fsbd.fun, complete [Phantom Portal domain verification](https://docs.phantom.com/phantom-portal/verify-domain) and submit the [domain review form](https://docs.google.com/forms/d/1JgIxdmolgh_80xMfQKBKx9-QPC7LRdN6LHpFFW8BlKM/viewform). See [app/PHANTOM_VERIFICATION.md](app/PHANTOM_VERIFICATION.md) for the full checklist.
+
 ## $FSBD Token Launch
 
 ```bash

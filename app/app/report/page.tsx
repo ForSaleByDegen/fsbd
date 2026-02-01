@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { useWallet } from '@solana/wallet-adapter-react'
 import Header from '@/components/Header'
-import DisclaimerBanner from '@/components/DisclaimerBanner'
 import Footer from '@/components/Footer'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -63,7 +62,6 @@ export default function ReportPage() {
     <div className="min-h-screen bg-background w-full overflow-x-hidden">
       <Header />
       <main className="max-w-2xl mx-auto px-2 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 w-full">
-        <DisclaimerBanner />
 
         <div className="pixel-box bg-black border-2 sm:border-4 border-[#660099] p-4 sm:p-6 md:p-8">
           <h1 className="text-2xl sm:text-3xl font-pixel text-[#00ff00] mb-2" style={{ fontFamily: 'var(--font-pixel)' }}>

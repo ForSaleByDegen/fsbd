@@ -12,8 +12,7 @@ import BiddingSection from './BiddingSection'
 import ListingChat from './ListingChat'
 import OptionalEscrowSection from './OptionalEscrowSection'
 import ManualTrackingForm from './ManualTrackingForm'
-import TermsAgreementModal from './TermsAgreementModal'
-import { hasAcceptedTerms, acceptTerms } from '@/lib/chat'
+import { hasAcceptedTerms } from '@/lib/chat'
 import { hashWalletAddress } from '@/lib/supabase'
 import BuyerOrderActions from './BuyerOrderActions'
 import SellerStatsCard from './SellerStatsCard'
@@ -41,7 +40,7 @@ function SolanaPayLink({ listingId }: { listingId: string }) {
       const p = await res.json() as { recipient: string; amount: number; token: string; mint?: string }
       const base = `solana:${p.recipient}`
       const params = new URLSearchParams()
-      params.set('label', 'FSBD Purchase')
+      params.set('label', 'FSBD Purchase (Degen - Direct)')
       if (p.token === 'SOL') {
         params.set('amount', String(Math.ceil(p.amount * LAMPORTS_PER_SOL)))
       } else if (p.mint) {
@@ -191,10 +190,19 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
     }
     const termsAccepted = await hasAcceptedTerms(publicKey.toString())
     if (!termsAccepted) {
-      setShowTermsModal(true)
+      alert('Please accept the Terms and Compliance to continue. Connect your wallet to see the compliance prompt.')
       return
     }
-    if (!confirm('Are you sure you want to purchase this item?')) {
+    const confirmAmount = listing.price
+    const confirmToken = (listing.price_token as string) || 'SOL'
+    const confirmMsg =
+      `⚠️ DEGEN PAYMENT — DIRECT TO SELLER\n\n` +
+      `You are about to send ${confirmAmount} ${confirmToken} DIRECTLY to the seller's wallet. No escrow, no protections.\n\n` +
+      `• No seller is affiliated with this platform.\n` +
+      `• We do NOT stand by any item's authenticity or condition.\n` +
+      `• We strongly encourage using Escrow (propose in chat first) for buyer protection.\n\n` +
+      `Proceed with direct (Degen) payment anyway?`
+    if (!confirm(confirmMsg)) {
       return
     }
 
@@ -570,21 +578,6 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
         </div>
       )}
 
-      {/* Prominent disclaimer - condition & delivery (Craigslist-style) */}
-      <div className="mb-4 sm:mb-6 p-4 sm:p-5 bg-red-950/40 border-2 border-[#ff0000] rounded">
-        <h3 className="font-pixel text-[#ff0000] mb-2 text-base sm:text-lg font-bold" style={{ fontFamily: 'var(--font-pixel)' }}>
-          ⚠️ BUYER & SELLER BEWARE
-        </h3>
-        <p className="text-sm text-[#00ff00] font-pixel-alt leading-relaxed mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-          <strong className="text-[#ff0000]">We cannot guarantee:</strong> item condition, authenticity, or successful delivery. 
-          Listings are AS IS, AS AVAILABLE. We are not a party to transactions. We do not verify listings or shipping. 
-          All risk is yours. Use at your own risk. All transactions are final.
-        </p>
-        <p className="text-xs text-[#660099] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-          <a href="/terms" className="text-[#ff00ff] underline">Full Terms of Service</a>
-        </p>
-      </div>
-
       {listing.has_token && listing.token_mint && (
         <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-[#660099]/20 border-2 border-[#660099] rounded">
           <h3 className="font-pixel text-[#ff00ff] mb-2 text-base sm:text-lg" style={{ fontFamily: 'var(--font-pixel)' }}>
@@ -602,14 +595,29 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
       ) : (
         <>
           {publicKey && publicKey.toString() !== listing.wallet_address && listing.status === 'active' && (
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-3">
+              {/* Direct payment (Degen) warning */}
+              <div className="p-3 sm:p-4 bg-amber-950/50 border-2 border-amber-600 rounded">
+                <h4 className="font-pixel text-amber-400 font-bold mb-2 text-sm sm:text-base" style={{ fontFamily: 'var(--font-pixel)' }}>
+                  🎲 DEGEN — Direct Payment
+                </h4>
+                <p className="text-sm text-[#aa77ee] font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                  This sends {listing.price} {(listing.price_token as string) || 'SOL'} <strong>directly to the seller</strong>. No escrow, no buyer protection.
+                </p>
+                <p className="text-sm text-[#aa77ee] font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                  No seller is affiliated with this platform. We do NOT stand by any item&apos;s authenticity or condition.
+                </p>
+                <p className="text-sm text-[#00ff00] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                  <strong>Strongly encouraged:</strong> Use the chat above to propose Escrow first. Funds are held until shipment and receipt are confirmed.
+                </p>
+              </div>
               <Button
                 onClick={handlePurchase}
                 disabled={processing}
-                className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 border-2 sm:border-4 border-[#00ff00] text-[#00ff00] hover:bg-[#00ff00] hover:text-black font-pixel-alt transition-colors min-h-[44px] text-base sm:text-lg touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 border-2 sm:border-4 border-amber-500 text-amber-400 hover:bg-amber-500 hover:text-black font-pixel-alt transition-colors min-h-[44px] text-base sm:text-lg touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ fontFamily: 'var(--font-pixel-alt)' }}
               >
-                {processing ? 'Processing...' : 'Purchase'}
+                {processing ? 'Processing...' : 'Purchase (Degen — Direct)'}
               </Button>
               <SolanaPayLink listingId={listingId} />
             </div>

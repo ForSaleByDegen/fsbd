@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic'
 import './globals.css'
 import WalletProvider from '@/components/providers/WalletProvider'
 import WalletErrorHandler from '@/components/WalletErrorHandler'
+import ComplianceModal from '@/components/ComplianceModal'
 import BackDoorModal from '@/components/BackDoorModal'
 import EasterEgg from '@/components/EasterEgg'
 import MatrixRain from '@/components/MatrixRain'
@@ -79,6 +80,7 @@ export default function RootLayout({
         <PrivyProvider>
           <WalletProvider>
             <WalletErrorHandler />
+            <ComplianceModal />
             <div className="crt-screen">
               <MatrixRain />
               <FloatingCryptoIcons />

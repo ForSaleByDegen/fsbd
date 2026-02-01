@@ -1,6 +1,5 @@
 import CreateListingForm from '@/components/CreateListingForm'
 import Header from '@/components/Header'
-import DisclaimerBanner from '@/components/DisclaimerBanner'
 import Footer from '@/components/Footer'
 
 // Force dynamic rendering - requires wallet connection
@@ -11,7 +10,6 @@ export default function CreateListingPage() {
     <div className="min-h-screen bg-background w-full overflow-x-hidden">
       <Header />
       <main className="max-w-2xl mx-auto px-2 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 w-full relative z-10">
-        <DisclaimerBanner />
         <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-4 sm:mb-6 font-pixel text-[#00ff00] break-words" style={{ fontFamily: 'var(--font-pixel)' }}>
           Create New Listing
         </h1>
