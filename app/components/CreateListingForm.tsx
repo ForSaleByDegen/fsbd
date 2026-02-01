@@ -41,7 +41,8 @@ export default function CreateListingForm() {
     deliveryMethod: 'ship' as 'ship' | 'local_pickup' | 'both',
     locationCity: '',
     locationRegion: '',
-    externalListingUrl: ''
+    externalListingUrl: '',
+    subcategory: ''
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
