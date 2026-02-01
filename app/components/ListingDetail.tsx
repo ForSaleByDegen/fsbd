@@ -123,7 +123,7 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
       if (!walletAddr) {
         throw new Error('This listing is missing the seller\'s wallet address. Please try another listing.')
       }
-      if (/^https?:\/\//i.test(walletAddr) || walletAddr.includes('://') || walletAddr.length > 50) {
+      if (/^https?:\/\//i.test(walletAddr) || walletAddr.includes('://') || walletAddr.toLowerCase().includes('localhost') || walletAddr.length > 50) {
         console.error('Invalid wallet_address (URL or corrupted):', walletAddr?.slice(0, 50))
         throw new Error('This listing has invalid data (seller address looks like a URL). The seller may need to re-list the item.')
       }
