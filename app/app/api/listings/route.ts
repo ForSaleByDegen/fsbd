@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { PublicKey } from '@solana/web3.js'
 import { supabase, hashWalletAddress } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 
-// Fallback API route if Supabase not configured
+const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
@@ -43,14 +46,33 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    
-    // Validate wallet address
-    const walletHash = hashWalletAddress(body.wallet_address)
-    
-    if (supabase) {
-      const { data, error } = await supabase
+    const wa = String(body.wallet_address ?? '').trim()
+
+    // Validate wallet_address before storing (prevents corrupted data)
+    if (!wa || !BASE58.test(wa)) {
+      return NextResponse.json(
+        { error: 'Invalid wallet address. Please reconnect your wallet and try again.' },
+        { status: 400 }
+      )
+    }
+    try {
+      new PublicKey(wa)
+    } catch {
+      return NextResponse.json(
+        { error: 'Invalid wallet address format. Please reconnect your wallet.' },
+        { status: 400 }
+      )
+    }
+
+    const walletHash = hashWalletAddress(wa)
+    const listingData = { ...body, wallet_address: wa, wallet_address_hash: walletHash }
+
+    // Prefer supabaseAdmin (bypasses RLS) for reliable insert
+    const client = supabaseAdmin || supabase
+    if (client) {
+      const { data, error } = await client
         .from('listings')
-        .insert([body])
+        .insert([listingData])
         .select()
         .single()
 
@@ -58,8 +80,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(data)
     }
 
-    // Fallback: return mock data
-    return NextResponse.json({ id: 'mock-' + Date.now(), ...body })
+    return NextResponse.json({ id: 'mock-' + Date.now(), ...listingData })
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message },

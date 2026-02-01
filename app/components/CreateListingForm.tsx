@@ -191,63 +191,28 @@ export default function CreateListingForm() {
       
       console.log('Creating listing with images:', imageUrls)
 
-      if (supabase) {
-        const { data, error } = await supabase
-          .from('listings')
-          .insert([listingData])
-          .select()
-          .single()
+      // Always use API route - validates wallet_address server-side and uses service role for reliable insert
+      const response = await fetch('/api/listings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(listingData),
+      })
 
-        if (error) {
-          console.error('Supabase insert error:', error)
-          throw new Error(`Database error: ${error.message || 'Failed to save listing'}`)
-        }
-        
-        if (!data || !data.id) {
-          throw new Error('Listing created but no ID returned')
-        }
-        
-        console.log('Listing created successfully:', data.id)
-        console.log('Listing data:', data)
-        
-        // Show success message
-        alert(`Listing created successfully! Redirecting to your listing...`)
-        
-        // Small delay to ensure database is updated before redirect
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        
-        // Redirect to listing detail page
-        router.push(`/listings/${data.id}`)
-      } else {
-        // Fallback to API route
-        const response = await fetch('/api/listings', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(listingData)
-        })
-        
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          throw new Error(errorData.error || `HTTP ${response.status}: Failed to create listing`)
-        }
-        
-        const data = await response.json()
-        if (!data || !data.id) {
-          throw new Error('Listing created but no ID returned')
-        }
-        
-        console.log('Listing created successfully via API:', data.id)
-        console.log('Listing data:', data)
-        
-        // Show success message
-        alert(`Listing created successfully! Redirecting to your listing...`)
-        
-        // Small delay to ensure database is updated before redirect
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        
-        // Redirect to listing detail page
-        router.push(`/listings/${data.id}`)
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `HTTP ${response.status}: Failed to create listing`)
       }
+
+      const data = await response.json()
+      if (!data || !data.id) {
+        throw new Error('Listing created but no ID returned')
+      }
+
+      console.log('Listing created successfully:', data.id)
+
+      alert(`Listing created successfully! Redirecting to your listing...`)
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+      router.push(`/listings/${data.id}`)
     } catch (error: any) {
       console.error('Error creating listing:', error)
       const errorMessage = error?.message || 'Unknown error'

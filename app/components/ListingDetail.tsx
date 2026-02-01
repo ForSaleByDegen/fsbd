@@ -166,7 +166,8 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
       })
       if (!prepRes.ok) {
         const err = await prepRes.json().catch(() => ({}))
-        throw new Error(err.error || prepRes.statusText || 'Could not prepare transaction.')
+        const msg = err.error || prepRes.statusText || 'Could not prepare transaction.'
+        throw new Error(msg)
       }
       const prep = await prepRes.json() as {
         transactionBase64: string
