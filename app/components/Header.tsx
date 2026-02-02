@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useWallet } from '@solana/wallet-adapter-react'
 import Link from 'next/link'
-import { Button } from './ui/button'
+import { usePathname, useSearchParams } from 'next/navigation'
 import PrivyConnectButton from './PrivyConnectButton'
 import { isAdmin } from '@/lib/admin'
 
@@ -21,12 +21,32 @@ if (typeof window !== 'undefined') {
 }
 
 export default function Header() {
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const { connected, publicKey } = useWallet()
   const privyEnabled = !!(process.env.NEXT_PUBLIC_PRIVY_APP_ID && usePrivyHook)
   const privyAuth = privyEnabled ? usePrivyHook() : { authenticated: false }
   const authenticated = privyAuth.authenticated || false
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [userIsAdmin, setUserIsAdmin] = useState(false)
+
+  const isActive = (href: string) => {
+    if (href === '/') return pathname === '/' && !searchParams.get('tab')
+    if (href === '/?tab=activity') return pathname === '/' && searchParams.get('tab') === 'activity'
+    if (href === '/listings/create') return pathname === '/listings/create'
+    if (href === '/listings/create-auction') return pathname.startsWith('/listings/create-auction')
+    return pathname.startsWith(href)
+  }
+
+  const navLinkClass = (href: string) => {
+    const active = isActive(href)
+    return `text-xs md:text-sm font-pixel-alt transition-colors touch-manipulation px-2 py-1 border-2 ${active ? 'text-[#00ff00] border-[#660099]' : 'text-[#660099] border-transparent hover:text-[#00ff00] hover:border-[#660099]'}`
+  }
+
+  const mobileNavLinkClass = (href: string) => {
+    const active = isActive(href)
+    return `text-sm font-pixel-alt transition-colors touch-manipulation px-3 py-2 border-2 min-h-[44px] flex items-center ${active ? 'text-[#00ff00] border-[#660099]' : 'text-[#660099] border-transparent hover:text-[#00ff00] hover:border-[#660099]'}`
+  }
 
   useEffect(() => {
     if (connected && publicKey) {
@@ -64,38 +84,38 @@ export default function Header() {
           <nav className="hidden md:flex items-center gap-2 lg:gap-4">
             {!isBetaMode && (
               <>
-                <Link href="/" className="text-xs md:text-sm font-pixel-alt text-[#660099] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-2 py-1 border-2 border-transparent hover:border-[#660099]" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                <Link href="/" className={navLinkClass('/')} style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                   Browse
                 </Link>
-                <Link href="/?tab=activity" className="text-xs md:text-sm font-pixel-alt text-[#660099] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-2 py-1 border-2 border-transparent hover:border-[#660099]" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                <Link href="/?tab=activity" className={navLinkClass('/?tab=activity')} style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                   Activity
                 </Link>
-                <Link href="/listings/create" className="text-xs md:text-sm font-pixel-alt text-[#660099] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-2 py-1 border-2 border-transparent hover:border-[#660099]" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                <Link href="/listings/create" className={navLinkClass('/listings/create')} style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                   Create
                 </Link>
             {connected && (
               <>
-                <Link href="/listings/create-auction">
-                  <Button variant="outline" size="sm" className="touch-manipulation border-2 border-[#660099] text-[#00ff00] hover:bg-[#660099] hover:text-black font-pixel-alt text-xs" style={{ fontFamily: 'var(--font-pixel-alt)' }}>Auction</Button>
+                <Link href="/listings/create-auction" className={navLinkClass('/listings/create-auction')} style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                  Auction
                 </Link>
-                <Link href="/listings/my" className="text-xs md:text-sm font-pixel-alt text-[#660099] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-2 py-1 border-2 border-transparent hover:border-[#660099]" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                <Link href="/listings/my" className={navLinkClass('/listings/my')} style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                   My Listings
                 </Link>
-                <Link href="/profile" className="text-xs md:text-sm font-pixel-alt text-[#660099] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-2 py-1 border-2 border-transparent hover:border-[#660099]" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                <Link href="/profile" className={navLinkClass('/profile')} style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                   Profile
                 </Link>
-                <Link href="/tiers" className="text-xs md:text-sm font-pixel-alt text-[#660099] hover:text-[#00ff00] active:text-[#00ff00] transition-colors hidden lg:inline touch-manipulation px-2 py-1 border-2 border-transparent hover:border-[#660099]" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                <Link href="/tiers" className={`${navLinkClass('/tiers')} hidden lg:inline`} style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                   Tiers
                 </Link>
               </>
             )}
               </>
             )}
-            <Link href="/why" className="text-xs md:text-sm font-pixel-alt text-[#660099] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-2 py-1 border-2 border-transparent hover:border-[#660099] hidden lg:inline" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+            <Link href="/why" className={`${navLinkClass('/why')} hidden lg:inline`} style={{ fontFamily: 'var(--font-pixel-alt)' }}>
               Why $FSBD
             </Link>
             {userIsAdmin && (
-              <Link href="/admin" className="text-xs md:text-sm font-pixel-alt text-[#ff00ff] hover:text-[#00ff00] transition-colors touch-manipulation px-2 py-1 border-2 border-[#ff00ff] hover:border-[#00ff00]" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+              <Link href="/admin" className={`text-xs md:text-sm font-pixel-alt transition-colors touch-manipulation px-2 py-1 border-2 ${isActive('/admin') ? 'text-[#00ff00] border-[#00ff00]' : 'text-[#ff00ff] border-[#ff00ff] hover:text-[#00ff00] hover:border-[#00ff00]'}`} style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                 Admin
               </Link>
             )}
@@ -129,7 +149,7 @@ export default function Header() {
                   <Link 
                     href="/" 
                     onClick={() => setMobileMenuOpen(false)}
-                    className="text-sm font-pixel-alt text-[#660099] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-3 py-2 border-2 border-transparent hover:border-[#660099] min-h-[44px] flex items-center" 
+                    className={mobileNavLinkClass('/')}
                     style={{ fontFamily: 'var(--font-pixel-alt)' }}
                   >
                     Browse
@@ -137,7 +157,7 @@ export default function Header() {
                   <Link 
                     href="/?tab=activity" 
                     onClick={() => setMobileMenuOpen(false)}
-                    className="text-sm font-pixel-alt text-[#660099] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-3 py-2 border-2 border-transparent hover:border-[#660099] min-h-[44px] flex items-center" 
+                    className={mobileNavLinkClass('/?tab=activity')}
                     style={{ fontFamily: 'var(--font-pixel-alt)' }}
                   >
                     Activity
@@ -145,7 +165,7 @@ export default function Header() {
                   <Link 
                     href="/listings/create" 
                     onClick={() => setMobileMenuOpen(false)}
-                    className="text-sm font-pixel-alt text-[#660099] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-3 py-2 border-2 border-transparent hover:border-[#660099] min-h-[44px] flex items-center" 
+                    className={mobileNavLinkClass('/listings/create')}
                     style={{ fontFamily: 'var(--font-pixel-alt)' }}
                   >
                     Create Listing
@@ -155,7 +175,7 @@ export default function Header() {
                       <Link 
                         href="/listings/create-auction" 
                         onClick={() => setMobileMenuOpen(false)}
-                        className="text-sm font-pixel-alt text-[#660099] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-3 py-2 border-2 border-transparent hover:border-[#660099] min-h-[44px] flex items-center" 
+                        className={mobileNavLinkClass('/listings/create-auction')}
                         style={{ fontFamily: 'var(--font-pixel-alt)' }}
                       >
                         Create Auction
@@ -163,7 +183,7 @@ export default function Header() {
                       <Link 
                         href="/listings/my" 
                         onClick={() => setMobileMenuOpen(false)}
-                        className="text-sm font-pixel-alt text-[#660099] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-3 py-2 border-2 border-transparent hover:border-[#660099] min-h-[44px] flex items-center" 
+                        className={mobileNavLinkClass('/listings/my')}
                         style={{ fontFamily: 'var(--font-pixel-alt)' }}
                       >
                         My Listings
@@ -171,7 +191,7 @@ export default function Header() {
                       <Link 
                         href="/profile" 
                         onClick={() => setMobileMenuOpen(false)}
-                        className="text-sm font-pixel-alt text-[#660099] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-3 py-2 border-2 border-transparent hover:border-[#660099] min-h-[44px] flex items-center" 
+                        className={mobileNavLinkClass('/profile')}
                         style={{ fontFamily: 'var(--font-pixel-alt)' }}
                       >
                         Profile
@@ -179,7 +199,7 @@ export default function Header() {
                       <Link 
                         href="/tiers" 
                         onClick={() => setMobileMenuOpen(false)}
-                        className="text-sm font-pixel-alt text-[#660099] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-3 py-2 border-2 border-transparent hover:border-[#660099] min-h-[44px] flex items-center" 
+                        className={mobileNavLinkClass('/tiers')}
                         style={{ fontFamily: 'var(--font-pixel-alt)' }}
                       >
                         Tiers
@@ -191,7 +211,7 @@ export default function Header() {
               <Link 
                 href="/why" 
                 onClick={() => setMobileMenuOpen(false)}
-                className="text-sm font-pixel-alt text-[#660099] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-3 py-2 border-2 border-transparent hover:border-[#660099] min-h-[44px] flex items-center" 
+                className={mobileNavLinkClass('/why')}
                 style={{ fontFamily: 'var(--font-pixel-alt)' }}
               >
                 Why $FSBD
@@ -200,7 +220,7 @@ export default function Header() {
                 <Link 
                   href="/admin" 
                   onClick={() => setMobileMenuOpen(false)}
-                  className="text-sm font-pixel-alt text-[#ff00ff] hover:text-[#00ff00] active:text-[#00ff00] transition-colors touch-manipulation px-3 py-2 border-2 border-[#ff00ff] hover:border-[#00ff00] min-h-[44px] flex items-center" 
+                  className={`text-sm font-pixel-alt transition-colors touch-manipulation px-3 py-2 border-2 min-h-[44px] flex items-center ${isActive('/admin') ? 'text-[#00ff00] border-[#00ff00]' : 'text-[#ff00ff] border-[#ff00ff] hover:text-[#00ff00] hover:border-[#00ff00]'}`}
                   style={{ fontFamily: 'var(--font-pixel-alt)' }}
                 >
                   Admin
