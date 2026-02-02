@@ -3,7 +3,12 @@
 import { useState } from 'react'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { Connection, PublicKey, Transaction } from '@solana/web3.js'
-import { getAssociatedTokenAddressSync, createTransferInstruction, getMint } from '@solana/spl-token'
+import {
+  getAssociatedTokenAddressSync,
+  createAssociatedTokenAccountInstruction,
+  createTransferInstruction,
+  getMint,
+} from '@solana/spl-token'
 import { EXTRA_LISTING_SLOT_COST_FSBD } from '@/lib/tier-check'
 
 export default function BuyListingSlotButton({
