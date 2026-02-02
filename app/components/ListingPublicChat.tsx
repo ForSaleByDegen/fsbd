@@ -141,7 +141,9 @@ export default function ListingPublicChat({
         load
       )
       .subscribe()
-    return () => channel.unsubscribe()
+    return () => {
+      void channel.unsubscribe()
+    }
   }, [listingId, isTokenGated, chatKey, decryptMessages])
 
   useEffect(() => {
