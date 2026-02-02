@@ -29,6 +29,7 @@ export default function CreateListingForm() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [maxImages, setMaxImages] = useState(1)
+  const [isAdminUser, setIsAdminUser] = useState(false)
 
   useEffect(() => {
     if (!publicKey || !connection) {
@@ -39,6 +40,17 @@ export default function CreateListingForm() {
       .then((tier) => setMaxImages(getMaxImagesForTier(tier)))
       .catch(() => setMaxImages(1))
   }, [publicKey?.toString(), connection])
+
+  useEffect(() => {
+    if (!publicKey) {
+      setIsAdminUser(false)
+      return
+    }
+    fetch(`/api/admin/check?wallet=${encodeURIComponent(publicKey.toString())}`)
+      .then((res) => res.json())
+      .then((data) => setIsAdminUser(!!data?.isAdmin))
+      .catch(() => setIsAdminUser(false))
+  }, [publicKey?.toString()])
 
   const [formData, setFormData] = useState({
     title: '',
@@ -460,6 +472,7 @@ export default function CreateListingForm() {
         )}
       </div>
 
+      {isAdminUser && (
       <div className="border-t pt-4">
         <label className="flex items-center gap-2 mb-4">
           <input
@@ -504,6 +517,7 @@ export default function CreateListingForm() {
           </div>
         )}
       </div>
+      )}
 
       <Button
         type="submit"
