@@ -43,6 +43,8 @@ export default function ListingPublicChat({
   const [sending, setSending] = useState(false)
   const [chatKey, setChatKey] = useState<Uint8Array | null>(null)
   const [keyError, setKeyError] = useState<string | null>(null)
+  const [canChatByFsbd, setCanChatByFsbd] = useState<boolean | null>(null)
+  const [fsbdChatError, setFsbdChatError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const myHash = hashWalletAddress(currentUserWallet)
   const isTokenGated = !!(tokenMint && tokenMint.trim())
@@ -69,6 +71,26 @@ export default function ListingPublicChat({
     },
     []
   )
+
+  useEffect(() => {
+    if (!currentUserWallet) return
+    fetch(`/api/config/balance-check?wallet=${encodeURIComponent(currentUserWallet)}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (!d.mintSet) {
+          setCanChatByFsbd(true)
+          setFsbdChatError(null)
+          return
+        }
+        const canChat = d.tier && d.tier !== 'free'
+        setCanChatByFsbd(canChat)
+        setFsbdChatError(canChat ? null : (d.hint || 'Hold at least 100,000 $FSBD to chat'))
+      })
+      .catch(() => {
+        setCanChatByFsbd(null)
+        setFsbdChatError(null)
+      })
+  }, [currentUserWallet])
 
   useEffect(() => {
     if (!listingId) return
@@ -180,13 +202,13 @@ export default function ListingPublicChat({
           alert('Failed to send message')
         }
       } else {
-        const ok = await sendPublicMessage(listingId, currentUserWallet, text)
-        if (ok) {
+        const result = await sendPublicMessage(listingId, currentUserWallet, text)
+        if (result.ok) {
           setInput('')
           const msgs = await fetchPublicMessages(listingId)
           setMessages(msgs)
         } else {
-          alert('Failed to send message. Ensure you are connected and try again.')
+          alert(result.error || 'Failed to send message. Ensure you are connected and hold the minimum $FSBD to chat.')
         }
       }
     } finally {
@@ -200,7 +222,8 @@ export default function ListingPublicChat({
   }
 
   const displayMessages = isTokenGated && chatKey ? decryptedMessages : messages
-  const canSend = !isTokenGated || (isTokenGated && chatKey)
+  const fsbdOk = canChatByFsbd === true
+  const canSend = fsbdOk && (!isTokenGated || (isTokenGated && chatKey))
 
   if (!supabase) return null
 
@@ -265,13 +288,19 @@ export default function ListingPublicChat({
         )}
         <div ref={messagesEndRef} />
       </div>
-      <div className="p-2 border-t border-[#660099] flex gap-2">
+      <div className="p-2 border-t border-[#660099]">
+        {canChatByFsbd === false && fsbdChatError && (
+          <p className="text-xs text-[#aa77ee] font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+            {fsbdChatError}
+          </p>
+        )}
+        <div className="flex gap-2">
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-          placeholder={canSend ? 'Message the community...' : 'Hold token to post'}
+          placeholder={canSend ? 'Message the community...' : !fsbdOk ? 'Hold $FSBD to chat' : isTokenGated ? 'Hold token to post' : 'Message...'}
           maxLength={2000}
           disabled={!canSend}
           className="flex-1 bg-black border-2 border-[#660099] px-3 py-2 text-[#00ff00] placeholder-[#660099]/60 rounded font-pixel-alt text-sm disabled:opacity-50"
@@ -282,8 +311,9 @@ export default function ListingPublicChat({
           disabled={sending || !input.trim() || !canSend}
           className="border-2 border-[#00ff00] text-[#00ff00] hover:bg-[#00ff00] hover:text-black px-4"
         >
-          Send
+          {sending ? '…' : 'Send'}
         </Button>
+        </div>
       </div>
     </div>
   )

@@ -26,14 +26,14 @@ export async function fetchPublicMessages(listingId: string): Promise<PublicChat
   return (data ?? []) as PublicChatMessage[]
 }
 
-/** Send plain public message (via API - uses service role, bypasses RLS) */
+/** Send plain public message (via API - uses service role, token-gated by $FSBD) */
 export async function sendPublicMessage(
   listingId: string,
   senderWallet: string,
   content: string
-): Promise<boolean> {
+): Promise<{ ok: boolean; error?: string }> {
   const trimmed = content.trim().slice(0, 2000)
-  if (!trimmed) return false
+  if (!trimmed) return { ok: false, error: 'Message is empty' }
   const res = await fetch(`/api/listings/${listingId}/public-chat-message`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -42,7 +42,9 @@ export async function sendPublicMessage(
       content: trimmed,
     }),
   })
-  return res.ok
+  if (res.ok) return { ok: true }
+  const data = await res.json().catch(() => ({}))
+  return { ok: false, error: data.error || `Failed to send (${res.status})` }
 }
 
 /** Send encrypted message to token-gated chat (via API - verifies holder server-side) */
