@@ -82,6 +82,14 @@ After setting environment variables, redeploy your app.
 - **Admin Checks**: Admin status verified before showing admin features
 - **Wallet Hashing**: Wallet addresses hashed before storage
 
+#### Admin Route Security
+
+1. **Client-side**: `/admin` page checks `isAdmin(wallet)` and redirects non-admins to home
+2. **API routes**: All admin APIs verify the caller's wallet before processing:
+   - `POST /api/admin/analytics` — requires `{ wallet }` in body, verifies admin + `view_analytics` permission
+   - `PATCH /api/admin/config` — requires `{ wallet }` in body, verifies admin + config permission
+3. **Data access**: Admin analytics uses `supabaseAdmin` (service role) server-side, so RLS does not block reads. The wallet is validated before any data is returned.
+
 ## Admin Roles
 
 - **admin**: Full access to all features

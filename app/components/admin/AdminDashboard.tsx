@@ -47,7 +47,7 @@ export default function AdminDashboard({ adminUser }: AdminDashboardProps) {
 
       {/* Tab Content */}
       <div className="w-full">
-        {activeTab === 'analytics' && <AdminAnalytics />}
+        {activeTab === 'analytics' && <AdminAnalytics adminWallet={adminUser.wallet_address} />}
         {activeTab === 'listings' && <ListingManagement />}
         {activeTab === 'users' && <UserManagement />}
         {activeTab === 'config' && <PlatformConfig />}

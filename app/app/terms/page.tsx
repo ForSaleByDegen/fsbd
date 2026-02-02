@@ -1,6 +1,7 @@
 'use client'
 
 import Header from '@/components/Header'
+import Footer from '@/components/Footer'
 import Link from 'next/link'
 
 export default function TermsPage() {
@@ -307,7 +308,13 @@ export default function TermsPage() {
             </section>
           </div>
 
-          <div className="mt-6 pt-4 border-t border-[#660099]/30">
+          <div className="mt-6 pt-4 border-t border-[#660099]/30 flex flex-wrap gap-4">
+            <Link 
+              href="/" 
+              className="text-[#00ff00] hover:text-[#ff00ff] underline text-sm sm:text-base"
+            >
+              ← Back to Browse
+            </Link>
             <Link 
               href="/privacy" 
               className="text-[#00ff00] hover:text-[#ff00ff] underline text-sm sm:text-base"
@@ -317,6 +324,7 @@ export default function TermsPage() {
           </div>
         </div>
       </main>
+      <Footer />
     </div>
   )
 }

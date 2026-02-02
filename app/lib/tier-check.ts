@@ -122,20 +122,23 @@ export function getTierBenefits(tier: Tier): string[] {
     free: [
       'Free listings (message signing only)', 
       `Platform fee: ${feePercent}% on sales`,
-      `Token launch fee: ${listingFee.toFixed(3)} SOL (if creating token/NFT)`
+      `Token launch fee: ${listingFee.toFixed(3)} SOL (if creating token/NFT)`,
+      '1 image per listing'
     ],
     bronze: [
       'Free listings (message signing only)',
       `Platform fee: ${feePercent}% on sales`,
       `Token launch fee: ${listingFee.toFixed(3)} SOL (25% discount)`,
-      'Basic listings'
+      'Basic listings',
+      '2 images per listing'
     ],
     silver: [
       'Free listings (message signing only)',
       `Platform fee: ${feePercent}% on sales`,
       `Token launch fee: ${listingFee.toFixed(3)} SOL (50% discount)`,
       'Priority visibility',
-      'Basic listings'
+      'Basic listings',
+      '3 images per listing'
     ],
     gold: [
       'Free listings (message signing only)',
@@ -144,10 +147,24 @@ export function getTierBenefits(tier: Tier): string[] {
       'Priority visibility',
       'Governance voting',
       'Auction creation',
-      'Basic listings'
+      'Basic listings',
+      '4 images per listing'
     ]
   }
   return benefits[tier] || benefits.free
+}
+
+/**
+ * Maximum listing images allowed per tier (Tier 1 = 1 image, Tier 2 = 2, etc.)
+ */
+export function getMaxImagesForTier(tier: Tier): number {
+  const limits: Record<Tier, number> = {
+    free: 1,
+    bronze: 2,
+    silver: 3,
+    gold: 4,
+  }
+  return limits[tier] ?? 1
 }
 
 /**

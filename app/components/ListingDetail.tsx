@@ -16,6 +16,7 @@ import { hashWalletAddress } from '@/lib/supabase'
 import BuyerOrderActions from './BuyerOrderActions'
 import SellerStatsCard from './SellerStatsCard'
 import ListingTokenChart from './ListingTokenChart'
+import ShareListing from './ShareListing'
 import { getSubcategoryLabel } from '@/lib/categories'
 
 /** Solana Pay link - alternative when in-app transaction fails */
@@ -518,6 +519,12 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
           <span className="text-xl sm:text-2xl md:text-3xl font-pixel text-[#00ff00] font-bold" style={{ fontFamily: 'var(--font-pixel)' }}>
             {listing.price} {listing.price_token || 'SOL'}
           </span>
+          <ShareListing
+            listingId={listing.id}
+            title={listing.title}
+            price={listing.price}
+            priceToken={listing.price_token}
+          />
           {listingQty != null && listingQty > 1 && (
             <span className="text-sm sm:text-base text-[#00ff00] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
               ×{listingQty} available

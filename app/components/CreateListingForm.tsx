@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useWallet, useConnection } from '@solana/wallet-adapter-react'
 import { useRouter } from 'next/navigation'
 import { Transaction, SystemProgram, LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js'
-import { getUserTier, calculateListingFee } from '@/lib/tier-check'
+import { getUserTier, calculateListingFee, getMaxImagesForTier } from '@/lib/tier-check'
 import { supabase, hashWalletAddress } from '@/lib/supabase'
 import { incrementListingCount, addToTotalFees, upsertUserProfile } from '@/lib/admin'
 import { uploadMultipleImagesToIPFS } from '@/lib/pinata'
@@ -27,6 +27,18 @@ export default function CreateListingForm() {
   const { connection } = useConnection()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [maxImages, setMaxImages] = useState(1)
+
+  useEffect(() => {
+    if (!publicKey || !connection) {
+      setMaxImages(1)
+      return
+    }
+    getUserTier(publicKey.toString(), connection)
+      .then((tier) => setMaxImages(getMaxImagesForTier(tier)))
+      .catch(() => setMaxImages(1))
+  }, [publicKey?.toString(), connection])
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -68,11 +80,16 @@ export default function CreateListingForm() {
     try {
       setLoading(true)
       
+      // Enforce tier-based image limit (in case of stale state)
+      const tier = await getUserTier(publicKey.toString(), connection)
+      const allowedImages = Math.min(formData.images.length, getMaxImagesForTier(tier))
+      const imagesToUpload = formData.images.slice(0, allowedImages)
+
       // Upload images to IPFS via Pinata
       const imageUrls: string[] = []
-      if (formData.images && formData.images.length > 0) {
+      if (imagesToUpload && imagesToUpload.length > 0) {
         try {
-          const urls = await uploadMultipleImagesToIPFS(formData.images)
+          const urls = await uploadMultipleImagesToIPFS(imagesToUpload)
           // Store full URLs directly (more reliable than extracting CIDs)
           imageUrls.push(...urls)
           console.log('Uploaded images:', urls)
@@ -86,13 +103,12 @@ export default function CreateListingForm() {
       let tokenMint: string | null = null
       let fee = 0
       if (formData.launchToken && formData.tokenName && formData.tokenSymbol) {
-        const imageFile = formData.images?.[0]
+        const imageFile = imagesToUpload?.[0]
         const imageUrl = imageUrls?.[0]
         if (!imageFile && !imageUrl) {
           throw new Error('Token launch on pump.fun requires at least one image. Add an image to your listing.')
         }
 
-        const tier = await getUserTier(publicKey.toString(), connection)
         fee = calculateListingFee(tier)
         const devBuy = Math.max(0.001, formData.devBuySol ?? 0.01)
 
@@ -196,7 +212,6 @@ export default function CreateListingForm() {
 
         // Update user profile stats (no fee paid)
         try {
-          const tier = await getUserTier(publicKey.toString(), connection)
           await upsertUserProfile(publicKey.toString(), { tier })
           await incrementListingCount(publicKey.toString())
         } catch (error) {
@@ -412,29 +427,32 @@ export default function CreateListingForm() {
         <label className="block text-sm font-medium mb-2">Images (IPFS)</label>
         <Input
           type="file"
-          multiple
+          multiple={maxImages > 1}
           accept="image/*"
           className="min-h-[44px] text-base sm:text-sm w-full"
           onChange={(e) => {
             const files = Array.from(e.target.files || [])
+            // Enforce tier-based image limit
+            const limited = files.slice(0, maxImages)
+            if (files.length > maxImages) {
+              alert(`Your tier allows up to ${maxImages} image(s) per listing. Only the first ${maxImages} will be used.`)
+            }
             // Validate file sizes
             const maxSize = 1024 * 1024 * 1024 // 1GB (Pinata free tier limit)
-            const invalidFiles = files.filter(f => f.size > maxSize)
+            const invalidFiles = limited.filter((f: File) => f.size > maxSize)
             if (invalidFiles.length > 0) {
               alert(`Some files are too large (max 1GB). Please select smaller images.`)
               return
             }
-            // Store original files without any compression or modification
-            // Files are uploaded as-is to preserve original quality
-            setFormData(prev => ({ ...prev, images: files }))
+            setFormData(prev => ({ ...prev, images: limited }))
           }}
         />
         <p className="text-sm text-[#aa77ee] font-pixel-alt mt-1">
-          Images will be uploaded to IPFS via Pinata in original quality (no compression) - max 1GB per file
+          Up to {maxImages} image{maxImages > 1 ? 's' : ''} per listing (based on your tier). Uploaded to IPFS via Pinata — max 1GB per file.
         </p>
         {formData.images.length > 0 && (
           <p className="text-xs text-[#00ff00] mt-1">
-            {formData.images.length} file(s) selected
+            {formData.images.length} file(s) selected (max {maxImages})
           </p>
         )}
       </div>

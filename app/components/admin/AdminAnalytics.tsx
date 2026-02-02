@@ -1,92 +1,51 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
 
 interface Analytics {
   totalListings: number
   activeListings: number
+  soldListings: number
   totalUsers: number
   totalFees: number
-  totalPlatformFees: number // Platform fees from sales (0.42%)
+  totalPlatformFees: number
   listingsByCategory: Record<string, number>
-  recentActivity: any[]
+  recentActivity: { id: string; title: string; status: string; created_at: string; category: string }[]
+  betaSignups: number
+  bugReports: number
 }
 
-export default function AdminAnalytics() {
+interface AdminAnalyticsProps {
+  adminWallet: string
+}
+
+export default function AdminAnalytics({ adminWallet }: AdminAnalyticsProps) {
   const [analytics, setAnalytics] = useState<Analytics | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    loadAnalytics()
-  }, [])
-
-  const loadAnalytics = async () => {
-    if (!supabase) {
+    if (!adminWallet) {
       setLoading(false)
       return
     }
+    loadAnalytics()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adminWallet])
 
+  const loadAnalytics = async () => {
     try {
       setLoading(true)
-
-      // Get total listings
-      const { count: totalListings } = await supabase
-        .from('listings')
-        .select('*', { count: 'exact', head: true })
-
-      // Get active listings
-      const { count: activeListings } = await supabase
-        .from('listings')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'active')
-
-      // Get total users
-      const { count: totalUsers } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
-
-      // Get total listing fees (from token launches)
-      const { data: feesData } = await supabase
-        .from('listings')
-        .select('fee_paid')
-
-      const totalFees = feesData?.reduce((sum, listing) => sum + (listing.fee_paid || 0), 0) || 0
-
-      // Get total platform fees (0.42% from sales)
-      const { data: platformFeesData } = await supabase
-        .from('listings')
-        .select('platform_fee')
-        .eq('status', 'sold')
-
-      const totalPlatformFees = platformFeesData?.reduce((sum, listing) => sum + (listing.platform_fee || 0), 0) || 0
-
-      // Get listings by category
-      const { data: categoryData } = await supabase
-        .from('listings')
-        .select('category')
-
-      const listingsByCategory: Record<string, number> = {}
-      categoryData?.forEach(listing => {
-        listingsByCategory[listing.category] = (listingsByCategory[listing.category] || 0) + 1
+      const res = await fetch('/api/admin/analytics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wallet: adminWallet }),
       })
-
-      // Get recent activity (last 10 listings)
-      const { data: recentActivity } = await supabase
-        .from('listings')
-        .select('id, title, status, created_at, category')
-        .order('created_at', { ascending: false })
-        .limit(10)
-
-      setAnalytics({
-        totalListings: totalListings || 0,
-        activeListings: activeListings || 0,
-        totalUsers: totalUsers || 0,
-        totalFees,
-        totalPlatformFees,
-        listingsByCategory,
-        recentActivity: recentActivity || []
-      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || 'Failed to load analytics')
+      }
+      const data = await res.json()
+      setAnalytics(data)
     } catch (error) {
       console.error('Error loading analytics:', error)
     } finally {
@@ -139,10 +98,37 @@ export default function AdminAnalytics() {
 
         <div className="pixel-box bg-black border-2 border-[#660099] p-4">
           <h3 className="text-[#660099] font-pixel-alt text-xs sm:text-sm mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+            Sold
+          </h3>
+          <p className="text-2xl sm:text-3xl font-pixel text-[#00ff00]" style={{ fontFamily: 'var(--font-pixel)' }}>
+            {analytics.soldListings ?? 0}
+          </p>
+        </div>
+
+        <div className="pixel-box bg-black border-2 border-[#660099] p-4">
+          <h3 className="text-[#660099] font-pixel-alt text-xs sm:text-sm mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             Total Users
           </h3>
           <p className="text-2xl sm:text-3xl font-pixel text-[#00ff00]" style={{ fontFamily: 'var(--font-pixel)' }}>
             {analytics.totalUsers}
+          </p>
+        </div>
+
+        <div className="pixel-box bg-black border-2 border-[#660099] p-4">
+          <h3 className="text-[#660099] font-pixel-alt text-xs sm:text-sm mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+            Beta Signups
+          </h3>
+          <p className="text-2xl sm:text-3xl font-pixel text-[#00ff00]" style={{ fontFamily: 'var(--font-pixel)' }}>
+            {analytics.betaSignups ?? 0}
+          </p>
+        </div>
+
+        <div className="pixel-box bg-black border-2 border-[#660099] p-4">
+          <h3 className="text-[#660099] font-pixel-alt text-xs sm:text-sm mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+            Bug Reports
+          </h3>
+          <p className="text-2xl sm:text-3xl font-pixel text-[#00ff00]" style={{ fontFamily: 'var(--font-pixel)' }}>
+            {analytics.bugReports ?? 0}
           </p>
         </div>
 
@@ -190,7 +176,7 @@ export default function AdminAnalytics() {
           Recent Activity
         </h2>
         <div className="space-y-2">
-          {analytics.recentActivity.map((activity) => (
+          {analytics.recentActivity.map((activity: { id: string; title: string; status: string; created_at: string; category: string }) => (
             <div
               key={activity.id}
               className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-2 border-b border-[#660099]/30"
