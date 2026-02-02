@@ -30,7 +30,12 @@ export default function CreateListingForm() {
   const [loading, setLoading] = useState(false)
   const [maxImages, setMaxImages] = useState(1)
   const [isAdminUser, setIsAdminUser] = useState(false)
-  const [limitCheck, setLimitCheck] = useState<{ currentCount: number; maxAllowed: number; canCreate: boolean } | null>(null)
+  const [limitCheck, setLimitCheck] = useState<{
+    currentCount: number
+    maxAllowed: number
+    canCreate: boolean
+    fsbd_token_mint?: string | null
+  } | null>(null)
 
   useEffect(() => {
     if (!publicKey || !connection) {
