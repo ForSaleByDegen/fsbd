@@ -26,20 +26,23 @@ export async function fetchPublicMessages(listingId: string): Promise<PublicChat
   return (data ?? []) as PublicChatMessage[]
 }
 
+/** Send plain public message (via API - uses service role, bypasses RLS) */
 export async function sendPublicMessage(
   listingId: string,
-  senderWalletHash: string,
+  senderWallet: string,
   content: string
 ): Promise<boolean> {
-  if (!supabase) return false
   const trimmed = content.trim().slice(0, 2000)
   if (!trimmed) return false
-  const { error } = await supabase.from('listing_public_messages').insert({
-    listing_id: listingId,
-    sender_wallet_hash: senderWalletHash,
-    content: trimmed,
+  const res = await fetch(`/api/listings/${listingId}/public-chat-message`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      wallet: senderWallet,
+      content: trimmed,
+    }),
   })
-  return !error
+  return res.ok
 }
 
 /** Send encrypted message to token-gated chat (via API - verifies holder server-side) */

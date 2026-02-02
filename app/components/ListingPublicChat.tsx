@@ -180,13 +180,13 @@ export default function ListingPublicChat({
           alert('Failed to send message')
         }
       } else {
-        const ok = await sendPublicMessage(listingId, myHash, text)
+        const ok = await sendPublicMessage(listingId, currentUserWallet, text)
         if (ok) {
           setInput('')
           const msgs = await fetchPublicMessages(listingId)
           setMessages(msgs)
         } else {
-          alert('Failed to send message')
+          alert('Failed to send message. Ensure you are connected and try again.')
         }
       }
     } finally {
