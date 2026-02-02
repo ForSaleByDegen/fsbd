@@ -10,6 +10,20 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 import { supabase } from '@/lib/supabase'
 import { getFsbdMintAddress, getUserTier } from '@/lib/tier-check'
 
+/** Fallback: use getParsedTokenAccountsByOwner when ATA lookup fails (some RPCs/tokens work better) */
+async function getBalanceViaParsedAccounts(
+  connection: Connection,
+  wallet: PublicKey,
+  mint: PublicKey
+): Promise<number> {
+  const { value } = await connection.getParsedTokenAccountsByOwner(wallet, { mint })
+  if (value.length === 0) return 0
+  const info = value[0].account.data?.parsed?.info
+  if (!info?.tokenAmount) return 0
+  const ui = info.tokenAmount.uiAmount
+  return typeof ui === 'number' ? ui : Number(info.tokenAmount.amount || 0) / Math.pow(10, info.tokenAmount.decimals || 6)
+}
+
 function extractMintFromConfig(data: { key: string; value_json: unknown }[]): string | null {
   const row = data?.find((r) => r.key === 'fsbd_token_mint')
   if (!row) return null
@@ -63,16 +77,18 @@ export async function GET(request: NextRequest) {
       const account = await getAccount(connection, ata)
       const mint = await getMint(connection, mintKey)
       balance = Number(account.amount) / 10 ** mint.decimals
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      return NextResponse.json({
-        balance: 0,
-        tier: 'free',
-        mintSet: true,
-        mintSuffix: '...' + mintToUse.slice(-8),
-        error: msg,
-        hint: 'Token account may not exist, or RPC failed. Verify mint address matches your $FSBD token.',
-      })
+    } catch {
+      try {
+        balance = await getBalanceViaParsedAccounts(connection, userKey, mintKey)
+      } catch {
+        return NextResponse.json({
+          balance: 0,
+          tier: 'free',
+          mintSet: true,
+          mintSuffix: '...' + mintToUse.slice(-8),
+          hint: 'RPC failed or mint may be wrong. In Phantom: tap $FSBD → Details → copy Contract Address. Set it in Admin → Platform Config.',
+        })
+      }
     }
 
     const tier = await getUserTier(wallet, connection, undefined, mintOverride)
@@ -82,6 +98,7 @@ export async function GET(request: NextRequest) {
       tier,
       mintSet: true,
       mintSuffix: '...' + mintToUse.slice(-8),
+      hint: balance === 0 ? 'Balance is 0. If you hold $FSBD, verify Admin → Platform Config mint matches Phantom (Token → Details → Contract Address).' : undefined,
     })
   } catch (e) {
     console.error('Balance check error:', e)
