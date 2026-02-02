@@ -75,7 +75,7 @@ export default function AsciiLogo() {
               $FSBD
             </div>
             <div className="text-sm sm:text-base md:text-lg text-[#660099] font-pixel-alt break-words" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-              fsbd.fun
+              Decentralized Solana marketplace — buy, sell, launch tokens, pay in crypto.
             </div>
           </div>
 
