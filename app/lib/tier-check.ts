@@ -118,24 +118,25 @@ export function getTierBenefits(tier: Tier): string[] {
   const feePercent = (platformFeeRate * 100).toFixed(3)
   const listingFee = calculateListingFee(tier)
   
+  const maxListings = getMaxListingsForTier(tier as Tier)
   const benefits = {
     free: [
       'Free listings (message signing only)', 
       `Platform fee: ${feePercent}% on sales`,
-      `Token launch fee: ${listingFee.toFixed(3)} SOL (if creating token/NFT)`,
+      `Up to ${maxListings} active listings`,
       '1 image per listing'
     ],
     bronze: [
       'Free listings (message signing only)',
       `Platform fee: ${feePercent}% on sales`,
-      `Token launch fee: ${listingFee.toFixed(3)} SOL (25% discount)`,
+      `Up to ${maxListings} active listings (10k $FSBD per extra slot)`,
       'Basic listings',
       '2 images per listing'
     ],
     silver: [
       'Free listings (message signing only)',
       `Platform fee: ${feePercent}% on sales`,
-      `Token launch fee: ${listingFee.toFixed(3)} SOL (50% discount)`,
+      `Up to ${maxListings} active listings (10k $FSBD per extra slot)`,
       'Priority visibility',
       'Basic listings',
       '3 images per listing'
@@ -143,7 +144,7 @@ export function getTierBenefits(tier: Tier): string[] {
     gold: [
       'Free listings (message signing only)',
       `Platform fee: ${feePercent}% on sales`,
-      `Token launch fee: ${listingFee.toFixed(3)} SOL (75% discount)`,
+      `Up to ${maxListings} active listings (10k $FSBD per extra slot)`,
       'Priority visibility',
       'Governance voting',
       'Auction creation',
@@ -153,6 +154,23 @@ export function getTierBenefits(tier: Tier): string[] {
   }
   return benefits[tier] || benefits.free
 }
+
+/**
+ * Maximum active listings allowed per tier (free=3, bronze=2, silver=4, gold=10)
+ * Users can purchase extra slots with 10,000 $FSBD each (see extra_paid_slots in profiles)
+ */
+export function getMaxListingsForTier(tier: Tier): number {
+  const limits: Record<Tier, number> = {
+    free: 3,
+    bronze: 2,
+    silver: 4,
+    gold: 10,
+  }
+  return limits[tier] ?? 3
+}
+
+/** Cost in $FSBD to purchase one extra listing slot over tier limit */
+export const EXTRA_LISTING_SLOT_COST_FSBD = 10_000
 
 /**
  * Maximum listing images allowed per tier (Tier 1 = 1 image, Tier 2 = 2, etc.)

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Connection, PublicKey } from '@solana/web3.js'
 import { supabase, hashWalletAddress } from '@/lib/supabase'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { getUserTokenBalance } from '@/lib/tier-check'
+import { getUserTokenBalance, getUserTier, getMaxListingsForTier } from '@/lib/tier-check'
 
 const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/
 
@@ -117,6 +117,46 @@ export async function POST(request: NextRequest) {
 
     const walletHash = hashWalletAddress(wa)
     const listingData = { ...body, wallet_address: wa, wallet_address_hash: walletHash }
+
+    // Enforce listing cap (tier + extra paid slots)
+    if (supabaseAdmin) {
+      const { count } = await supabaseAdmin
+        .from('listings')
+        .select('*', { count: 'exact', head: true })
+        .eq('wallet_address_hash', walletHash)
+        .in('status', ['active', 'removed'])
+      const currentCount = count ?? 0
+
+      let fsbdMint: string | null = null
+      let extraSlots = 0
+      const { data: configRows } = await supabaseAdmin.from('platform_config').select('key, value_json')
+      for (const row of configRows || []) {
+        const key = (row as { key: string }).key
+        const val = (row as { value_json: unknown }).value_json
+        if (key === 'fsbd_token_mint' && typeof val === 'string') fsbdMint = val
+      }
+      try {
+        const { data: profile } = await supabaseAdmin
+          .from('profiles')
+          .select('extra_paid_slots')
+          .eq('wallet_address_hash', walletHash)
+          .maybeSingle()
+        extraSlots = Number((profile as { extra_paid_slots?: number } | null)?.extra_paid_slots) || 0
+      } catch {}
+
+      const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || 'https://api.mainnet-beta.solana.com'
+      const connection = new Connection(rpcUrl)
+      const tier = await getUserTier(wa, connection, undefined, fsbdMint || undefined)
+      const maxAllowed = getMaxListingsForTier(tier) + extraSlots
+      if (currentCount >= maxAllowed) {
+        return NextResponse.json(
+          {
+            error: `Listing limit reached (${maxAllowed} max for your tier). Purchase extra slots with 10,000 $FSBD each.`,
+          },
+          { status: 403 }
+        )
+      }
+    }
 
     // Enforce auction creation gate (tier limit) - uses $FSBD holdings
     if (body.is_auction === true) {

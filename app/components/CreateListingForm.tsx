@@ -30,6 +30,7 @@ export default function CreateListingForm() {
   const [loading, setLoading] = useState(false)
   const [maxImages, setMaxImages] = useState(1)
   const [isAdminUser, setIsAdminUser] = useState(false)
+  const [limitCheck, setLimitCheck] = useState<{ currentCount: number; maxAllowed: number; canCreate: boolean } | null>(null)
 
   useEffect(() => {
     if (!publicKey || !connection) {
@@ -50,6 +51,24 @@ export default function CreateListingForm() {
       .then((res) => res.json())
       .then((data) => setIsAdminUser(!!data?.isAdmin))
       .catch(() => setIsAdminUser(false))
+  }, [publicKey?.toString()])
+
+  useEffect(() => {
+    if (!publicKey) {
+      setLimitCheck(null)
+      return
+    }
+    fetch(`/api/listings/limit-check?wallet=${encodeURIComponent(publicKey.toString())}`)
+      .then((res) => res.json())
+      .then((data) =>
+        setLimitCheck({
+          currentCount: data.currentCount ?? 0,
+          maxAllowed: data.maxAllowed ?? 3,
+          canCreate: data.canCreate !== false,
+          fsbd_token_mint: data.fsbd_token_mint ?? null,
+        })
+      )
+      .catch(() => setLimitCheck({ currentCount: 0, maxAllowed: 3, canCreate: true }))
   }, [publicKey?.toString()])
 
   const [formData, setFormData] = useState({
@@ -519,12 +538,39 @@ export default function CreateListingForm() {
       </div>
       )}
 
+      {limitCheck && (
+        <div className="mb-2">
+          <p className="text-sm text-[#aa77ee] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+            {limitCheck.currentCount} of {limitCheck.maxAllowed} listings used
+            {!limitCheck.canCreate && (
+              <span className="block text-amber-400 mt-1">At limit. Purchase extra slots with 10,000 $FSBD each.</span>
+            )}
+          </p>
+          {!limitCheck.canCreate && (
+            <BuyListingSlotButton
+              fsbdMint={limitCheck.fsbd_token_mint}
+              onSuccess={() => {
+                fetch(`/api/listings/limit-check?wallet=${encodeURIComponent(publicKey!.toString())}`)
+                  .then((res) => res.json())
+                  .then((data) =>
+                    setLimitCheck({
+                      currentCount: data.currentCount ?? 0,
+                      maxAllowed: data.maxAllowed ?? 3,
+                      canCreate: data.canCreate !== false,
+                      fsbd_token_mint: data.fsbd_token_mint ?? null,
+                    })
+                  )
+              }}
+            />
+          )}
+        </div>
+      )}
       <Button
         type="submit"
-        disabled={loading}
+        disabled={loading || (limitCheck !== null && !limitCheck.canCreate)}
         className="w-full min-h-[44px] text-base sm:text-sm touch-manipulation"
       >
-        {loading ? 'Creating...' : 'Create Listing (Pay Fee)'}
+        {loading ? 'Creating...' : 'Create Listing'}
       </Button>
     </form>
   )

@@ -59,7 +59,7 @@ async function uploadToPumpIpfs(
   throw new Error('Token launch requires an image. Add an image to your listing first.')
 }
 
-/** Create token via pump.fun (bonding curve, dev buy, pump.fun discoverability) */
+/** Create token via pump.fun — split create + dev buy to avoid "read-only account" simulation errors */
 export async function createPumpFunToken(
   wallet: PublicKey,
   signTransaction: WalletContextState['signTransaction'],
@@ -74,9 +74,8 @@ export async function createPumpFunToken(
   } = {}
 ): Promise<string> {
   const mintKeypair = Keypair.generate()
-  const devBuySol = options.devBuySol ?? 0.01
+  const devBuySol = Math.max(0, options.devBuySol ?? 0.01)
 
-  // 1. Upload metadata via our proxy (avoids pump.fun CORS)
   if (!options.imageFile && !options.imageUrl) {
     throw new Error('Token launch requires an image. Add an image to your listing first.')
   }
@@ -86,45 +85,78 @@ export async function createPumpFunToken(
     description: options.description,
   })
 
-  // 2. Get create transaction from PumpPortal (no API key needed for trade-local)
-  const body = {
+  // Step 1: Create token only (amount: 0 avoids combined create+buy which triggers read-only account error)
+  const createBody = {
     publicKey: wallet.toBase58(),
     action: 'create',
     tokenMetadata: { name: tokenName, symbol: tokenSymbol, uri: metadataUri },
     mint: mintKeypair.publicKey.toBase58(),
     denominatedInSol: 'true',
-    amount: devBuySol,
+    amount: 0,
     slippage: 10,
-    priorityFee: 0.00005,
+    priorityFee: 0.0005,
     pool: 'pump',
     isMayhemMode: 'false',
   }
 
-  const txRes = await fetch(PUMP_TRADE_LOCAL, {
+  const createRes = await fetch(PUMP_TRADE_LOCAL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    body: JSON.stringify(createBody),
   })
 
-  if (!txRes.ok) {
-    const errText = await txRes.text()
+  if (!createRes.ok) {
+    const errText = await createRes.text()
     throw new Error(`Pump.fun create failed: ${errText}`)
   }
 
-  const txBuffer = await txRes.arrayBuffer()
-  const tx = VersionedTransaction.deserialize(new Uint8Array(txBuffer))
-
-  // 3. Partial sign with mint keypair, then wallet signs
-  tx.sign([mintKeypair])
+  const createBuffer = await createRes.arrayBuffer()
+  const createTx = VersionedTransaction.deserialize(new Uint8Array(createBuffer))
+  createTx.sign([mintKeypair])
 
   if (!signTransaction) throw new Error('Wallet signTransaction not available')
-  const signed = await signTransaction(tx)
-  const sig = await connection.sendTransaction(signed as VersionedTransaction, {
+  const signedCreate = await signTransaction(createTx)
+  const createSig = await connection.sendTransaction(signedCreate as VersionedTransaction, {
     skipPreflight: true,
     maxRetries: 5,
     preflightCommitment: 'confirmed',
   })
-  await connection.confirmTransaction(sig, 'confirmed')
+  await connection.confirmTransaction(createSig, 'confirmed')
+
+  // Step 2: Dev buy (separate tx — avoids Instruction 2 read-only account error in combined create+buy)
+  if (devBuySol > 0) {
+    const buyBody = {
+      publicKey: wallet.toBase58(),
+      action: 'buy',
+      mint: mintKeypair.publicKey.toBase58(),
+      denominatedInSol: 'true',
+      amount: devBuySol,
+      slippage: 15,
+      priorityFee: 0.0005,
+      pool: 'pump',
+    }
+
+    const buyRes = await fetch(PUMP_TRADE_LOCAL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(buyBody),
+    })
+
+    if (buyRes.ok) {
+      const buyBuffer = await buyRes.arrayBuffer()
+      const buyTx = VersionedTransaction.deserialize(new Uint8Array(buyBuffer))
+      const signedBuy = await signTransaction(buyTx)
+      try {
+        await connection.sendTransaction(signedBuy as VersionedTransaction, {
+          skipPreflight: true,
+          maxRetries: 5,
+          preflightCommitment: 'confirmed',
+        })
+      } catch (buyErr) {
+        console.warn('Dev buy failed (token created):', buyErr)
+      }
+    }
+  }
 
   return mintKeypair.publicKey.toBase58()
 }
