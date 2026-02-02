@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from './ui/select'
 import { CATEGORIES, getSubcategories } from '@/lib/categories'
+import BuyListingSlotButton from './BuyListingSlotButton'
 
 export default function CreateListingForm() {
   const { publicKey, signTransaction, signMessage } = useWallet()
