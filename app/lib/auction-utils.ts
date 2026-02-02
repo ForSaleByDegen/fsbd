@@ -14,7 +14,6 @@ import {
   createAssociatedTokenAccountIdempotentInstruction,
   getAssociatedTokenAddressSync,
   getMint,
-  createInitializeMintInstruction,
   createInitializeMint2Instruction,
   createMintToInstruction,
   MINT_SIZE,
@@ -96,11 +95,24 @@ export async function createAuctionToken(
   const sellerAmount = (totalSupply * BigInt(90)) / BigInt(100) // 90%
   const devAmount = totalSupply - sellerAmount // 10%
 
+  // Ensure seller has enough SOL (mint rent + 2 ATAs + fees ~0.015 SOL)
+  const minLamports = 0.02 * LAMPORTS_PER_SOL
+  const balance = await connection.getBalance(seller)
+  if (balance < minLamports) {
+    throw new Error(`Insufficient SOL. Need ~0.02 SOL for token creation. Your balance: ${(balance / LAMPORTS_PER_SOL).toFixed(4)} SOL.`)
+  }
+
   // Get rent exemption for mint account
   const lamports = await getMinimumBalanceForRentExemptMint(connection)
 
   // Build transaction to create and initialize mint
   const transaction = new Transaction()
+
+  // Add compute budget (avoids simulation failures from default limit)
+  transaction.add(
+    ComputeBudgetProgram.setComputeUnitLimit({ units: 400_000 }),
+    ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 50_000 })
+  )
   
   // Create mint account
   transaction.add(
