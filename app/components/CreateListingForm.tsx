@@ -8,6 +8,7 @@ import { getUserTier, calculateListingFee, getMaxImagesForTier } from '@/lib/tie
 import { supabase, hashWalletAddress } from '@/lib/supabase'
 import { incrementListingCount, addToTotalFees, upsertUserProfile } from '@/lib/admin'
 import { uploadMultipleImagesToIPFS } from '@/lib/pinata'
+import { stripImageMetadataBatch } from '@/lib/strip-image-metadata'
 import { createPumpFunToken, createListingToken } from '@/lib/token-ops'
 import { sendTransactionWithRebate, shouldUseRebate } from '@/lib/helius-rebate'
 import { Button } from './ui/button'
