@@ -169,21 +169,25 @@ export async function createAuctionToken(
     )
   }
 
-  // Sign transaction (mint keypair needs to sign the createAccount instruction)
-  transaction.partialSign(mintKeypair)
-  
-  // Get recent blockhash
-  const { blockhash } = await connection.getLatestBlockhash()
+  // Set blockhash and feePayer BEFORE any signing (required for valid transaction)
+  const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed')
   transaction.recentBlockhash = blockhash
   transaction.feePayer = seller
+
+  // Sign transaction (mint keypair needs to sign the createAccount instruction)
+  transaction.partialSign(mintKeypair)
 
   // Sign with wallet and send
   if (!signTransaction) {
     throw new Error('Wallet signTransaction is not available')
   }
   const signed = await signTransaction(transaction)
-  const signature = await connection.sendRawTransaction(signed.serialize())
-  await connection.confirmTransaction(signature)
+  const signature = await connection.sendRawTransaction(signed.serialize(), {
+    skipPreflight: false,
+    preflightCommitment: 'confirmed',
+    maxRetries: 5,
+  })
+  await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight })
 
   return { mint, sellerAmount, devAmount }
 }

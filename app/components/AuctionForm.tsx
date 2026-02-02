@@ -135,23 +135,29 @@ export default function AuctionForm() {
       // Calculate fee
       const fee = calculateListingFee(tier)
       
-      // Create payment transaction
-      const appWallet = new PublicKey(
-        process.env.NEXT_PUBLIC_APP_WALLET || '11111111111111111111111111111111'
-      )
-      
-      const transaction = new Transaction().add(
-        SystemProgram.transfer({
-          fromPubkey: publicKey,
-          toPubkey: appWallet,
-          lamports: fee * LAMPORTS_PER_SOL,
+      // Create payment transaction (skip if fee is 0)
+      if (fee > 0) {
+        const appWallet = new PublicKey(
+          process.env.NEXT_PUBLIC_APP_WALLET || '11111111111111111111111111111111'
+        )
+        const paymentTx = new Transaction().add(
+          SystemProgram.transfer({
+            fromPubkey: publicKey,
+            toPubkey: appWallet,
+            lamports: fee * LAMPORTS_PER_SOL,
+          })
+        )
+        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed')
+        paymentTx.recentBlockhash = blockhash
+        paymentTx.feePayer = publicKey
+        const signed = await signTransaction(paymentTx)
+        const signature = await connection.sendRawTransaction(signed.serialize(), {
+          skipPreflight: false,
+          preflightCommitment: 'confirmed',
+          maxRetries: 5,
         })
-      )
-
-      // Sign and send payment
-      const signed = await signTransaction(transaction)
-      const signature = await connection.sendRawTransaction(signed.serialize())
-      await connection.confirmTransaction(signature)
+        await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight })
+      }
 
       // Simulate dev buy if reserve price > 0
       const reservePrice = parseFloat(formData.reservePrice)
