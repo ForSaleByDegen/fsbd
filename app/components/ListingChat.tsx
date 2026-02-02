@@ -46,6 +46,8 @@ export default function ListingChat({
   const [showPinModal, setShowPinModal] = useState(false)
   const [pinInput, setPinInput] = useState('')
   const [loadingAddress, setLoadingAddress] = useState(false)
+  const [canChatByFsbd, setCanChatByFsbd] = useState<boolean | null>(null)
+  const [fsbdChatError, setFsbdChatError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { signMessage } = useWallet()
 
@@ -53,6 +55,26 @@ export default function ListingChat({
   const buyerHash = hashWalletAddress(currentUserWallet)
   const myHash = hashWalletAddress(currentUserWallet)
   const isSeller = currentUserWallet === listing.wallet_address
+
+  useEffect(() => {
+    if (!currentUserWallet) return
+    fetch(`/api/config/balance-check?wallet=${encodeURIComponent(currentUserWallet)}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (!d.mintSet) {
+          setCanChatByFsbd(true)
+          setFsbdChatError(null)
+          return
+        }
+        const canChat = d.tier && d.tier !== 'free'
+        setCanChatByFsbd(canChat)
+        setFsbdChatError(canChat ? null : (d.hint || 'Hold at least 100,000 $FSBD to chat'))
+      })
+      .catch(() => {
+        setCanChatByFsbd(null)
+        setFsbdChatError(null)
+      })
+  }, [currentUserWallet])
 
   useEffect(() => {
     if (!listing.id || !currentUserWallet) return
@@ -129,7 +151,7 @@ export default function ListingChat({
       )
       .subscribe()
     return () => {
-      channel.unsubscribe()
+      void channel.unsubscribe()
     }
   }, [threadId, sellerHash, threadBuyerHash, onThreadLoaded])
 
@@ -158,9 +180,11 @@ export default function ListingChat({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  const canSendByFsbd = canChatByFsbd === true
+
   const handleSend = async () => {
     const text = input.trim()
-    if (!text || !threadId || !threadBuyerHash || sending) return
+    if (!text || !threadId || !threadBuyerHash || sending || !canSendByFsbd) return
     setSending(true)
     const ok = await sendEncryptedMessage(threadId, sellerHash, threadBuyerHash, myHash, text)
     if (ok) {
@@ -349,23 +373,31 @@ export default function ListingChat({
         ))}
         <div ref={messagesEndRef} />
       </div>
-      <div className="p-2 border-t border-[#660099] flex gap-2">
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-          placeholder="Type a message..."
-          className="flex-1 bg-black border-2 border-[#660099] px-3 py-2 text-[#00ff00] placeholder-[#660099]/60 rounded font-pixel-alt text-sm"
-          style={{ fontFamily: 'var(--font-pixel-alt)' }}
-        />
-        <Button
-          onClick={handleSend}
-          disabled={sending || !input.trim()}
-          className="border-2 border-[#00ff00] text-[#00ff00] hover:bg-[#00ff00] hover:text-black px-4"
-        >
-          Send
-        </Button>
+      <div className="p-2 border-t border-[#660099]">
+        {canChatByFsbd === false && fsbdChatError && (
+          <p className="text-xs text-[#aa77ee] font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+            {fsbdChatError}
+          </p>
+        )}
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+            placeholder={canSendByFsbd ? 'Type a message...' : canChatByFsbd === null ? 'Checking…' : 'Hold $FSBD to chat'}
+            disabled={!canSendByFsbd}
+            className="flex-1 bg-black border-2 border-[#660099] px-3 py-2 text-[#00ff00] placeholder-[#660099]/60 rounded font-pixel-alt text-sm disabled:opacity-50"
+            style={{ fontFamily: 'var(--font-pixel-alt)' }}
+          />
+          <Button
+            onClick={handleSend}
+            disabled={sending || !input.trim() || !canSendByFsbd}
+            className="border-2 border-[#00ff00] text-[#00ff00] hover:bg-[#00ff00] hover:text-black px-4"
+          >
+            {sending ? '…' : 'Send'}
+          </Button>
+        </div>
       </div>
       {!isSeller && hasAddress && (
         <div className="p-2 border-t border-[#660099]">

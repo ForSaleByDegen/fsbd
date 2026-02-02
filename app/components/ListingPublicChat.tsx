@@ -300,7 +300,7 @@ export default function ListingPublicChat({
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-          placeholder={canSend ? 'Message the community...' : !fsbdOk ? 'Hold $FSBD to chat' : isTokenGated ? 'Hold token to post' : 'Message...'}
+          placeholder={canSend ? 'Message the community...' : !fsbdOk ? (canChatByFsbd === null ? 'Checking…' : 'Hold $FSBD to chat') : isTokenGated ? 'Hold token to post' : 'Message...'}
           maxLength={2000}
           disabled={!canSend}
           className="flex-1 bg-black border-2 border-[#660099] px-3 py-2 text-[#00ff00] placeholder-[#660099]/60 rounded font-pixel-alt text-sm disabled:opacity-50"
