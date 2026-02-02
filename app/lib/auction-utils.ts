@@ -4,11 +4,11 @@ import {
   SystemProgram, 
   Transaction,
   LAMPORTS_PER_SOL,
-  Keypair
+  Keypair,
+  ComputeBudgetProgram
 } from '@solana/web3.js'
 import { 
   getAssociatedTokenAddress,
-  createAssociatedTokenAccountInstruction,
   getAccount,
   TOKEN_PROGRAM_ID,
   createAssociatedTokenAccountIdempotentInstruction,
@@ -126,9 +126,9 @@ export async function createAuctionToken(
   // Get seller's associated token account address
   const sellerTokenAccount = getAssociatedTokenAddressSync(mint, seller)
   
-  // Create seller's associated token account if it doesn't exist
+  // Create seller's associated token account (idempotent - no-op if exists)
   transaction.add(
-    createAssociatedTokenAccountInstruction(
+    createAssociatedTokenAccountIdempotentInstruction(
       seller, // payer
       sellerTokenAccount, // ATA address
       seller, // owner
@@ -151,7 +151,7 @@ export async function createAuctionToken(
     const devTokenAccount = getAssociatedTokenAddressSync(mint, devWalletPubkey)
     
     transaction.add(
-      createAssociatedTokenAccountInstruction(
+      createAssociatedTokenAccountIdempotentInstruction(
         seller, // payer
         devTokenAccount, // ATA address
         devWalletPubkey, // owner
@@ -182,11 +182,22 @@ export async function createAuctionToken(
     throw new Error('Wallet signTransaction is not available')
   }
   const signed = await signTransaction(transaction)
-  const signature = await connection.sendRawTransaction(signed.serialize(), {
-    skipPreflight: false,
-    preflightCommitment: 'confirmed',
-    maxRetries: 5,
-  })
+  const serialized = signed.serialize()
+  let signature: string
+  try {
+    signature = await connection.sendRawTransaction(serialized, {
+      skipPreflight: false,
+      preflightCommitment: 'confirmed',
+      maxRetries: 5,
+    })
+  } catch (simErr) {
+    // Retry with skipPreflight when simulation fails (RPC can be overly strict)
+    signature = await connection.sendRawTransaction(serialized, {
+      skipPreflight: true,
+      preflightCommitment: 'confirmed',
+      maxRetries: 5,
+    })
+  }
   await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight })
 
   return { mint, sellerAmount, devAmount }

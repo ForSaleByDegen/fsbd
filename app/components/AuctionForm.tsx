@@ -107,6 +107,14 @@ export default function AuctionForm() {
     try {
       setLoading(true)
       
+      // Ensure sufficient SOL for token creation (~0.01) + fee + buffer
+      const fee = calculateListingFee(tier)
+      const minSol = 0.02 + fee
+      const balance = await connection.getBalance(publicKey)
+      if (balance < minSol * LAMPORTS_PER_SOL) {
+        throw new Error(`Insufficient SOL. Need ~${minSol.toFixed(2)} SOL for auction creation (token mint + fees). You have ${(balance / LAMPORTS_PER_SOL).toFixed(2)} SOL.`)
+      }
+      
       // Calculate auction end time
       const durationDays = parseInt(formData.auctionDuration)
       const endTime = Math.floor(Date.now() / 1000) + (durationDays * 24 * 60 * 60)
@@ -132,9 +140,6 @@ export default function AuctionForm() {
         Date.now().toString() // Temporary listing ID
       )
 
-      // Calculate fee
-      const fee = calculateListingFee(tier)
-      
       // Create payment transaction (skip if fee is 0)
       if (fee > 0) {
         const appWallet = new PublicKey(
