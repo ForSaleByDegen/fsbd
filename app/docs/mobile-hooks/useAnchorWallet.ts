@@ -11,7 +11,7 @@ import {
   type VersionedTransaction,
 } from '@solana/web3.js'
 import { useMemo } from 'react'
-import useMobileWallet from './useMobileWallet'
+import { useMobileWallet } from './useMobileWallet'
 import useAuthorization from './useAuthorization'
 
 export interface AnchorWallet {
