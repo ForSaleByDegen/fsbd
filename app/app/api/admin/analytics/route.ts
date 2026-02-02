@@ -56,11 +56,11 @@ export async function POST(request: NextRequest) {
       supabaseAdmin.from('listings').select('*', { count: 'exact', head: true }).eq('status', 'sold'),
     ])
 
-    const totalFees = feesData.reduce((sum: number, r: { fee_paid?: number }) => sum + (r.fee_paid || 0), 0)
-    const totalPlatformFees = platformFeesData.reduce((sum: number, r: { platform_fee?: number }) => sum + (r.platform_fee || 0), 0)
+    const totalFees = (feesData ?? []).reduce((sum: number, r: { fee_paid?: number }) => sum + (r.fee_paid || 0), 0)
+    const totalPlatformFees = (platformFeesData ?? []).reduce((sum: number, r: { platform_fee?: number }) => sum + (r.platform_fee || 0), 0)
 
     const listingsByCategory: Record<string, number> = {}
-    categoryData.forEach((r: { category?: string }) => {
+    ;(categoryData ?? []).forEach((r: { category?: string }) => {
       const cat = r.category || 'other'
       listingsByCategory[cat] = (listingsByCategory[cat] || 0) + 1
     })
