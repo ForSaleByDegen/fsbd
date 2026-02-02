@@ -36,6 +36,8 @@ export default function ListingFeed() {
   const [delivery, setDelivery] = useState('all')
   const [locationCity, setLocationCity] = useState('')
   const [locationRegion, setLocationRegion] = useState('')
+  const [listedTime, setListedTime] = useState<ListedTimeFilter>('any')
+  const [listedSort, setListedSort] = useState<ListedSort>('newest')
 
   useEffect(() => {
     if (tab === 'activity') {
