@@ -300,7 +300,7 @@ export default function ListingChat({
         <span className="text-sm font-pixel-alt text-[#00ff00]" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
           💬 Encrypted Chat {isSeller ? '(Seller)' : '(Buyer)'}
         </span>
-        {isSeller && allThreads.length > 1 && (
+        {isSeller && allThreads.length >= 1 && (
           <select
             value={threadId || ''}
             onChange={(e) => {
@@ -309,10 +309,11 @@ export default function ListingChat({
             }}
             className="bg-black border border-[#660099] text-[#00ff00] text-xs font-pixel-alt px-2 py-1 rounded max-w-full"
             style={{ fontFamily: 'var(--font-pixel-alt)' }}
+            title="Select which buyer to chat with — each conversation is separate and encrypted"
           >
             {allThreads.map((t, i) => (
               <option key={t.id} value={t.id}>
-                Conversation {i + 1} (buyer …{t.buyer_wallet_hash.slice(-8)})
+                {allThreads.length > 1 ? `Buyer ${i + 1} (…${t.buyer_wallet_hash.slice(-6)})` : `Chat with buyer (…${t.buyer_wallet_hash.slice(-6)})`}
               </option>
             ))}
           </select>

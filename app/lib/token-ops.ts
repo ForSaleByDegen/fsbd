@@ -142,7 +142,10 @@ export async function createPumpFunToken(
       body: JSON.stringify(buyBody),
     })
 
-    if (buyRes.ok) {
+    if (!buyRes.ok) {
+      const errText = await buyRes.text()
+      console.warn('Dev buy API failed (token created, buy skipped):', errText)
+    } else {
       const buyBuffer = await buyRes.arrayBuffer()
       const buyTx = VersionedTransaction.deserialize(new Uint8Array(buyBuffer))
       const signedBuy = await signTransaction(buyTx)
@@ -153,7 +156,8 @@ export async function createPumpFunToken(
           preflightCommitment: 'confirmed',
         })
       } catch (buyErr) {
-        console.warn('Dev buy failed (token created):', buyErr)
+        console.warn('Dev buy send failed (token created, user can buy on pump.fun):', buyErr)
+        // Don't throw — token is created, listing can still be saved
       }
     }
   }

@@ -4,14 +4,16 @@
  */
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 
 export async function GET() {
   try {
-    if (!supabase) {
+    const client = supabaseAdmin || supabase
+    if (!client) {
       return NextResponse.json(getDefaults())
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await client
       .from('platform_config')
       .select('key, value_json')
 
@@ -24,8 +26,9 @@ export async function GET() {
     for (const row of data || []) {
       const key = (row as { key: string }).key
       const val = (row as { value_json: unknown }).value_json
-      if (key === 'fsbd_token_mint' && typeof val === 'string') {
-        config.fsbd_token_mint = val
+      if (key === 'fsbd_token_mint') {
+        const s = typeof val === 'string' ? val : (val && typeof val === 'object' && 'value' in val && typeof (val as { value: unknown }).value === 'string' ? (val as { value: string }).value : null)
+        if (s && s !== 'FSBD_TOKEN_MINT_PLACEHOLDER') config.fsbd_token_mint = s
       } else if (typeof val === 'number') {
         config[key] = val
       } else if (typeof val === 'string') {

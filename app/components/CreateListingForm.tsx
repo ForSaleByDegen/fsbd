@@ -140,6 +140,7 @@ export default function CreateListingForm() {
       }
 
       // Launch token if requested (pump.fun with dev buy, fallback to SPL)
+      // Token uses listing image and description
       let tokenMint: string | null = null
       let fee = 0
       if (formData.launchToken && formData.tokenName && formData.tokenSymbol) {
@@ -149,8 +150,13 @@ export default function CreateListingForm() {
           throw new Error('Token launch on pump.fun requires at least one image. Add an image to your listing.')
         }
 
+        const listingDescription = [formData.title, formData.description]
+          .filter(Boolean)
+          .join('. ')
+          .slice(0, 500)
+
         fee = calculateListingFee(tier)
-        const devBuy = Math.max(0.001, formData.devBuySol ?? 0.01)
+        const devBuy = Math.max(0, formData.devBuySol ?? 0.01)
 
         try {
           tokenMint = await createPumpFunToken(
@@ -163,7 +169,7 @@ export default function CreateListingForm() {
               devBuySol: devBuy,
               imageFile: imageFile || undefined,
               imageUrl: imageUrl || undefined,
-              description: formData.description?.slice(0, 500),
+              description: listingDescription || formData.description?.slice(0, 500) || undefined,
             }
           )
         } catch (pumpErr: unknown) {
@@ -497,7 +503,6 @@ export default function CreateListingForm() {
         )}
       </div>
 
-      {isAdminUser && (
       <div className="border-t pt-4">
         <label className="flex items-center gap-2 mb-4">
           <input
@@ -506,7 +511,7 @@ export default function CreateListingForm() {
             onChange={(e) => setFormData(prev => ({ ...prev, launchToken: e.target.checked }))}
             className="w-4 h-4"
           />
-          <span className="text-sm font-medium">Launch a token for this listing (fun/marketing only)</span>
+          <span className="text-sm font-medium">Launch a token for this listing (fun/marketing)</span>
         </label>
 
         {formData.launchToken && (
@@ -517,6 +522,7 @@ export default function CreateListingForm() {
                 type="text"
                 value={formData.tokenName}
                 onChange={(e) => setFormData(prev => ({ ...prev, tokenName: e.target.value }))}
+                placeholder="My Item Token"
               />
             </div>
             <div>
@@ -526,6 +532,7 @@ export default function CreateListingForm() {
                 value={formData.tokenSymbol}
                 onChange={(e) => setFormData(prev => ({ ...prev, tokenSymbol: e.target.value }))}
                 maxLength={10}
+                placeholder="MIT"
               />
             </div>
             <div className="col-span-2">
@@ -536,13 +543,15 @@ export default function CreateListingForm() {
                 min={0}
                 value={formData.devBuySol}
                 onChange={(e) => setFormData(prev => ({ ...prev, devBuySol: Math.max(0, parseFloat(e.target.value) || 0) }))}
+                placeholder="0.01"
               />
-              <p className="text-xs text-muted-foreground mt-1">Uses first listing image. Add an image above for pump.fun.</p>
+              <p className="text-xs text-[#aa77ee] font-pixel-alt mt-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                Optional SOL to buy your token at launch (pump.fun). Use 0 to skip. Your listing image and description are used for the token.
+              </p>
             </div>
           </div>
         )}
       </div>
-      )}
 
       {limitCheck && (
         <div className="mb-2">

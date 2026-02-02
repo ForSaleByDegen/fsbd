@@ -4,14 +4,17 @@
 
 ### 1. Contract Address (CA) — Required
 
-The **only required value** is your token's mint address (CA). You get this when you launch on pump.fun.
+The **only required value** is your token's mint address (CA). You get this when you launch on pump.fun. Copy it from your wallet (e.g. Phantom) or pump.fun.
 
 **Where to set it (pick one):**
 
 | Option | Where | How |
 |--------|-------|-----|
+| **Admin Panel** | Admin → Platform Config | Set "$FSBD Token Mint" to your CA, click **Save Config** |
 | **Vercel** | Settings → Environment Variables | `NEXT_PUBLIC_FSBD_TOKEN_MINT` = your mint address (e.g. `7xKXt...`) |
-| **Admin Panel** | Admin → Platform Config | Set "$FSBD Token Mint" and save |
+| **Supabase** | SQL Editor | `INSERT INTO platform_config (key, value_json) VALUES ('fsbd_token_mint', to_jsonb('YOUR_CA_HERE'::text)) ON CONFLICT (key) DO UPDATE SET value_json = EXCLUDED.value_json;` (replace YOUR_CA_HERE) |
+
+**Important:** If using Admin Panel, the "$FSBD Token Mint" field must be saved — click **Save Config** after entering your CA. Until the CA is set, the tier checker will show 0 $FSBD.
 
 Redeploy after changing in Vercel.
 

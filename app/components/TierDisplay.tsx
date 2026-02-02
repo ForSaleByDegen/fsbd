@@ -38,8 +38,13 @@ export default function TierDisplay() {
   const loadTier = async () => {
     if (!publicKey || !connection) return
     try {
-      const userTier = await getUserTier(publicKey.toString(), connection, thresholds, fsbdMint ?? undefined)
-      setTier(userTier)
+      const serverRes = await fetch(`/api/config/balance-check?wallet=${encodeURIComponent(publicKey.toString())}`).then((r) => r.json()).catch(() => null)
+      if (serverRes && typeof serverRes.tier === 'string') {
+        setTier(serverRes.tier)
+      } else {
+        const userTier = await getUserTier(publicKey.toString(), connection, thresholds, fsbdMint ?? undefined)
+        setTier(userTier)
+      }
     } catch (error) {
       console.error('Error loading tier:', error)
     } finally {

@@ -40,6 +40,7 @@ export default function PlatformConfig() {
           tier_bronze: parseInt(String(config.tier_bronze), 10),
           tier_silver: parseInt(String(config.tier_silver), 10),
           tier_gold: parseInt(String(config.tier_gold), 10),
+          fsbd_token_mint: String(config.fsbd_token_mint || '').trim(),
         }),
       })
       const data = await res.json().catch(() => ({}))

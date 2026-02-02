@@ -187,23 +187,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Token launch: admin-only until fully tested
-    if (body.has_token === true && supabaseAdmin) {
-      const walletHash = hashWalletAddress(wa)
-      const { data: adminRow } = await supabaseAdmin
-        .from('admins')
-        .select('id')
-        .eq('wallet_address_hash', walletHash)
-        .eq('is_active', true)
-        .maybeSingle()
-      if (!adminRow) {
-        return NextResponse.json(
-          { error: 'Token launch is temporarily disabled for non-admins. Regular listings are available.' },
-          { status: 403 }
-        )
-      }
-    }
-
     // Prefer supabaseAdmin (bypasses RLS) for reliable insert
     const client = supabaseAdmin || supabase
     if (client) {

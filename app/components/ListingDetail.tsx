@@ -9,7 +9,7 @@ import { sendTransactionWithRebate, shouldUseRebate } from '@/lib/helius-rebate'
 import { getIPFSGatewayURL } from '@/lib/pinata'
 import { Button } from './ui/button'
 import BiddingSection from './BiddingSection'
-import ListingChat from './ListingChat'
+import ListingChatSection from './ListingChatSection'
 import ManualTrackingForm from './ManualTrackingForm'
 import { hasAcceptedTerms } from '@/lib/chat'
 import { hashWalletAddress } from '@/lib/supabase'
@@ -575,10 +575,15 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
       </div>
 
       {/* Encrypted chat between buyer and seller */}
-      {publicKey && ['active', 'in_escrow', 'shipped'].includes(listing.status) && (
+      {publicKey && ['active', 'in_escrow', 'shipped', 'sold'].includes(listing.status) && (
         <div className="mb-4 sm:mb-6">
-          <ListingChat
-            listing={{ id: listing.id, wallet_address: listing.wallet_address }}
+          <ListingChatSection
+            listing={{
+              id: listing.id,
+              wallet_address: listing.wallet_address,
+              has_token: listing.has_token,
+              token_mint: listing.token_mint,
+            }}
             currentUserWallet={publicKey.toString()}
           />
         </div>

@@ -28,6 +28,7 @@ export default function AuctionForm() {
   const [userBalance, setUserBalance] = useState(0)
   const [auctionMinTokens, setAuctionMinTokens] = useState(10000000)
   const [tierLoading, setTierLoading] = useState(true)
+  const [balanceHint, setBalanceHint] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -56,18 +57,31 @@ export default function AuctionForm() {
     
     try {
       setTierLoading(true)
+      setBalanceHint(null)
       const configRes = await fetch('/api/config').then((r) => r.json()).catch(() => ({}))
-      const mintOverride = configRes.fsbd_token_mint && configRes.fsbd_token_mint !== 'FSBD_TOKEN_MINT_PLACEHOLDER'
-        ? configRes.fsbd_token_mint
-        : undefined
-      const [balance, userTier] = await Promise.all([
-        getUserTokenBalance(publicKey.toString(), connection, mintOverride),
-        getUserTier(publicKey.toString(), connection, undefined, mintOverride),
-      ])
-      setTier(userTier)
-      setUserBalance(balance)
       if (typeof configRes.auction_min_tokens === 'number') {
         setAuctionMinTokens(configRes.auction_min_tokens)
+      }
+      const serverRes = await fetch(`/api/config/balance-check?wallet=${encodeURIComponent(publicKey.toString())}`).then((r) => r.json()).catch(() => ({}))
+      if (typeof serverRes.balance === 'number') {
+        setUserBalance(serverRes.balance)
+        setTier(serverRes.tier || 'free')
+        if (serverRes.balance === 0 && serverRes.hint) {
+          setBalanceHint(serverRes.hint)
+        }
+      } else {
+        const mintOverride = configRes.fsbd_token_mint && configRes.fsbd_token_mint !== 'FSBD_TOKEN_MINT_PLACEHOLDER'
+          ? configRes.fsbd_token_mint
+          : undefined
+        const [balance, userTier] = await Promise.all([
+          getUserTokenBalance(publicKey.toString(), connection, mintOverride),
+          getUserTier(publicKey.toString(), connection, undefined, mintOverride),
+        ])
+        setTier(userTier)
+        setUserBalance(balance)
+        if (balance === 0) {
+          setBalanceHint('Set your $FSBD contract address in Admin → Platform Config, or NEXT_PUBLIC_FSBD_TOKEN_MINT in Vercel.')
+        }
       }
     } catch (error) {
       console.error('Error checking tier:', error)
@@ -203,6 +217,19 @@ export default function AuctionForm() {
             <strong>Auction Creation Gated:</strong> You need {auctionMinTokens.toLocaleString()} $FSBD to create auctions. 
             Your balance: <strong>{userBalance.toLocaleString()} $FSBD</strong> (tier: {tier})
           </p>
+          {balanceHint && (
+            <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-2">
+              {balanceHint}
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={checkTier}
+            disabled={tierLoading}
+            className="mt-2 text-sm underline text-yellow-700 dark:text-yellow-300 hover:no-underline"
+          >
+            {tierLoading ? 'Checking...' : 'Refresh balance'}
+          </button>
         </div>
       )}
 
