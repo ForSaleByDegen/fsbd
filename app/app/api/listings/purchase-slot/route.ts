@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
           if (!info) continue
           const source = info.source
           const dest = info.destination
-          const amount = info.amount ? BigInt(info.amount) : 0n
+          const amount = info.amount ? BigInt(info.amount) : BigInt(0)
           if (
             source &&
             dest &&
