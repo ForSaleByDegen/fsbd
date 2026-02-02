@@ -2,7 +2,11 @@
  * Pinata IPFS Upload Functions
  * Uses Pinata REST API directly (no SDK needed)
  * Pinata is more reliable than NFT.Storage for production use
+ *
+ * Privacy: Images are stripped of EXIF/metadata before upload (see stripImageMetadata).
  */
+
+import { stripImageMetadata } from './strip-image-metadata'
 
 // Get Pinata credentials from environment
 const PINATA_JWT = process.env.NEXT_PUBLIC_PINATA_JWT || ''
@@ -38,11 +42,12 @@ export async function uploadImageToIPFS(file: File): Promise<string> {
   }
 
   try {
+    // Strip EXIF and all metadata (GPS, camera info, timestamps) before upload
+    const cleanFile = await stripImageMetadata(file)
+
     // Use Pinata REST API directly (more reliable than SDK for client-side)
-    // Upload original file without any compression or modification
     const formData = new FormData()
-    // Pass file directly - no compression, no resizing, original quality preserved
-    formData.append('file', file, file.name)
+    formData.append('file', cleanFile, cleanFile.name)
 
     const response = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
       method: 'POST',

@@ -66,6 +66,14 @@ export default function PrivacyPage() {
                 <li>User profile statistics (listing counts, fees paid)</li>
                 <li>Email addresses (if provided via Privy authentication)</li>
               </ul>
+              <p className="mt-3">
+                <strong>Image privacy:</strong> All uploaded images are stripped of EXIF metadata (GPS coordinates, 
+                camera info, timestamps) before storage. See our{' '}
+                <Link href="/privacy#data-protection" className="text-[#ff00ff] underline hover:text-[#00ff00]">
+                  Data Protection guide
+                </Link>{' '}
+                for details.
+              </p>
             </section>
 
             <section>
@@ -139,8 +147,18 @@ export default function PrivacyPage() {
               </p>
             </section>
 
+            <section id="data-protection">
+              <h2 className="text-lg sm:text-xl font-pixel text-[#ff00ff] mb-3">11. Data Protection & Image Privacy</h2>
+              <p>
+                We protect your data at every step. All listing images are stripped of embedded metadata 
+                (EXIF, GPS, camera info, timestamps) before upload—no location or device data is ever stored. 
+                Chat is end-to-end encrypted. Shipping addresses are never stored. For full technical details, 
+                see <code className="text-[#aa77ee]">PRIVACY_DATA_PROTECTION.md</code> in our documentation.
+              </p>
+            </section>
+
             <section>
-              <h2 className="text-lg sm:text-xl font-pixel text-[#ff00ff] mb-3">11. Contact</h2>
+              <h2 className="text-lg sm:text-xl font-pixel text-[#ff00ff] mb-3">12. Contact</h2>
               <p>
                 For privacy-related questions, contact us through the platform or at the contact information 
                 provided in our Terms of Service.

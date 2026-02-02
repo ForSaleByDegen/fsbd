@@ -15,14 +15,36 @@ export async function GET(request: NextRequest) {
     const delivery = searchParams.get('delivery') // 'local_pickup' | 'ship' | all
     const locationCity = searchParams.get('location_city')?.trim()
     const locationRegion = searchParams.get('location_region')?.trim()
+    const listed = searchParams.get('listed') // '24h' | '7d' | '30d' | 'older'
+    const sort = searchParams.get('sort') // 'newest' | 'oldest'
 
     if (supabase) {
+      const now = new Date()
+      const toIso = (d: Date) => d.toISOString()
+
       let query = supabase
         .from('listings')
         .select('*')
         .eq('status', 'active')
-        .order('created_at', { ascending: false })
         .limit(100)
+
+      if (listed && listed !== 'any') {
+        if (listed === '24h') {
+          const since = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+          query = query.gte('created_at', toIso(since))
+        } else if (listed === '7d') {
+          const since = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+          query = query.gte('created_at', toIso(since))
+        } else if (listed === '30d') {
+          const since = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+          query = query.gte('created_at', toIso(since))
+        } else if (listed === 'older') {
+          const since = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+          query = query.lt('created_at', toIso(since))
+        }
+      }
+
+      query = query.order('created_at', { ascending: sort === 'oldest' })
 
       if (category && category !== 'all') {
         query = query.eq('category', category)

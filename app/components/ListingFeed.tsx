@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase'
 import { CATEGORIES } from '@/lib/categories'
 import ListingCard from './ListingCard'
 import SearchBar from './SearchBar'
+import type { ListedTimeFilter, ListedSort } from './SearchBar'
 import { Button } from './ui/button'
 
 type TabType = 'browse' | 'activity'
@@ -42,7 +43,7 @@ export default function ListingFeed() {
     } else {
       fetchListings()
     }
-  }, [tab, category, subcategory, searchQuery, delivery, locationCity, locationRegion])
+  }, [tab, category, subcategory, searchQuery, delivery, locationCity, locationRegion, listedTime, listedSort])
 
   // Refresh listings when component becomes visible (user navigates back)
   useEffect(() => {
@@ -84,6 +85,8 @@ export default function ListingFeed() {
       if (delivery !== 'all') params.set('delivery', delivery)
       if (locationCity.trim()) params.set('location_city', locationCity.trim())
       if (locationRegion.trim()) params.set('location_region', locationRegion.trim())
+      if (listedTime !== 'any') params.set('listed', listedTime)
+      if (listedSort !== 'newest') params.set('sort', listedSort)
 
       if (!supabase) {
         console.warn('Supabase not configured, using API fallback')
@@ -93,12 +96,32 @@ export default function ListingFeed() {
         return
       }
 
+      const now = new Date()
+      const toIso = (d: Date) => d.toISOString()
+
       let query = supabase
         .from('listings')
         .select('*')
         .eq('status', 'active')
-        .order('created_at', { ascending: false })
         .limit(100)
+
+      if (listedTime !== 'any') {
+        if (listedTime === '24h') {
+          const since = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+          query = query.gte('created_at', toIso(since))
+        } else if (listedTime === '7d') {
+          const since = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+          query = query.gte('created_at', toIso(since))
+        } else if (listedTime === '30d') {
+          const since = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+          query = query.gte('created_at', toIso(since))
+        } else if (listedTime === 'older') {
+          const since = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+          query = query.lt('created_at', toIso(since))
+        }
+      }
+
+      query = query.order('created_at', { ascending: listedSort === 'oldest' })
 
       if (category !== 'all') {
         query = query.eq('category', category)
@@ -161,6 +184,10 @@ export default function ListingFeed() {
         setLocationCity={setLocationCity}
         locationRegion={locationRegion}
         setLocationRegion={setLocationRegion}
+        listedTime={listedTime}
+        setListedTime={setListedTime}
+        listedSort={listedSort}
+        setListedSort={setListedSort}
       />
 
       {tab === 'activity' && (

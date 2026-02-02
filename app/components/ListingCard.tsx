@@ -1,20 +1,7 @@
 import Link from 'next/link'
 import { getIPFSGatewayURL } from '@/lib/pinata'
 import { getSubcategoryLabel } from '@/lib/categories'
-
-function formatRelativeTime(dateStr: string | undefined): string {
-  if (!dateStr) return ''
-  const date = new Date(dateStr)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMins = Math.floor(diffMs / 60000)
-  const diffHours = Math.floor(diffMs / 3600000)
-  const diffDays = Math.floor(diffMs / 86400000)
-  if (diffMins < 60) return `${diffMins}m ago`
-  if (diffHours < 24) return `${diffHours}h ago`
-  if (diffDays < 7) return `${diffDays}d ago`
-  return date.toLocaleDateString()
-}
+import { formatRelativeTime } from '@/lib/format-time'
 
 interface ListingCardProps {
   listing: {
@@ -32,6 +19,7 @@ interface ListingCardProps {
     delivery_method?: string
     location_city?: string
     location_region?: string
+    created_at?: string
     updated_at?: string
   }
 }
@@ -112,6 +100,11 @@ export default function ListingCard({ listing }: ListingCardProps) {
           </span>
         </div>
         <div className="flex flex-wrap gap-1 mt-2">
+          {listing.status === 'active' && listing.created_at && (
+            <span className="inline-block text-xs text-muted-foreground" title={`Listed ${listing.created_at}`}>
+              Listed {formatRelativeTime(listing.created_at)}
+            </span>
+          )}
           {listing.has_token && (
             <span className="inline-block text-xs bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 px-2 py-1 rounded">
               🪙 Has Token

@@ -83,9 +83,11 @@ export default function CreateListingForm() {
       // Enforce tier-based image limit (in case of stale state)
       const tier = await getUserTier(publicKey.toString(), connection)
       const allowedImages = Math.min(formData.images.length, getMaxImagesForTier(tier))
-      const imagesToUpload = formData.images.slice(0, allowedImages)
+      const rawImages = formData.images.slice(0, allowedImages)
+      // Strip EXIF/metadata (GPS, camera info, timestamps) before any upload
+      const imagesToUpload = await stripImageMetadataBatch(rawImages)
 
-      // Upload images to IPFS via Pinata
+      // Upload images to IPFS via Pinata (metadata already stripped)
       const imageUrls: string[] = []
       if (imagesToUpload && imagesToUpload.length > 0) {
         try {
@@ -448,7 +450,7 @@ export default function CreateListingForm() {
           }}
         />
         <p className="text-sm text-[#aa77ee] font-pixel-alt mt-1">
-          Up to {maxImages} image{maxImages > 1 ? 's' : ''} per listing (based on your tier). Uploaded to IPFS via Pinata — max 1GB per file.
+          Up to {maxImages} image{maxImages > 1 ? 's' : ''} per listing (based on your tier). All metadata (EXIF, GPS, camera info) is stripped before upload for your privacy. Max 1GB per file.
         </p>
         {formData.images.length > 0 && (
           <p className="text-xs text-[#00ff00] mt-1">

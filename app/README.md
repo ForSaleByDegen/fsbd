@@ -50,10 +50,12 @@ Open http://localhost:3000
 
 - Wallet-only authentication
 - Create/view/search listings
-- IPFS image storage
+- IPFS image storage (EXIF/metadata stripped before upload)
 - $FSBD tier system
 - Optional token launching
-- Privacy-first (no tracking)
+- Privacy-first: encrypted chat, no shipping address storage, image metadata stripped
+
+See [PRIVACY_DATA_PROTECTION.md](PRIVACY_DATA_PROTECTION.md) for details on data protection.
 
 ## Tech Stack
 

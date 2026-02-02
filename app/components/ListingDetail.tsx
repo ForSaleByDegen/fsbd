@@ -18,6 +18,7 @@ import SellerStatsCard from './SellerStatsCard'
 import ListingTokenChart from './ListingTokenChart'
 import ShareListing from './ShareListing'
 import { getSubcategoryLabel } from '@/lib/categories'
+import { formatRelativeTime } from '@/lib/format-time'
 
 /** Solana Pay link - alternative when in-app transaction fails */
 function SolanaPayLink({ listingId }: { listingId: string }) {
@@ -538,6 +539,11 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
           {(listing.delivery_method === 'local_pickup' || listing.delivery_method === 'both') && (
             <span className="text-sm text-green-400 font-pixel-alt px-2 py-1 rounded border border-green-600 bg-green-900/40" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
               📍 Local pickup
+            </span>
+          )}
+          {listing.created_at && listing.status === 'active' && (
+            <span className="text-sm text-[#aa77ee] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }} title={listing.created_at}>
+              Listed {formatRelativeTime(listing.created_at)}
             </span>
           )}
         </div>
