@@ -46,10 +46,18 @@ export default function ListingPublicChat({
   const [keyError, setKeyError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { tier: tierState } = useTier()
-  const canChatByFsbd = tierState.loading ? null : tierState.balance >= tierState.chatMinTokens
-  const fsbdChatError = tierState.error
+  const [isAdmin, setIsAdmin] = useState(false)
+  useEffect(() => {
+    if (!currentUserWallet) return
+    fetch(`/api/admin/check?wallet=${encodeURIComponent(currentUserWallet)}`)
+      .then((r) => r.json())
+      .then((d) => setIsAdmin(!!d?.isAdmin))
+      .catch(() => setIsAdmin(false))
+  }, [currentUserWallet])
+  const canChatByFsbd = tierState.loading && !isAdmin ? null : isAdmin || (tierState.balance >= tierState.chatMinTokens)
+  const fsbdChatError = tierState.error && !isAdmin
     ? tierState.error
-    : !tierState.loading && canChatByFsbd === false
+    : !tierState.loading && !isAdmin && canChatByFsbd === false
       ? `Hold at least ${tierState.chatMinTokens.toLocaleString()} $FSBD to post in public chat`
       : null
   const myHash = hashWalletAddress(currentUserWallet)

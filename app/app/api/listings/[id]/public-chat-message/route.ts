@@ -7,6 +7,7 @@ import { Connection } from '@solana/web3.js'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { supabase } from '@/lib/supabase'
 import { hashWalletAddress } from '@/lib/supabase'
+import { getAdminUser } from '@/lib/admin'
 import { getUserTokenBalance, getFsbdMintAddress } from '@/lib/tier-check'
 
 const FSBD_PRODUCTION_MINT = 'A8sdJBY6UGErXW2gNVT6s13Qn4FJwGyRp63Y5mZBpump'
@@ -73,22 +74,35 @@ export async function POST(
       mintOverride = process.env.NEXT_PUBLIC_FSBD_TOKEN_MINT || null
     }
 
-    const connection = new Connection(rpcUrl)
-    let balance = await getUserTokenBalance(wallet, connection, FSBD_PRODUCTION_MINT)
-    if (balance === 0 && mintOverride && getFsbdMintAddress(mintOverride) !== FSBD_PRODUCTION_MINT) {
-      balance = await getUserTokenBalance(wallet, connection, mintOverride)
+    let isAdmin = false
+    if (supabaseAdmin) {
+      const wh = hashWalletAddress(wallet)
+      const { data: adminRow } = await supabaseAdmin
+        .from('admins')
+        .select('id')
+        .eq('wallet_address_hash', wh)
+        .eq('is_active', true)
+        .maybeSingle()
+      isAdmin = !!adminRow
     }
+    if (!isAdmin) {
+      const connection = new Connection(rpcUrl)
+      let balance = await getUserTokenBalance(wallet, connection, FSBD_PRODUCTION_MINT)
+      if (balance === 0 && mintOverride && getFsbdMintAddress(mintOverride) !== FSBD_PRODUCTION_MINT) {
+        balance = await getUserTokenBalance(wallet, connection, mintOverride)
+      }
 
-    if (balance < minTokens) {
-      return NextResponse.json(
-        {
-          error: `Hold at least ${minTokens.toLocaleString()} $FSBD to post in public chat`,
-          code: 'INSUFFICIENT_TOKENS',
-          minTokens,
-          balance,
-        },
-        { status: 403 }
-      )
+      if (balance < minTokens) {
+        return NextResponse.json(
+          {
+            error: `Hold at least ${minTokens.toLocaleString()} $FSBD to post in public chat`,
+            code: 'INSUFFICIENT_TOKENS',
+            minTokens,
+            balance,
+          },
+          { status: 403 }
+        )
+      }
     }
 
     const senderWalletHash = hashWalletAddress(wallet)
