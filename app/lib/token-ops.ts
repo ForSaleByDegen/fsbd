@@ -140,6 +140,16 @@ export async function createPumpFunToken(
   const mintKeypair = Keypair.generate()
   const devBuySol = Math.max(0, options.devBuySol ?? 0.01)
 
+  // pump.fun needs ~0.05 SOL system fee + dev buy + tx fees/rent. Buffer avoids error 0x1 (insufficient lamports)
+  const minSolRequired = devBuySol + 0.07
+  const balance = await connection.getBalance(wallet)
+  const solBalance = balance / 1e9
+  if (solBalance < minSolRequired) {
+    throw new Error(
+      `Insufficient SOL. Need ~${minSolRequired.toFixed(2)} SOL (dev buy + fees) but you have ${solBalance.toFixed(3)} SOL. Add more SOL and try again.`
+    )
+  }
+
   if (!options.imageFile && !options.imageUrl) {
     throw new Error('Token launch requires an image. Add an image to your listing first.')
   }
@@ -180,12 +190,23 @@ export async function createPumpFunToken(
 
   if (!signTransaction) throw new Error('Wallet signTransaction not available')
   const signedCreate = await signTransaction(createTx)
-  const createSig = await connection.sendTransaction(signedCreate as VersionedTransaction, {
-    skipPreflight: true,
-    maxRetries: 5,
-    preflightCommitment: 'confirmed',
-  })
-  await connection.confirmTransaction(createSig, 'confirmed')
+
+  try {
+    const createSig = await connection.sendTransaction(signedCreate as VersionedTransaction, {
+      skipPreflight: true,
+      maxRetries: 5,
+      preflightCommitment: 'confirmed',
+    })
+    await connection.confirmTransaction(createSig, 'confirmed')
+  } catch (sendErr: unknown) {
+    const errMsg = sendErr instanceof Error ? sendErr.message : String(sendErr)
+    if (/0x1|custom program error|insufficient/i.test(errMsg)) {
+      throw new Error(
+        `Token create failed (likely insufficient SOL). You need ~${(devBuySol + 0.06).toFixed(2)} SOL total (dev buy + fees). Error: ${errMsg}`
+      )
+    }
+    throw sendErr
+  }
 
   return mintKeypair.publicKey.toBase58()
 }
