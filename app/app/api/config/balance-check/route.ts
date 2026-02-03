@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
     const userKey = new PublicKey(wallet)
     const prodMintKey = new PublicKey(FSBD_PRODUCTION_MINT)
 
-    async function fetchBalance(mint: PublicKey): Promise<number> {
+    const fetchBalance = async (mint: PublicKey): Promise<number> => {
       try {
         const ata = await getAssociatedTokenAddress(mint, userKey)
         const account = await getAccount(connection, ata)
