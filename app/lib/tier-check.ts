@@ -1,5 +1,5 @@
 import { Connection, PublicKey } from '@solana/web3.js'
-import { getAssociatedTokenAddress, getAccount, getMint } from '@solana/spl-token'
+import { getAssociatedTokenAddress, getAccount, getMint, TOKEN_PROGRAM_ID } from '@solana/spl-token'
 
 // $FSBD token mint - env/config override, or production fallback
 const FSBD_TOKEN_MINT = process.env.NEXT_PUBLIC_FSBD_TOKEN_MINT || 'FSBD_TOKEN_MINT_PLACEHOLDER'
@@ -33,6 +33,7 @@ export function getFsbdMintAddress(mintOverride?: string | null): string {
 
 /**
  * Get user's raw $FSBD token balance (for flexible thresholds like auction gate)
+ * Tries: parsed+mint filter -> ATA -> all accounts filter (RPC fallbacks for pump.fun)
  * @param mintOverride - Optional mint from platform_config; when set, uses real $FSBD
  */
 export async function getUserTokenBalance(
@@ -41,13 +42,42 @@ export async function getUserTokenBalance(
   mintOverride?: string | null
 ): Promise<number> {
   const mintToUse = getFsbdMintAddress(mintOverride)
+  const mintPublicKey = new PublicKey(mintToUse)
+  const userPublicKey = new PublicKey(walletAddress)
+
+  const tryParsed = async (): Promise<number> => {
+    const { value } = await connection.getParsedTokenAccountsByOwner(userPublicKey, { mint: mintPublicKey })
+    if (value.length === 0) return 0
+    const info = value[0].account.data?.parsed?.info
+    if (!info?.tokenAmount) return 0
+    const ui = info.tokenAmount.uiAmount
+    return typeof ui === 'number' ? ui : Number(info.tokenAmount.amount || 0) / Math.pow(10, info.tokenAmount.decimals || 6)
+  }
+  const tryAllAccounts = async (): Promise<number> => {
+    const { value } = await connection.getParsedTokenAccountsByOwner(userPublicKey, { programId: TOKEN_PROGRAM_ID })
+    const mintLower = mintToUse.toLowerCase()
+    for (const item of value) {
+      const info = item.account.data?.parsed?.info
+      if (info?.mint && String(info.mint).toLowerCase() === mintLower && info?.tokenAmount) {
+        const ui = info.tokenAmount.uiAmount
+        return typeof ui === 'number' ? ui : Number(info.tokenAmount.amount || 0) / Math.pow(10, info.tokenAmount.decimals || 6)
+      }
+    }
+    return 0
+  }
+
   try {
-    const mintPublicKey = new PublicKey(mintToUse)
-    const userPublicKey = new PublicKey(walletAddress)
+    let balance = await tryParsed()
+    if (balance > 0) return balance
+  } catch { /* ignore */ }
+  try {
     const tokenAccount = await getAssociatedTokenAddress(mintPublicKey, userPublicKey)
     const accountInfo = await getAccount(connection, tokenAccount)
     const mintInfo = await getMint(connection, mintPublicKey)
     return Number(accountInfo.amount) / (10 ** mintInfo.decimals)
+  } catch { /* ignore */ }
+  try {
+    return await tryAllAccounts()
   } catch {
     return 0
   }
