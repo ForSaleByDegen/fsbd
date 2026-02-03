@@ -202,9 +202,14 @@ export async function createPumpFunToken(
     })
   } catch (sendErr: unknown) {
     const errMsg = sendErr instanceof Error ? sendErr.message : String(sendErr)
-    if (/0x1|custom program error|insufficient/i.test(errMsg)) {
+    if (/insufficient/i.test(errMsg)) {
       throw new Error(
         `Token create failed (likely insufficient SOL). Need ~${minSolRequired.toFixed(2)} SOL (dev buy + ~0.03 fees). ${errMsg}`
+      )
+    }
+    if (/0x1|custom program error|read-only account|instruction changed the balance/i.test(errMsg)) {
+      throw new Error(
+        `Transaction may have succeeded — check your wallet for the token. If you see it, use the recovery below to link it. Error: ${errMsg}`
       )
     }
     throw sendErr
@@ -219,7 +224,7 @@ export async function createPumpFunToken(
     if (status?.confirmationStatus === 'confirmed' || status?.confirmationStatus === 'finalized') {
       return mintKeypair.publicKey.toBase58()
     }
-    if (/0x1|custom program error/i.test(errMsg)) {
+    if (/0x1|custom program error|read-only account|instruction changed the balance/i.test(errMsg)) {
       throw new Error(
         `Transaction may have succeeded — check your wallet for the token. If you see it, you can manually link it to your listing. Error: ${errMsg}`
       )

@@ -443,7 +443,9 @@ export default function CreateListingForm() {
           )
         } catch (pumpErr: unknown) {
           const msg = pumpErr instanceof Error ? pumpErr.message : String(pumpErr)
-          if (/Transaction may have succeeded|check your wallet for the token/i.test(msg)) {
+          const txMayHaveSucceeded =
+            /Transaction may have succeeded|check your wallet for the token|read-only account|instruction changed the balance/i.test(msg)
+          if (txMayHaveSucceeded) {
             setTokenLaunchRecovery({ listingId, listingUrl })
             setLoading(false)
             throw pumpErr
@@ -605,7 +607,7 @@ export default function CreateListingForm() {
     } catch (error: any) {
       console.error('Error creating listing:', error)
       const errorMessage = error?.message || 'Unknown error'
-      if (!/Transaction may have succeeded|check your wallet for the token/i.test(errorMessage)) {
+      if (!/Transaction may have succeeded|check your wallet|read-only account|instruction changed the balance/i.test(errorMessage)) {
         alert('Failed to create listing: ' + errorMessage)
       }
     } finally {
