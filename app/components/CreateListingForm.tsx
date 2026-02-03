@@ -25,6 +25,68 @@ import { CATEGORIES, getSubcategories } from '@/lib/categories'
 import BuyListingSlotButton from './BuyListingSlotButton'
 import { useTier } from './providers/TierProvider'
 
+const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/
+
+function TokenLaunchRecoveryForm({
+  listingId,
+  listingUrl,
+  wallet,
+  onSuccess,
+}: {
+  listingId: string
+  listingUrl: string
+  wallet: string
+  onSuccess: () => void
+}) {
+  const [mint, setMint] = useState('')
+  const [linking, setLinking] = useState(false)
+
+  const handleLink = async () => {
+    const trimmed = mint.trim()
+    if (!trimmed || !BASE58.test(trimmed)) {
+      alert('Enter a valid Solana mint address (base58, 32-44 chars)')
+      return
+    }
+    if (!wallet) {
+      alert('Connect your wallet')
+      return
+    }
+    setLinking(true)
+    try {
+      const res = await fetch(`/api/listings/${listingId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wallet, token_mint: trimmed }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Failed to link token')
+      onSuccess()
+    } catch (e) {
+      alert('Failed to link: ' + (e instanceof Error ? e.message : String(e)))
+    } finally {
+      setLinking(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col sm:flex-row gap-2">
+      <Input
+        placeholder="Token mint address (e.g. from pump.fun URL)"
+        value={mint}
+        onChange={(e) => setMint(e.target.value)}
+        className="flex-1 font-mono text-sm"
+      />
+      <Button
+        onClick={handleLink}
+        disabled={linking}
+        className="border-2 border-amber-500 text-amber-400 hover:bg-amber-500 hover:text-black"
+      >
+        {linking ? 'Linking...' : 'Link & go to listing'}
+      </Button>
+    </div>
+  )
+}
+
 export default function CreateListingForm() {
   const { publicKey, signTransaction, signMessage } = useWallet()
   const { connection } = useConnection()
@@ -110,6 +172,7 @@ export default function CreateListingForm() {
     imagesToUpload: File[]
   } | null>(null)
   const [creatingListing, setCreatingListing] = useState(false)
+  const [tokenLaunchRecovery, setTokenLaunchRecovery] = useState<{ listingId: string; listingUrl: string } | null>(null)
 
   const handleCreateListingFirst = async () => {
     if (!publicKey || !formData.launchToken) return
@@ -380,6 +443,11 @@ export default function CreateListingForm() {
           )
         } catch (pumpErr: unknown) {
           const msg = pumpErr instanceof Error ? pumpErr.message : String(pumpErr)
+          if (/Transaction may have succeeded|check your wallet for the token/i.test(msg)) {
+            setTokenLaunchRecovery({ listingId, listingUrl })
+            setLoading(false)
+            throw pumpErr
+          }
           if (/image|IPFS|pump/i.test(msg)) throw pumpErr
           tokenMint = await createListingToken(publicKey, signTransaction!, connection, formData.tokenName, formData.tokenSymbol)
         }
@@ -537,8 +605,9 @@ export default function CreateListingForm() {
     } catch (error: any) {
       console.error('Error creating listing:', error)
       const errorMessage = error?.message || 'Unknown error'
-      console.error('Full error details:', error)
-      alert('Failed to create listing: ' + errorMessage)
+      if (!/Transaction may have succeeded|check your wallet for the token/i.test(errorMessage)) {
+        alert('Failed to create listing: ' + errorMessage)
+      }
     } finally {
       setLoading(false)
     }
@@ -924,7 +993,8 @@ export default function CreateListingForm() {
                 placeholder="0.01"
               />
               <p className="text-xs text-[#aa77ee] font-pixel-alt mt-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-                Optional SOL to buy your token at launch (pump.fun). Use 0 to skip. Your listing image and description are used for the token.
+                Optional SOL to buy your token at launch (pump.fun). Use 0 to skip. Want an address ending in &quot;pump&quot;?{' '}
+                <a href="/vanity" target="_blank" rel="noopener noreferrer" className="text-[#00ff00] underline hover:text-[#ff00ff]">Vanity generator</a>.
               </p>
             </div>
             {(canAddSocialsForTier((limitCheck?.tier ?? tierState.tier) as 'free' | 'bronze' | 'silver' | 'gold') || isAdminUser) && (
@@ -944,6 +1014,27 @@ export default function CreateListingForm() {
           </div>
         )}
       </div>
+      )}
+
+      {tokenLaunchRecovery && (
+        <div className="mb-4 p-4 border-2 border-amber-500 bg-amber-950/30 rounded">
+          <h3 className="font-pixel text-amber-400 mb-2" style={{ fontFamily: 'var(--font-pixel)' }}>
+            Token may have launched — link it manually
+          </h3>
+          <p className="text-sm text-[#aa77ee] font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+            If you see your token in your wallet, paste the mint address from pump.fun to link it to your listing.
+          </p>
+          <TokenLaunchRecoveryForm
+            listingId={tokenLaunchRecovery.listingId}
+            listingUrl={tokenLaunchRecovery.listingUrl}
+            wallet={publicKey?.toString() ?? ''}
+            onSuccess={() => {
+              setTokenLaunchRecovery(null)
+              setCreatedListingForToken(null)
+              router.push(`/listings/${tokenLaunchRecovery.listingId}`)
+            }}
+          />
+        </div>
       )}
 
       {limitCheck && (

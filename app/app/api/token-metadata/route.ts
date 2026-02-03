@@ -18,7 +18,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => ({}))
     const name = String(body.name || '').trim()
     const symbol = String(body.symbol || '').trim()
-    const description = String(body.description || '').trim() || `Token for listing on $FSBD`
+    let description = String(body.description || '').trim() || `Token for listing on $FSBD`
+    if (!description.includes('Launched on FSBD.fun')) {
+      description += '\n\nLaunched on FSBD.fun'
+    }
     const imageUrl = body.imageUrl
     if (!name || !symbol) {
       return NextResponse.json({ error: 'Missing name or symbol' }, { status: 400 })

@@ -69,10 +69,11 @@ async function getMetadataUri(
     }
   }
 
+  const desc = (options.description || `Token for listing on $FSBD`) + '\n\nLaunched on FSBD.fun'
   return uploadToPumpIpfs(tokenName, tokenSymbol, {
     imageFile: options.imageFile,
     imageUrl: options.imageUrl,
-    description: options.description,
+        description: options.description || `Token for listing on $FSBD`,
   })
 }
 
@@ -153,10 +154,11 @@ export async function createPumpFunToken(
   if (!options.imageFile && !options.imageUrl) {
     throw new Error('Token launch requires an image. Add an image to your listing first.')
   }
-  const metadataUri = await uploadToPumpIpfs(tokenName, tokenSymbol, {
+  const metadataUri = await getMetadataUri(tokenName, tokenSymbol, {
     imageFile: options.imageFile,
     imageUrl: options.imageUrl,
     description: options.description,
+    extras: options.extras,
   })
 
   // Create token with dev buy in one tx (PumpPortal docs use amount > 0; amount: 0 can cause read-only account errors)
@@ -191,13 +193,13 @@ export async function createPumpFunToken(
   if (!signTransaction) throw new Error('Wallet signTransaction not available')
   const signedCreate = await signTransaction(createTx)
 
+  let createSig: string
   try {
-    const createSig = await connection.sendTransaction(signedCreate as VersionedTransaction, {
+    createSig = await connection.sendTransaction(signedCreate as VersionedTransaction, {
       skipPreflight: true,
       maxRetries: 5,
       preflightCommitment: 'confirmed',
     })
-    await connection.confirmTransaction(createSig, 'confirmed')
   } catch (sendErr: unknown) {
     const errMsg = sendErr instanceof Error ? sendErr.message : String(sendErr)
     if (/0x1|custom program error|insufficient/i.test(errMsg)) {
@@ -206,6 +208,23 @@ export async function createPumpFunToken(
       )
     }
     throw sendErr
+  }
+
+  try {
+    await connection.confirmTransaction(createSig, 'confirmed')
+  } catch (confirmErr: unknown) {
+    const errMsg = confirmErr instanceof Error ? confirmErr.message : String(confirmErr)
+    const statuses = await connection.getSignatureStatuses([createSig])
+    const status = statuses.value[0]
+    if (status?.confirmationStatus === 'confirmed' || status?.confirmationStatus === 'finalized') {
+      return mintKeypair.publicKey.toBase58()
+    }
+    if (/0x1|custom program error/i.test(errMsg)) {
+      throw new Error(
+        `Transaction may have succeeded — check your wallet for the token. If you see it, you can manually link it to your listing. Error: ${errMsg}`
+      )
+    }
+    throw confirmErr
   }
 
   return mintKeypair.publicKey.toBase58()
