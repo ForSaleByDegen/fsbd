@@ -20,13 +20,14 @@ function extractMintFromConfig(data: { key: string; value_json: unknown }[]): st
   return null
 }
 
-function getTierBronzeFromConfig(config: { key: string; value_json: unknown }[]): number {
-  const row = config?.find((r) => r.key === 'tier_bronze')
-  if (!row) return 100000
-  const v = (row as { value_json: unknown }).value_json
-  if (typeof v === 'number' && v >= 0) return Math.floor(v)
-  if (typeof v === 'string') return parseInt(v, 10) || 100000
-  return 100000
+function getChatMinTokensFromConfig(config: { key: string; value_json: unknown }[]): number {
+  const row = config?.find((r) => r.key === 'chat_min_tokens')
+  if (row) {
+    const v = (row as { value_json: unknown }).value_json
+    if (typeof v === 'number' && v >= 0) return Math.floor(v)
+    if (typeof v === 'string') return parseInt(v, 10) || 10000
+  }
+  return 10000
 }
 
 export async function POST(
@@ -59,15 +60,15 @@ export async function POST(
       return NextResponse.json({ error: 'RPC not configured' }, { status: 500 })
     }
 
-    // Token-gate: require minimum $FSBD balance (tier_bronze) to chat
+    // Token-gate: require minimum 10k $FSBD to chat in public
     let mintOverride: string | null = null
-    let minTokens = 100000
+    let minTokens = 10000
     const client = supabaseAdmin || supabase
     if (client) {
       const { data } = await client.from('platform_config').select('key, value_json')
       const rows = (data as { key: string; value_json: unknown }[]) || []
       mintOverride = extractMintFromConfig(rows)
-      minTokens = getTierBronzeFromConfig(rows)
+      minTokens = getChatMinTokensFromConfig(rows)
     }
     if (!mintOverride) {
       mintOverride = process.env.NEXT_PUBLIC_FSBD_TOKEN_MINT || null
@@ -79,7 +80,7 @@ export async function POST(
     if (balance < minTokens) {
       return NextResponse.json(
         {
-          error: `Hold at least ${minTokens.toLocaleString()} $FSBD to chat`,
+          error: `Hold at least ${minTokens.toLocaleString()} $FSBD to post in public chat`,
           code: 'INSUFFICIENT_TOKENS',
           minTokens,
           balance,

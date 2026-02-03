@@ -1,15 +1,13 @@
 /**
  * POST encrypted message to token-gated public chat.
- * Verifies sender holds: (1) minimum $FSBD (tier_bronze), (2) listing token or is seller.
+ * Verifies sender holds listing token (or is seller). No $FSBD requirement.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { Connection, PublicKey } from '@solana/web3.js'
 import { getAssociatedTokenAddress, getAccount, getMint } from '@solana/spl-token'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { supabase } from '@/lib/supabase'
 import { hashWalletAddress } from '@/lib/supabase'
-import { getUserTokenBalance } from '@/lib/tier-check'
 
 export async function POST(
   request: NextRequest,
@@ -57,34 +55,8 @@ export async function POST(
       )
     }
 
-    // $FSBD gate: require tier_bronze to chat
     const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || 'https://api.mainnet-beta.solana.com'
     const connection = new Connection(rpcUrl)
-    let fsbdMint: string | null = null
-    let minFsbd = 100000
-    const cfgClient = supabaseAdmin || supabase
-    if (cfgClient) {
-      const { data: cfg } = await cfgClient.from('platform_config').select('key, value_json')
-      const rows = (cfg as { key: string; value_json: unknown }[]) || []
-      const mintRow = rows.find((r) => r.key === 'fsbd_token_mint')
-      const tierRow = rows.find((r) => r.key === 'tier_bronze')
-      if (mintRow?.value_json && typeof mintRow.value_json === 'string' && mintRow.value_json !== 'FSBD_TOKEN_MINT_PLACEHOLDER') {
-        fsbdMint = mintRow.value_json
-      } else {
-        fsbdMint = process.env.NEXT_PUBLIC_FSBD_TOKEN_MINT || null
-      }
-      if (tierRow?.value_json != null) {
-        const v = (tierRow as { value_json: unknown }).value_json
-        minFsbd = typeof v === 'number' ? Math.floor(v) : parseInt(String(v), 10) || 100000
-      }
-    }
-    const fsbdBalance = await getUserTokenBalance(wallet, connection, fsbdMint || undefined)
-    if (fsbdBalance < minFsbd) {
-      return NextResponse.json(
-        { error: `Hold at least ${minFsbd.toLocaleString()} $FSBD to chat`, code: 'INSUFFICIENT_FSBD' },
-        { status: 403 }
-      )
-    }
 
     // Seller always allowed
     let allowed = sellerWallet && wallet.toLowerCase() === sellerWallet.toLowerCase()

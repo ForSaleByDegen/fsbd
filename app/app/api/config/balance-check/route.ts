@@ -24,6 +24,15 @@ async function getBalanceViaParsedAccounts(
   return typeof ui === 'number' ? ui : Number(info.tokenAmount.amount || 0) / Math.pow(10, info.tokenAmount.decimals || 6)
 }
 
+function getChatMinTokens(rows: { key: string; value_json: unknown }[]): number {
+  const row = rows?.find((r) => r.key === 'chat_min_tokens')
+  if (!row) return 10000
+  const v = (row as { value_json: unknown }).value_json
+  if (typeof v === 'number' && v >= 0) return Math.floor(v)
+  if (typeof v === 'string') return parseInt(v, 10) || 10000
+  return 10000
+}
+
 function extractMintFromConfig(data: { key: string; value_json: unknown }[]): string | null {
   const row = data?.find((r) => r.key === 'fsbd_token_mint')
   if (!row) return null
@@ -89,6 +98,7 @@ export async function GET(request: NextRequest) {
       tier,
       mintSet: true,
       mintSuffix: '...' + mintToUse.slice(-8),
+      chatMinTokens,
       hint: balance === 0 ? 'Balance is 0. If you hold $FSBD, verify Admin → Platform Config mint matches Phantom (Token → Details → Contract Address).' : undefined,
     })
   } catch (e) {

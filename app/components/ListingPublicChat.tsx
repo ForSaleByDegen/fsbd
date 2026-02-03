@@ -82,9 +82,11 @@ export default function ListingPublicChat({
           setFsbdChatError(null)
           return
         }
-        const canChat = d.tier && d.tier !== 'free'
+        const balance = typeof d.balance === 'number' ? d.balance : 0
+        const minReq = typeof d.chatMinTokens === 'number' ? d.chatMinTokens : PUBLIC_CHAT_MIN_FSBD
+        const canChat = balance >= minReq
         setCanChatByFsbd(canChat)
-        setFsbdChatError(canChat ? null : (d.hint || 'Hold at least 100,000 $FSBD to chat'))
+        setFsbdChatError(canChat ? null : `Hold at least ${minReq.toLocaleString()} $FSBD to post in public chat`)
       })
       .catch(() => {
         setCanChatByFsbd(null)
