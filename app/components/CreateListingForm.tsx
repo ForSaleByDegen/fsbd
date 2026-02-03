@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useWallet, useConnection } from '@solana/wallet-adapter-react'
 import { useRouter } from 'next/navigation'
 import { Transaction, SystemProgram, LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js'
-import { calculateListingFee, getMaxImagesForTier } from '@/lib/tier-check'
+import { calculateListingFee, getMaxImagesForTier, canAddSocialsForTier } from '@/lib/tier-check'
 import { supabase, hashWalletAddress } from '@/lib/supabase'
 import { incrementListingCount, addToTotalFees, upsertUserProfile } from '@/lib/admin'
 import { uploadMultipleImagesToIPFS } from '@/lib/pinata'
@@ -95,6 +95,11 @@ export default function CreateListingForm() {
     assetMint: '',
     memeCoinMinPercent: 1,
     assetCollectionName: '',
+    tokenWebsite: '',
+    tokenTwitter: '',
+    tokenTelegram: '',
+    tokenDiscord: '',
+    tokenBannerUrl: '',
   })
   const [assetVerified, setAssetVerified] = useState<{ verified: boolean; error?: string } | null>(null)
 
@@ -169,29 +174,80 @@ export default function CreateListingForm() {
         fee = calculateListingFee(fresh.tier)
         const devBuy = Math.max(0, formData.devBuySol ?? 0.01)
 
-        // Fetch profile for socials/banner to include in token metadata
-        let extras: { externalUrl?: string; website?: string; twitter?: string; telegram?: string; discord?: string; bannerUrl?: string } | undefined
-        try {
-          const profileRes = await fetch(`/api/profile?wallet=${encodeURIComponent(publicKey.toString())}`)
-          if (profileRes.ok) {
-            const profileData = await profileRes.json()
-            const p = profileData?.profile
-            const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://fsbd.fun'
-            const sellerUrl = `${baseUrl}/seller?wallet=${encodeURIComponent(publicKey.toString())}`
-            const hasSocials = p?.website_url || p?.twitter_url || p?.telegram_url || p?.discord_url || p?.banner_url
-            if (sellerUrl || hasSocials) {
-              extras = {
-                externalUrl: sellerUrl,
-                website: p?.website_url || undefined,
-                twitter: p?.twitter_url || undefined,
-                telegram: p?.telegram_url || undefined,
-                discord: p?.discord_url || undefined,
-                bannerUrl: p?.banner_url || undefined,
+        // 1. Create listing first so we can link the listing page in token metadata
+        const isDigitalAsset = formData.category === 'digital-assets'
+        const listingDataForCreate: Record<string, unknown> = {
+          title: formData.title,
+          description: formData.description,
+          category: formData.category,
+          price: parseFloat(formData.price),
+          price_token: formData.priceToken,
+          quantity: Math.max(1, Math.floor(Number(formData.quantity) || 1)),
+          images: imageUrls,
+          wallet_address_hash: hashWalletAddress(publicKey.toString()),
+          wallet_address: publicKey.toString(),
+          has_token: true,
+          token_mint: null,
+          token_name: formData.tokenName || null,
+          token_symbol: formData.tokenSymbol || null,
+          fee_paid: fee,
+          status: 'active',
+          delivery_method: formData.deliveryMethod,
+          location_city: formData.locationCity.trim() || null,
+          location_region: formData.locationRegion.trim() || null,
+          external_listing_url: formData.externalListingUrl.trim() || null,
+          subcategory: formData.subcategory.trim() || null,
+        }
+        if (isDigitalAsset) {
+          listingDataForCreate.asset_type = formData.subcategory === 'nft' ? 'nft' : 'meme_coin'
+          listingDataForCreate.asset_chain = 'solana'
+          listingDataForCreate.asset_mint = formData.assetMint.trim()
+          listingDataForCreate.meme_coin_min_percent = formData.subcategory === 'meme_coin' ? formData.memeCoinMinPercent : null
+          listingDataForCreate.asset_collection_name = formData.assetCollectionName.trim() || null
+          listingDataForCreate.asset_verified_at = new Date().toISOString()
+        }
+        const createRes = await fetch('/api/listings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(listingDataForCreate),
+        })
+        if (!createRes.ok) {
+          const errData = await createRes.json().catch(() => ({}))
+          throw new Error(errData.error || `Failed to create listing (${createRes.status})`)
+        }
+        const created = await createRes.json()
+        const listingId: string | null = created?.id || null
+        if (!listingId) throw new Error('Listing created but no ID returned')
+
+        const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://fsbd.fun'
+        const listingUrl = `${baseUrl}/listings/${listingId}`
+
+        // 2. Build extras: always listing URL; optional socials from form (tier-gated) or profile
+        let extras: { externalUrl?: string; website?: string; twitter?: string; telegram?: string; discord?: string; bannerUrl?: string } = { externalUrl: listingUrl }
+        const canAddSocials = canAddSocialsForTier(fresh.tier) || isAdminUser
+        if (canAddSocials) {
+          const fromForm = formData.tokenWebsite || formData.tokenTwitter || formData.tokenTelegram || formData.tokenDiscord || formData.tokenBannerUrl
+          if (fromForm) {
+            extras.website = formData.tokenWebsite?.trim() || undefined
+            extras.twitter = formData.tokenTwitter?.trim() || undefined
+            extras.telegram = formData.tokenTelegram?.trim() || undefined
+            extras.discord = formData.tokenDiscord?.trim() || undefined
+            extras.bannerUrl = formData.tokenBannerUrl?.trim() || undefined
+          } else {
+            try {
+              const profileRes = await fetch(`/api/profile?wallet=${encodeURIComponent(publicKey.toString())}`)
+              if (profileRes.ok) {
+                const { profile: p } = await profileRes.json()
+                if (p?.website_url || p?.twitter_url || p?.telegram_url || p?.discord_url || p?.banner_url) {
+                  extras.website = p?.website_url || undefined
+                  extras.twitter = p?.twitter_url || undefined
+                  extras.telegram = p?.telegram_url || undefined
+                  extras.discord = p?.discord_url || undefined
+                  extras.bannerUrl = p?.banner_url || undefined
+                }
               }
-            }
+            } catch { /* non-fatal */ }
           }
-        } catch {
-          // Non-fatal: use basic metadata
         }
 
         try {
@@ -211,17 +267,17 @@ export default function CreateListingForm() {
           )
         } catch (pumpErr: unknown) {
           const msg = pumpErr instanceof Error ? pumpErr.message : String(pumpErr)
-          if (/image|IPFS|pump/i.test(msg)) {
-            throw pumpErr
-          }
-          // Fallback to simple SPL token
-          tokenMint = await createListingToken(
-            publicKey,
-            signTransaction!,
-            connection,
-            formData.tokenName,
-            formData.tokenSymbol
-          )
+          if (/image|IPFS|pump/i.test(msg)) throw pumpErr
+          tokenMint = await createListingToken(publicKey, signTransaction!, connection, formData.tokenName, formData.tokenSymbol)
+        }
+
+        // Update listing with token_mint right away
+        if (tokenMint && listingId) {
+          await fetch(`/api/listings/${listingId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ wallet: publicKey.toString(), token_mint: tokenMint }),
+          })
         }
 
         // Pay listing fee only when launching token
@@ -271,8 +327,12 @@ export default function CreateListingForm() {
           await addToTotalFees(publicKey.toString(), fee)
         } catch (error) {
           console.error('Error updating user profile:', error)
-          // Don't fail the listing creation if profile update fails
         }
+
+        alert(`Listing created! Redirecting...`)
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+        router.push(`/listings/${listingId}`)
+        return
       } else {
         // For regular listings (no token), just sign a message of intent
         if (!signMessage) {
@@ -714,6 +774,20 @@ export default function CreateListingForm() {
                 Optional SOL to buy your token at launch (pump.fun). Use 0 to skip. Your listing image and description are used for the token.
               </p>
             </div>
+            {(canAddSocialsForTier((limitCheck?.tier ?? tierState.tier) as 'free' | 'bronze' | 'silver' | 'gold') || isAdminUser) && (
+              <div className="col-span-2 space-y-2 pt-2 border-t border-[#660099]/30">
+                <p className="text-xs text-[#aa77ee] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                  Optional socials for token metadata (100k+ $FSBD)
+                </p>
+                <div className="grid gap-2">
+                  <Input placeholder="Website" value={formData.tokenWebsite} onChange={(e) => setFormData(prev => ({ ...prev, tokenWebsite: e.target.value }))} className="bg-black border-[#660099] text-[#00ff00]" />
+                  <Input placeholder="Twitter/X URL" value={formData.tokenTwitter} onChange={(e) => setFormData(prev => ({ ...prev, tokenTwitter: e.target.value }))} className="bg-black border-[#660099] text-[#00ff00]" />
+                  <Input placeholder="Telegram URL" value={formData.tokenTelegram} onChange={(e) => setFormData(prev => ({ ...prev, tokenTelegram: e.target.value }))} className="bg-black border-[#660099] text-[#00ff00]" />
+                  <Input placeholder="Discord URL" value={formData.tokenDiscord} onChange={(e) => setFormData(prev => ({ ...prev, tokenDiscord: e.target.value }))} className="bg-black border-[#660099] text-[#00ff00]" />
+                  <Input placeholder="Banner image URL" value={formData.tokenBannerUrl} onChange={(e) => setFormData(prev => ({ ...prev, tokenBannerUrl: e.target.value }))} className="bg-black border-[#660099] text-[#00ff00]" />
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

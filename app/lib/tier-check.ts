@@ -232,6 +232,13 @@ export function getMaxImagesForTier(tier: Tier): number {
 }
 
 /**
+ * Whether user can add socials/banner to token metadata (bronze+ = 100k+ $FSBD)
+ */
+export function canAddSocialsForTier(tier: Tier): boolean {
+  return tier !== 'free'
+}
+
+/**
  * Check if user can create auctions (balance-based, admin-configurable threshold)
  * Use canCreateAuctionWithBalance(balance, auctionMinTokens) when config is available
  */

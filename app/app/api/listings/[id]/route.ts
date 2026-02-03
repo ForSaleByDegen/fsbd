@@ -79,10 +79,17 @@ export async function PATCH(
     const body = await request.json().catch(() => ({}))
     const wallet = typeof body.wallet === 'string' ? body.wallet.trim() : ''
     const action = body.action
+    const tokenMint = typeof body.token_mint === 'string' ? body.token_mint.trim() : null
 
-    if (!wallet || (action !== 'unlist' && action !== 'relist')) {
+    if (!wallet) {
       return NextResponse.json(
-        { error: 'Invalid request. Provide wallet and action: "unlist" or "relist".' },
+        { error: 'Invalid request. Provide wallet.' },
+        { status: 400 }
+      )
+    }
+    if (!action && !tokenMint) {
+      return NextResponse.json(
+        { error: 'Invalid request. Provide action ("unlist"|"relist") or token_mint to set.' },
         { status: 400 }
       )
     }
@@ -107,6 +114,19 @@ export async function PATCH(
 
     if (listing.wallet_address_hash !== walletHash) {
       return NextResponse.json({ error: 'You can only unlist/relist your own listings.' }, { status: 403 })
+    }
+
+    // Set token_mint (e.g. after creating token) — owner only
+    if (tokenMint && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(tokenMint)) {
+      const { error: updateError } = await supabaseAdmin
+        .from('listings')
+        .update({ token_mint: tokenMint, has_token: true })
+        .eq('id', id)
+      if (updateError) {
+        console.error('Set token_mint error:', updateError)
+        return NextResponse.json({ error: updateError.message }, { status: 500 })
+      }
+      return NextResponse.json({ success: true, token_mint: tokenMint })
     }
 
     if (action === 'unlist') {
