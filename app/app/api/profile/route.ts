@@ -66,12 +66,12 @@ export async function GET(request: NextRequest) {
     // Fetch user's listings (as seller) - include tracking for sold listings
     const { data: listings = [] } = await supabaseAdmin
       .from('listings')
-      .select('id, title, price, price_token, status, escrow_status, images, category, created_at, tracking_number, shipping_carrier, buyer_wallet_hash')
+      .select('id, title, price, price_token, token_symbol, status, escrow_status, images, category, created_at, tracking_number, shipping_carrier, buyer_wallet_hash')
       .eq('wallet_address_hash', walletHash)
       .order('created_at', { ascending: false })
 
     // Fetch escrow threads (buyer or seller) - table may not exist if migration_chat not run
-    let escrows: Array<{ id: string; listing_id: string; escrow_status: string; listing_title?: string; listing_price?: number; listing_price_token?: string }> = []
+    let escrows: Array<{ id: string; listing_id: string; escrow_status: string; listing_title?: string; listing_price?: number; listing_price_token?: string; listing_token_symbol?: string | null }> = []
     const { data: escrowsRaw = [], error: escrowsErr } = await supabaseAdmin
       .from('chat_threads')
       .select('id, listing_id, escrow_agreed, escrow_status, seller_wallet_hash, buyer_wallet_hash, updated_at')
@@ -81,14 +81,14 @@ export async function GET(request: NextRequest) {
 
     if (!escrowsErr && escrowsRaw?.length) {
       const listingIds = Array.from(new Set((escrowsRaw as { listing_id: string }[]).map((e) => e.listing_id).filter(Boolean)))
-      let listingMap: Record<string, { title: string; price: number; price_token: string }> = {}
+      let listingMap: Record<string, { title: string; price: number; price_token: string; token_symbol?: string | null }> = {}
       if (listingIds.length > 0) {
         const { data: listingsForEscrows } = await supabaseAdmin
           .from('listings')
-          .select('id, title, price, price_token')
+          .select('id, title, price, price_token, token_symbol')
           .in('id', listingIds)
         for (const l of listingsForEscrows || []) {
-          listingMap[l.id] = { title: l.title, price: l.price, price_token: l.price_token }
+          listingMap[l.id] = { title: l.title, price: l.price, price_token: l.price_token, token_symbol: l.token_symbol }
         }
       }
       escrows = (escrowsRaw as { id: string; listing_id: string; escrow_status: string }[]).map((e) => ({
@@ -98,6 +98,7 @@ export async function GET(request: NextRequest) {
         listing_title: listingMap[e.listing_id]?.title || 'Listing',
         listing_price: listingMap[e.listing_id]?.price,
         listing_price_token: listingMap[e.listing_id]?.price_token,
+        listing_token_symbol: listingMap[e.listing_id]?.token_symbol,
       }))
     }
 

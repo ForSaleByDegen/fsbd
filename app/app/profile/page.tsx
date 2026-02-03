@@ -13,6 +13,7 @@ import ProfileAreaTag from '@/components/ProfileAreaTag'
 import ProfileSocialsBanner from '@/components/ProfileSocialsBanner'
 import NotificationsPanel from '@/components/NotificationsPanel'
 import { useTier } from '@/components/providers/TierProvider'
+import { formatPriceToken } from '@/lib/utils'
 
 // Dynamic import for Privy to avoid build issues
 let usePrivy: any = null
@@ -505,7 +506,7 @@ export default function ProfilePage() {
                     >
                       <Link href={`/listings/${p.id}`} className="block">
                         <span className="text-[#00ff00] font-pixel-alt text-sm sm:text-base block" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-                          {p.title} • {p.price} {p.price_token || 'SOL'}
+                          {p.title} • {p.price} {formatPriceToken(p.price_token, (p as { token_symbol?: string | null }).token_symbol)}
                         </span>
                       </Link>
                       <div className="mt-2 flex flex-wrap items-center gap-2">

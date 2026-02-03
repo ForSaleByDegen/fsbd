@@ -19,6 +19,7 @@ import ListingTokenChart from './ListingTokenChart'
 import ShareListing from './ShareListing'
 import { getSubcategoryLabel } from '@/lib/categories'
 import { formatRelativeTime } from '@/lib/format-time'
+import { formatPriceToken } from '@/lib/utils'
 
 /** Solana Pay link - alternative when in-app transaction fails */
 function SolanaPayLink({ listingId }: { listingId: string }) {
@@ -222,7 +223,7 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
       return
     }
     const confirmAmount = listing.price
-    const confirmToken = (listing.price_token as string) || 'SOL'
+    const confirmToken = formatPriceToken(listing.price_token, listing.token_symbol)
     const confirmMsg =
       `⚠️ DEGEN PAYMENT — DIRECT TO SELLER\n\n` +
       `You are about to send ${confirmAmount} ${confirmToken} DIRECTLY to the seller's wallet. No protections.\n\n` +
@@ -518,13 +519,13 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
       <div className="mb-4 sm:mb-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 flex-wrap">
           <span className="text-xl sm:text-2xl md:text-3xl font-pixel text-[#00ff00] font-bold" style={{ fontFamily: 'var(--font-pixel)' }}>
-            {listing.price} {listing.price_token || 'SOL'}
+            {listing.price} {formatPriceToken(listing.price_token, listing.token_symbol)}
           </span>
           <ShareListing
             listingId={listing.id}
             title={listing.title}
             price={listing.price}
-            priceToken={listing.price_token}
+            priceToken={formatPriceToken(listing.price_token, listing.token_symbol)}
           />
           {listingQty != null && listingQty > 1 && (
             <span className="text-sm sm:text-base text-[#00ff00] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
@@ -583,6 +584,7 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
               wallet_address: listing.wallet_address,
               has_token: listing.has_token,
               token_mint: listing.token_mint,
+              chat_token_gated: listing.chat_token_gated,
             }}
             currentUserWallet={publicKey.toString()}
           />
@@ -619,7 +621,7 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
                   🎲 DEGEN — Direct Payment
                 </h4>
                 <p className="text-sm text-[#aa77ee] font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-                  This sends {listing.price} {(listing.price_token as string) || 'SOL'} <strong>directly to the seller</strong>. No buyer protection.
+                  This sends {listing.price} {formatPriceToken(listing.price_token, listing.token_symbol)} <strong>directly to the seller</strong>. No buyer protection.
                 </p>
                 <p className="text-sm text-[#aa77ee] font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                   No seller is affiliated with this platform. We do NOT stand by any item&apos;s authenticity or condition.

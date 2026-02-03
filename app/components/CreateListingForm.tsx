@@ -100,8 +100,111 @@ export default function CreateListingForm() {
     tokenTelegram: '',
     tokenDiscord: '',
     tokenBannerUrl: '',
+    chatTokenGated: true,
   })
   const [assetVerified, setAssetVerified] = useState<{ verified: boolean; error?: string } | null>(null)
+  const [createdListingForToken, setCreatedListingForToken] = useState<{
+    id: string
+    url: string
+    imageUrls: string[]
+    imagesToUpload: File[]
+  } | null>(null)
+  const [creatingListing, setCreatingListing] = useState(false)
+
+  const handleCreateListingFirst = async () => {
+    if (!publicKey || !formData.launchToken) return
+    if (!formData.title?.trim() || !formData.description?.trim() || !formData.price || formData.images.length === 0) {
+      alert('Fill title, description, price, and add at least one image before creating the listing.')
+      return
+    }
+    if (!formData.tokenName?.trim() || !formData.tokenSymbol?.trim()) {
+      alert('Enter token name and symbol.')
+      return
+    }
+    try {
+      setCreatingListing(true)
+      const fresh = await refresh()
+      const allowedImages = Math.min(formData.images.length, isAdminUser ? 4 : getMaxImagesForTier(fresh.tier))
+      const rawImages = formData.images.slice(0, allowedImages)
+      const imagesToUpload = await stripImageMetadataBatch(rawImages)
+      const imageUrls: string[] = []
+      if (imagesToUpload?.length) {
+        const urls = await uploadMultipleImagesToIPFS(imagesToUpload)
+        imageUrls.push(...urls)
+      }
+      if (imageUrls.length === 0) {
+        throw new Error('Failed to upload images to IPFS')
+      }
+      const fee = calculateListingFee(fresh.tier)
+      const isDigitalAsset = formData.category === 'digital-assets'
+      const listingDataForCreate: Record<string, unknown> = {
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        price: parseFloat(formData.price),
+        quantity: Math.max(1, Math.floor(Number(formData.quantity) || 1)),
+        images: imageUrls,
+        wallet_address_hash: hashWalletAddress(publicKey.toString()),
+        wallet_address: publicKey.toString(),
+        has_token: true,
+        token_mint: null,
+        token_name: formData.tokenName || null,
+        token_symbol: formData.tokenSymbol || null,
+        fee_paid: fee,
+        status: 'active',
+        delivery_method: formData.deliveryMethod,
+        location_city: formData.locationCity.trim() || null,
+        location_region: formData.locationRegion.trim() || null,
+        external_listing_url: formData.externalListingUrl.trim() || null,
+        subcategory: formData.subcategory.trim() || null,
+        chat_token_gated: formData.chatTokenGated,
+        price_token: formData.priceToken === 'LISTING_TOKEN' ? 'LISTING_TOKEN' : formData.priceToken,
+      }
+      if (isDigitalAsset) {
+        listingDataForCreate.asset_type = formData.subcategory === 'nft' ? 'nft' : 'meme_coin'
+        listingDataForCreate.asset_chain = 'solana'
+        listingDataForCreate.asset_mint = formData.assetMint.trim()
+        listingDataForCreate.meme_coin_min_percent = formData.subcategory === 'meme_coin' ? formData.memeCoinMinPercent : null
+        listingDataForCreate.asset_collection_name = formData.assetCollectionName.trim() || null
+        listingDataForCreate.asset_verified_at = new Date().toISOString()
+      }
+      const createRes = await fetch('/api/listings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(listingDataForCreate),
+      })
+      if (!createRes.ok) {
+        const errData = await createRes.json().catch(() => ({}))
+        throw new Error(errData.error || `Failed to create listing (${createRes.status})`)
+      }
+      const created = await createRes.json()
+      const listingId = created?.id
+      if (!listingId) throw new Error('Listing created but no ID returned')
+      const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://fsbd.fun'
+      const listingUrl = `${baseUrl}/listings/${listingId}`
+      setCreatedListingForToken({
+        id: listingId,
+        url: listingUrl,
+        imageUrls,
+        imagesToUpload: imagesToUpload || [],
+      })
+      setFormData(prev => ({ ...prev, tokenWebsite: listingUrl }))
+      try {
+        await upsertUserProfile(publicKey.toString(), { tier: fresh.tier })
+        await incrementListingCount(publicKey.toString())
+        fetch(`/api/listings/limit-check?wallet=${encodeURIComponent(publicKey.toString())}`)
+          .then((r) => r.json())
+          .then((d) => setLimitCheck({ currentCount: d.currentCount ?? 0, maxAllowed: d.maxAllowed ?? 3, canCreate: d.canCreate !== false, tier: d.tier ?? 'free', fsbd_token_mint: d.fsbd_token_mint ?? null }))
+          .catch(() => {})
+      } catch { /* non-fatal */ }
+      alert('Listing created! The listing link is now in the Website field. Add optional socials and click "Launch token" below.')
+    } catch (err: unknown) {
+      console.error(err)
+      alert('Failed to create listing: ' + (err instanceof Error ? err.message : 'Unknown error'))
+    } finally {
+      setCreatingListing(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -136,34 +239,36 @@ export default function CreateListingForm() {
     try {
       setLoading(true)
       const fresh = await refresh()
-      const allowedImages = Math.min(formData.images.length, isAdminUser ? 4 : getMaxImagesForTier(fresh.tier))
-      const rawImages = formData.images.slice(0, allowedImages)
-      // Strip EXIF/metadata (GPS, camera info, timestamps) before any upload
-      const imagesToUpload = await stripImageMetadataBatch(rawImages)
-
-      // Upload images to IPFS via Pinata (metadata already stripped)
-      const imageUrls: string[] = []
-      if (imagesToUpload && imagesToUpload.length > 0) {
-        try {
-          const urls = await uploadMultipleImagesToIPFS(imagesToUpload)
-          // Store full URLs directly (more reliable than extracting CIDs)
-          imageUrls.push(...urls)
-          console.log('Uploaded images:', urls)
-        } catch (error: any) {
-          console.error('IPFS upload error:', error)
-          throw new Error('Failed to upload images to IPFS: ' + (error.message || 'Please check your Pinata JWT'))
+      const skipImageUpload = formData.launchToken && !!createdListingForToken
+      let imagesToUpload: File[] = []
+      let imageUrls: string[] = []
+      if (!skipImageUpload) {
+        const allowedImages = Math.min(formData.images.length, isAdminUser ? 4 : getMaxImagesForTier(fresh.tier))
+        const rawImages = formData.images.slice(0, allowedImages)
+        imagesToUpload = await stripImageMetadataBatch(rawImages) || []
+        if (imagesToUpload.length > 0) {
+          try {
+            const urls = await uploadMultipleImagesToIPFS(imagesToUpload)
+            imageUrls.push(...urls)
+            console.log('Uploaded images:', urls)
+          } catch (error: any) {
+            console.error('IPFS upload error:', error)
+            throw new Error('Failed to upload images to IPFS: ' + (error.message || 'Please check your Pinata JWT'))
+          }
         }
       }
 
       // Launch token if requested (pump.fun with dev buy, fallback to SPL)
-      // Token uses listing image and description; include listing link and profile socials when available
       let tokenMint: string | null = null
       let fee = 0
       if (formData.launchToken && formData.tokenName && formData.tokenSymbol) {
-        const imageFile = imagesToUpload?.[0]
-        const imageUrl = imageUrls?.[0]
+        const usePreCreated = !!createdListingForToken
+        const effectiveImageUrls = usePreCreated ? createdListingForToken.imageUrls : imageUrls
+        const effectiveImagesToUpload = usePreCreated ? createdListingForToken.imagesToUpload : imagesToUpload
+        const imageFile = effectiveImagesToUpload?.[0]
+        const imageUrl = effectiveImageUrls?.[0]
         if (!imageFile && !imageUrl) {
-          throw new Error('Token launch on pump.fun requires at least one image. Add an image to your listing.')
+          throw new Error('Token launch on pump.fun requires at least one image. Add an image and create the listing first.')
         }
 
         const listingDescription = [formData.title, formData.description]
@@ -174,53 +279,61 @@ export default function CreateListingForm() {
         fee = calculateListingFee(fresh.tier)
         const devBuy = Math.max(0, formData.devBuySol ?? 0.01)
 
-        // 1. Create listing first so we can link the listing page in token metadata
-        const isDigitalAsset = formData.category === 'digital-assets'
-        const listingDataForCreate: Record<string, unknown> = {
-          title: formData.title,
-          description: formData.description,
-          category: formData.category,
-          price: parseFloat(formData.price),
-          price_token: formData.priceToken,
-          quantity: Math.max(1, Math.floor(Number(formData.quantity) || 1)),
-          images: imageUrls,
-          wallet_address_hash: hashWalletAddress(publicKey.toString()),
-          wallet_address: publicKey.toString(),
-          has_token: true,
-          token_mint: null,
-          token_name: formData.tokenName || null,
-          token_symbol: formData.tokenSymbol || null,
-          fee_paid: fee,
-          status: 'active',
-          delivery_method: formData.deliveryMethod,
-          location_city: formData.locationCity.trim() || null,
-          location_region: formData.locationRegion.trim() || null,
-          external_listing_url: formData.externalListingUrl.trim() || null,
-          subcategory: formData.subcategory.trim() || null,
-        }
-        if (isDigitalAsset) {
-          listingDataForCreate.asset_type = formData.subcategory === 'nft' ? 'nft' : 'meme_coin'
-          listingDataForCreate.asset_chain = 'solana'
-          listingDataForCreate.asset_mint = formData.assetMint.trim()
-          listingDataForCreate.meme_coin_min_percent = formData.subcategory === 'meme_coin' ? formData.memeCoinMinPercent : null
-          listingDataForCreate.asset_collection_name = formData.assetCollectionName.trim() || null
-          listingDataForCreate.asset_verified_at = new Date().toISOString()
-        }
-        const createRes = await fetch('/api/listings', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(listingDataForCreate),
-        })
-        if (!createRes.ok) {
-          const errData = await createRes.json().catch(() => ({}))
-          throw new Error(errData.error || `Failed to create listing (${createRes.status})`)
-        }
-        const created = await createRes.json()
-        const listingId: string | null = created?.id || null
-        if (!listingId) throw new Error('Listing created but no ID returned')
+        let listingId: string
+        let listingUrl: string
 
-        const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://fsbd.fun'
-        const listingUrl = `${baseUrl}/listings/${listingId}`
+        if (usePreCreated) {
+          listingId = createdListingForToken.id
+          listingUrl = createdListingForToken.url
+        } else {
+          // 1. Create listing first so we can link the listing page in token metadata
+          const isDigitalAsset = formData.category === 'digital-assets'
+          const listingDataForCreate: Record<string, unknown> = {
+            title: formData.title,
+            description: formData.description,
+            category: formData.category,
+            price: parseFloat(formData.price),
+            price_token: formData.priceToken === 'LISTING_TOKEN' ? 'LISTING_TOKEN' : formData.priceToken,
+            quantity: Math.max(1, Math.floor(Number(formData.quantity) || 1)),
+            images: imageUrls,
+            wallet_address_hash: hashWalletAddress(publicKey.toString()),
+            wallet_address: publicKey.toString(),
+            has_token: true,
+            token_mint: null,
+            token_name: formData.tokenName || null,
+            token_symbol: formData.tokenSymbol || null,
+            fee_paid: fee,
+            status: 'active',
+            delivery_method: formData.deliveryMethod,
+            location_city: formData.locationCity.trim() || null,
+            location_region: formData.locationRegion.trim() || null,
+            external_listing_url: formData.externalListingUrl.trim() || null,
+            subcategory: formData.subcategory.trim() || null,
+            chat_token_gated: formData.chatTokenGated,
+          }
+          if (isDigitalAsset) {
+            listingDataForCreate.asset_type = formData.subcategory === 'nft' ? 'nft' : 'meme_coin'
+            listingDataForCreate.asset_chain = 'solana'
+            listingDataForCreate.asset_mint = formData.assetMint.trim()
+            listingDataForCreate.meme_coin_min_percent = formData.subcategory === 'meme_coin' ? formData.memeCoinMinPercent : null
+            listingDataForCreate.asset_collection_name = formData.assetCollectionName.trim() || null
+            listingDataForCreate.asset_verified_at = new Date().toISOString()
+          }
+          const createRes = await fetch('/api/listings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(listingDataForCreate),
+          })
+          if (!createRes.ok) {
+            const errData = await createRes.json().catch(() => ({}))
+            throw new Error(errData.error || `Failed to create listing (${createRes.status})`)
+          }
+          const created = await createRes.json()
+          listingId = created?.id
+          if (!listingId) throw new Error('Listing created but no ID returned')
+          const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://fsbd.fun'
+          listingUrl = `${baseUrl}/listings/${listingId}`
+        }
 
         // 2. Build extras: always listing URL; optional socials from form (tier-gated) or profile
         let extras: { externalUrl?: string; website?: string; twitter?: string; telegram?: string; discord?: string; bannerUrl?: string } = { externalUrl: listingUrl }
@@ -320,10 +433,10 @@ export default function CreateListingForm() {
         }
         await connection.confirmTransaction(signature)
 
-        // Update user profile stats
+        // Update user profile stats (skip increment if listing was created in step 1)
         try {
           await upsertUserProfile(publicKey.toString(), { tier: fresh.tier })
-          await incrementListingCount(publicKey.toString())
+          if (!usePreCreated) await incrementListingCount(publicKey.toString())
           await addToTotalFees(publicKey.toString(), fee)
         } catch (error) {
           console.error('Error updating user profile:', error)
@@ -370,7 +483,7 @@ export default function CreateListingForm() {
         description: formData.description,
         category: formData.category,
         price: parseFloat(formData.price),
-        price_token: formData.priceToken,
+        price_token: formData.priceToken === 'LISTING_TOKEN' && tokenMint ? 'LISTING_TOKEN' : formData.priceToken,
         quantity: Math.max(1, Math.floor(Number(formData.quantity) || 1)),
         images: imageUrls, // Store full URLs
         wallet_address_hash: hashWalletAddress(publicKey.toString()),
@@ -386,6 +499,7 @@ export default function CreateListingForm() {
         location_region: formData.locationRegion.trim() || null,
         external_listing_url: formData.externalListingUrl.trim() || null,
         subcategory: formData.subcategory.trim() || null,
+        chat_token_gated: formData.chatTokenGated,
       }
       if (isDigitalAsset) {
         listingData.asset_type = formData.subcategory === 'nft' ? 'nft' : 'meme_coin'
@@ -516,6 +630,9 @@ export default function CreateListingForm() {
               <SelectContent>
                 <SelectItem value="SOL">SOL</SelectItem>
                 <SelectItem value="USDC">USDC</SelectItem>
+                {formData.launchToken && (
+                  <SelectItem value="LISTING_TOKEN">My token{formData.tokenSymbol ? ` (${formData.tokenSymbol})` : ''}</SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -733,7 +850,11 @@ export default function CreateListingForm() {
           <input
             type="checkbox"
             checked={formData.launchToken}
-            onChange={(e) => setFormData(prev => ({ ...prev, launchToken: e.target.checked }))}
+            onChange={(e) => {
+              const checked = e.target.checked
+              setFormData(prev => ({ ...prev, launchToken: checked }))
+              if (!checked) setCreatedListingForToken(null)
+            }}
             className="w-4 h-4"
           />
           <span className="text-sm font-medium">Launch a token for this listing (fun/marketing)</span>
@@ -741,6 +862,26 @@ export default function CreateListingForm() {
 
         {formData.launchToken && (
           <div className="grid grid-cols-2 gap-4 ml-6 space-y-2">
+            {!createdListingForToken ? (
+              <div className="col-span-2">
+                <Button
+                  type="button"
+                  onClick={handleCreateListingFirst}
+                  disabled={creatingListing || !formData.title?.trim() || !formData.description?.trim() || !formData.price || formData.images.length === 0 || !formData.tokenName?.trim() || !formData.tokenSymbol?.trim()}
+                  variant="outline"
+                  className="w-full border-[#660099] text-[#00ff00] hover:bg-[#660099]/20"
+                >
+                  {creatingListing ? 'Creating listing...' : '1. Create listing first (get link for token metadata)'}
+                </Button>
+                <p className="text-xs text-[#aa77ee] mt-1 font-pixel-alt">Create the listing first so the listing URL can be added to your token metadata.</p>
+              </div>
+            ) : (
+              <div className="col-span-2 p-3 rounded border border-[#00ff00]/50 bg-[#00ff00]/5">
+                <p className="text-sm text-[#00ff00] font-medium">Listing created</p>
+                <p className="text-xs text-muted-foreground mt-1 break-all">{createdListingForToken.url}</p>
+                <p className="text-xs text-[#aa77ee] mt-1">Link auto-filled below. Add optional socials, then click &quot;Launch token&quot;.</p>
+              </div>
+            )}
             <div>
               <label className="block text-sm font-medium mb-2">Token Name</label>
               <Input
@@ -760,6 +901,18 @@ export default function CreateListingForm() {
                 placeholder="MIT"
               />
             </div>
+            <div className="col-span-2 flex flex-col gap-3">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={formData.chatTokenGated}
+                  onChange={(e) => setFormData(prev => ({ ...prev, chatTokenGated: e.target.checked }))}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm">Token-gate public chat (holders only)</span>
+              </label>
+              <p className="text-xs text-muted-foreground">When enabled, only token holders and you can read/post in the listing&apos;s public chat.</p>
+            </div>
             <div className="col-span-2">
               <label className="block text-sm font-medium mb-2">Dev buy (SOL) — initial buy on pump.fun</label>
               <Input
@@ -777,10 +930,10 @@ export default function CreateListingForm() {
             {(canAddSocialsForTier((limitCheck?.tier ?? tierState.tier) as 'free' | 'bronze' | 'silver' | 'gold') || isAdminUser) && (
               <div className="col-span-2 space-y-2 pt-2 border-t border-[#660099]/30">
                 <p className="text-xs text-[#aa77ee] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-                  Optional socials for token metadata (100k+ $FSBD)
+                  Optional socials for token metadata (100k+ $FSBD). Website = listing link (auto-filled after step 1) or your personal site.
                 </p>
                 <div className="grid gap-2">
-                  <Input placeholder="Website" value={formData.tokenWebsite} onChange={(e) => setFormData(prev => ({ ...prev, tokenWebsite: e.target.value }))} className="bg-black border-[#660099] text-[#00ff00]" />
+                  <Input placeholder={createdListingForToken ? 'Listing link (auto-filled)' : 'Website — create listing first to auto-fill'} value={formData.tokenWebsite} onChange={(e) => setFormData(prev => ({ ...prev, tokenWebsite: e.target.value }))} className="bg-black border-[#660099] text-[#00ff00]" />
                   <Input placeholder="Twitter/X URL" value={formData.tokenTwitter} onChange={(e) => setFormData(prev => ({ ...prev, tokenTwitter: e.target.value }))} className="bg-black border-[#660099] text-[#00ff00]" />
                   <Input placeholder="Telegram URL" value={formData.tokenTelegram} onChange={(e) => setFormData(prev => ({ ...prev, tokenTelegram: e.target.value }))} className="bg-black border-[#660099] text-[#00ff00]" />
                   <Input placeholder="Discord URL" value={formData.tokenDiscord} onChange={(e) => setFormData(prev => ({ ...prev, tokenDiscord: e.target.value }))} className="bg-black border-[#660099] text-[#00ff00]" />
@@ -833,7 +986,11 @@ export default function CreateListingForm() {
         }
         className="w-full min-h-[44px] text-base sm:text-sm touch-manipulation"
       >
-        {loading ? 'Creating...' : 'Create Listing'}
+        {loading
+          ? 'Creating...'
+          : formData.launchToken && createdListingForToken
+            ? '2. Launch token'
+            : 'Create Listing'}
       </Button>
     </form>
   )

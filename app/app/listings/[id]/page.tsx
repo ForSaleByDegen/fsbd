@@ -10,7 +10,7 @@ async function getListingForMetadata(id: string) {
   if (!supabaseAdmin) return null
   const { data } = await supabaseAdmin
     .from('listings')
-    .select('id, title, description, price, price_token, images')
+    .select('id, title, description, price, price_token, token_symbol, images')
     .eq('id', id)
     .single()
   return data
@@ -37,7 +37,10 @@ export async function generateMetadata({
   const firstImg = Array.isArray(listing.images) ? listing.images[0] : null
   const imageUrl = toAbsoluteImageUrl(firstImg)
 
-  const title = `${listing.title} — ${listing.price} ${listing.price_token || 'SOL'} | $FSBD`
+  const tokenLabel = listing.price_token === 'LISTING_TOKEN' && listing.token_symbol
+    ? listing.token_symbol
+    : (listing.price_token || 'SOL')
+  const title = `${listing.title} — ${listing.price} ${tokenLabel} | $FSBD`
   const description =
     typeof listing.description === 'string'
       ? listing.description.slice(0, 160)

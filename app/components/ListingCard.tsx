@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { getIPFSGatewayURL } from '@/lib/pinata'
 import { getSubcategoryLabel } from '@/lib/categories'
 import { formatRelativeTime } from '@/lib/format-time'
+import { formatPriceToken } from '@/lib/utils'
 
 interface ListingCardProps {
   listing: {
@@ -10,6 +11,7 @@ interface ListingCardProps {
     description?: string
     price: number
     price_token: string
+    token_symbol?: string | null
     category: string
     subcategory?: string
     images?: string[]
@@ -26,7 +28,7 @@ interface ListingCardProps {
 
 export default function ListingCard({ listing }: ListingCardProps) {
   const formatPrice = () => {
-    return `${listing.price} ${listing.price_token || 'SOL'}`
+    return `${listing.price} ${formatPriceToken(listing.price_token, listing.token_symbol)}`
   }
 
   // Get image URL - handle both full URLs and CIDs

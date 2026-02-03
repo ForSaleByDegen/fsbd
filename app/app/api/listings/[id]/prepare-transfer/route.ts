@@ -46,6 +46,10 @@ function resolveTokenMint(
           : '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU',
     }
   }
+  // LISTING_TOKEN = seller accepts their listing token as payment
+  if (priceToken === 'LISTING_TOKEN' && tokenMint && BASE58.test(tokenMint)) {
+    return { token: 'USDC', mint: tokenMint }
+  }
   if (tokenMint && BASE58.test(tokenMint)) return { token: 'USDC', mint: tokenMint }
   return { token: 'SOL', mint: null }
 }

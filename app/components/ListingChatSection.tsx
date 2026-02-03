@@ -5,7 +5,7 @@ import ListingPublicChat from './ListingPublicChat'
 import ListingChat from './ListingChat'
 
 interface ListingChatSectionProps {
-  listing: { id: string; wallet_address: string; has_token?: boolean; token_mint?: string | null }
+  listing: { id: string; wallet_address: string; has_token?: boolean; token_mint?: string | null; chat_token_gated?: boolean }
   currentUserWallet: string
   onEscrowProposed?: () => void
   onEscrowAccepted?: () => void
@@ -52,7 +52,7 @@ export default function ListingChatSection({
         <ListingPublicChat
           listingId={listing.id}
           currentUserWallet={currentUserWallet}
-          tokenMint={listing.has_token ? listing.token_mint : null}
+          tokenMint={listing.has_token && (listing.chat_token_gated !== false) ? listing.token_mint : null}
           sellerWallet={listing.wallet_address}
         />
       )}

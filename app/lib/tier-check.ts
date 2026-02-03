@@ -157,46 +157,51 @@ export function calculateListingFee(tier: Tier): number {
 }
 
 /**
- * Get tier benefits description
+ * Get tier benefits description — all token-gated perks for $FSBD holders
  */
 export function getTierBenefits(tier: Tier): string[] {
   const platformFeeRate = calculatePlatformFeeRate(tier)
   const feePercent = (platformFeeRate * 100).toFixed(3)
   const listingFee = calculateListingFee(tier)
-  
-  const maxListings = getMaxListingsForTier(tier as Tier)
-  const benefits = {
+  const maxListings = getMaxListingsForTier(tier)
+  const maxImages = getMaxImagesForTier(tier)
+
+  const benefits: Record<Tier, string[]> = {
     free: [
-      'Free listings (message signing only)', 
+      'Free listings (message signing only)',
       `Platform fee: ${feePercent}% on sales`,
       `Up to ${maxListings} active listings`,
-      '1 image per listing'
+      `${maxImages} image per listing`,
+      `Token launch fee: ${listingFee} SOL (full price)`,
     ],
     bronze: [
       'Free listings (message signing only)',
       `Platform fee: ${feePercent}% on sales`,
       `Up to ${maxListings} active listings (10k $FSBD per extra slot)`,
-      'Basic listings',
-      '2 images per listing'
+      `${maxImages} images per listing`,
+      `Token launch fee: ${listingFee} SOL (25% off)`,
+      'Socials & banner in token metadata when launching',
     ],
     silver: [
       'Free listings (message signing only)',
       `Platform fee: ${feePercent}% on sales`,
       `Up to ${maxListings} active listings (10k $FSBD per extra slot)`,
+      `${maxImages} images per listing`,
+      `Token launch fee: ${listingFee} SOL (50% off)`,
+      'Socials & banner in token metadata when launching',
       'Priority visibility',
-      'Basic listings',
-      '3 images per listing'
     ],
     gold: [
       'Free listings (message signing only)',
       `Platform fee: ${feePercent}% on sales`,
       `Up to ${maxListings} active listings (10k $FSBD per extra slot)`,
+      `${maxImages} images per listing`,
+      `Token launch fee: ${listingFee} SOL (75% off)`,
+      'Socials & banner in token metadata when launching',
       'Priority visibility',
-      'Governance voting',
       'Auction creation',
-      'Basic listings',
-      '4 images per listing'
-    ]
+      'Governance voting',
+    ],
   }
   return benefits[tier] || benefits.free
 }

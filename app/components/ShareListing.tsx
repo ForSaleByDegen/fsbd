@@ -11,8 +11,8 @@ interface ShareListingProps {
 
 const SHARE_TEXT_MAX = 200 // Twitter has ~280 chars, leave room for URL
 
-function buildShareText(title: string, price: number | string, priceToken?: string): string {
-  const priceStr = `${price} ${priceToken || 'SOL'}`
+function buildShareText(title: string, price: number | string, priceToken?: string | null): string {
+  const priceStr = `${price} ${priceToken?.trim() || 'SOL'}`
   const base = `${title} — ${priceStr} on $FSBD`
   return base.length > SHARE_TEXT_MAX ? base.slice(0, SHARE_TEXT_MAX - 3) + '...' : base
 }

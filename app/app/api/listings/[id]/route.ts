@@ -80,6 +80,8 @@ export async function PATCH(
     const wallet = typeof body.wallet === 'string' ? body.wallet.trim() : ''
     const action = body.action
     const tokenMint = typeof body.token_mint === 'string' ? body.token_mint.trim() : null
+    const chatTokenGated = body.chat_token_gated
+    const priceToken = typeof body.price_token === 'string' ? body.price_token.trim() : null
 
     if (!wallet) {
       return NextResponse.json(
@@ -87,9 +89,9 @@ export async function PATCH(
         { status: 400 }
       )
     }
-    if (!action && !tokenMint) {
+    if (!action && !tokenMint && chatTokenGated === undefined && !priceToken) {
       return NextResponse.json(
-        { error: 'Invalid request. Provide action ("unlist"|"relist") or token_mint to set.' },
+        { error: 'Invalid request. Provide action ("unlist"|"relist"), token_mint, chat_token_gated, or price_token.' },
         { status: 400 }
       )
     }
@@ -116,17 +118,25 @@ export async function PATCH(
       return NextResponse.json({ error: 'You can only unlist/relist your own listings.' }, { status: 403 })
     }
 
-    // Set token_mint (e.g. after creating token) — owner only
+    // Build update object for token_mint, chat_token_gated, price_token
+    const updates: Record<string, unknown> = {}
     if (tokenMint && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(tokenMint)) {
+      updates.token_mint = tokenMint
+      updates.has_token = true
+    }
+    if (typeof chatTokenGated === 'boolean') updates.chat_token_gated = chatTokenGated
+    if (priceToken && ['SOL', 'USDC', 'LISTING_TOKEN'].includes(priceToken)) updates.price_token = priceToken
+
+    if (Object.keys(updates).length > 0) {
       const { error: updateError } = await supabaseAdmin
         .from('listings')
-        .update({ token_mint: tokenMint, has_token: true })
+        .update(updates)
         .eq('id', id)
       if (updateError) {
-        console.error('Set token_mint error:', updateError)
+        console.error('Listing update error:', updateError)
         return NextResponse.json({ error: updateError.message }, { status: 500 })
       }
-      return NextResponse.json({ success: true, token_mint: tokenMint })
+      return NextResponse.json({ success: true, ...updates })
     }
 
     if (action === 'unlist') {

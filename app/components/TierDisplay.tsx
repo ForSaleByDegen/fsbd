@@ -53,14 +53,21 @@ export default function TierDisplay() {
 
   return (
     <>
+      <div className="mb-6 p-4 rounded-lg border border-[#660099]/30 bg-[#0a0a0a]">
+        <h3 className="font-semibold mb-2">$FSBD Token-Gated Perks</h3>
+        <p className="text-sm text-muted-foreground">
+          Your $FSBD balance unlocks tier benefits: listings limit, images per listing, token launch fee discounts,
+          socials in token metadata (Bronze+), and auctions (Gold). Balance checked on-chain — no registration, fully private.
+        </p>
+      </div>
+
       {publicKey ? (
         <div className="mb-8 p-4 bg-muted rounded-lg">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <p className="font-semibold">Your Current Tier: <span className="capitalize">{tier}</span></p>
               <p className="text-sm text-muted-foreground mt-2">
-                Hold $FSBD tokens to unlock higher tiers and fee reductions. 
-                Balance checked on-chain - no data sharing.
+                Hold $FSBD tokens to unlock higher tiers. Listings & token launches are limited by your tier.
               </p>
             </div>
             <button
@@ -111,8 +118,8 @@ export default function TierDisplay() {
       <div className="mt-8 p-4 bg-muted rounded-lg">
         <h3 className="font-semibold mb-2">How to Upgrade</h3>
         <p className="text-sm text-muted-foreground">
-          Hold $FSBD tokens to unlock tiers. Your balance is checked on-chain—no registration, 
-          no data sharing, fully private.
+          Hold $FSBD to unlock tiers. Your balance is checked on-chain—no registration, fully private.
+          More listings, more images per listing, lower fees, socials in token metadata, and auctions at Gold.
         </p>
         <div className="mt-3">
           <BuyFsbdSection variant="card" mint={fsbdMint ?? undefined} />
