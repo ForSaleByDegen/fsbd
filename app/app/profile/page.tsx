@@ -10,6 +10,7 @@ import BuyerOrderActions from '@/components/BuyerOrderActions'
 import ShippingAddressGuidance from '@/components/ShippingAddressGuidance'
 import LocalShippingAddressForm from '@/components/LocalShippingAddressForm'
 import ProfileAreaTag from '@/components/ProfileAreaTag'
+import NotificationsPanel from '@/components/NotificationsPanel'
 import { useTier } from '@/components/providers/TierProvider'
 
 // Dynamic import for Privy to avoid build issues
@@ -315,6 +316,10 @@ export default function ProfilePage() {
               <p className="text-xl sm:text-2xl md:text-3xl font-pixel text-[#660099] capitalize" style={{ fontFamily: 'var(--font-pixel)' }}>
                 {loading ? 'Loading...' : tier}
               </p>
+            </div>
+
+            <div className="pt-4 border-t border-[#660099]/30">
+              <NotificationsPanel />
             </div>
 
             {stats && (

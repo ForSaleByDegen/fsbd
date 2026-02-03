@@ -54,10 +54,11 @@ export default function ListingPublicChat({
       .then((d) => setIsAdmin(!!d?.isAdmin))
       .catch(() => setIsAdmin(false))
   }, [currentUserWallet])
-  const canChatByFsbd = tierState.loading && !isAdmin ? null : isAdmin || (tierState.balance >= tierState.chatMinTokens)
-  const fsbdChatError = tierState.error && !isAdmin
+  const isSeller = !!(sellerWallet && currentUserWallet === sellerWallet)
+  const canChatByFsbd = tierState.loading && !isAdmin && !isSeller ? null : isAdmin || isSeller || (tierState.balance >= tierState.chatMinTokens)
+  const fsbdChatError = tierState.error && !isAdmin && !isSeller
     ? tierState.error
-    : !tierState.loading && !isAdmin && canChatByFsbd === false
+    : !tierState.loading && !isAdmin && !isSeller && canChatByFsbd === false
       ? `Hold at least ${tierState.chatMinTokens.toLocaleString()} $FSBD to post in public chat`
       : null
   const myHash = hashWalletAddress(currentUserWallet)

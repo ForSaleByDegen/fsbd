@@ -7,7 +7,6 @@ import { Connection } from '@solana/web3.js'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { supabase } from '@/lib/supabase'
 import { hashWalletAddress } from '@/lib/supabase'
-import { getAdminUser } from '@/lib/admin'
 import { getUserTokenBalance, getFsbdMintAddress } from '@/lib/tier-check'
 import { getTokenBalanceViaBitquery } from '@/lib/bitquery-balance'
 
@@ -76,6 +75,7 @@ export async function POST(
     }
 
     let isAdmin = false
+    let isSeller = false
     if (supabaseAdmin) {
       const wh = hashWalletAddress(wallet)
       const { data: adminRow } = await supabaseAdmin
@@ -85,8 +85,14 @@ export async function POST(
         .eq('is_active', true)
         .maybeSingle()
       isAdmin = !!adminRow
+      const { data: listing } = await supabaseAdmin
+        .from('listings')
+        .select('wallet_address')
+        .eq('id', listingId)
+        .single()
+      isSeller = !!(listing?.wallet_address && listing.wallet_address === wallet)
     }
-    if (!isAdmin) {
+    if (!isAdmin && !isSeller) {
       const connection = new Connection(rpcUrl)
       let balance = await getUserTokenBalance(wallet, connection, FSBD_PRODUCTION_MINT)
       if (balance === 0 && mintOverride && getFsbdMintAddress(mintOverride) !== FSBD_PRODUCTION_MINT) {

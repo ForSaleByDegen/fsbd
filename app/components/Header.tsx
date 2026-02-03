@@ -5,6 +5,7 @@ import { useWallet } from '@solana/wallet-adapter-react'
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import PrivyConnectButton from './PrivyConnectButton'
+import NotificationBadge from './NotificationBadge'
 import { isAdmin } from '@/lib/admin'
 
 const isBetaMode = process.env.NEXT_PUBLIC_BETA_MODE === 'true'
@@ -196,6 +197,7 @@ export default function Header() {
                       >
                         Profile
                       </Link>
+                      <NotificationBadge />
                       <Link 
                         href="/tiers" 
                         onClick={() => setMobileMenuOpen(false)}
