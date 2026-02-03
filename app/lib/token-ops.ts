@@ -140,13 +140,13 @@ export async function createPumpFunToken(
   const mintKeypair = Keypair.generate()
   const devBuySol = Math.max(0, options.devBuySol ?? 0.01)
 
-  // pump.fun needs ~0.05 SOL system fee + dev buy + tx fees/rent. Buffer avoids error 0x1 (insufficient lamports)
-  const minSolRequired = devBuySol + 0.07
+  // Where your SOL goes: ~0.02–0.025 SOL creation/network fee → pump.fun; dev buy → bonding curve (you receive tokens); ~0.001 tx fee
+  const minSolRequired = devBuySol + 0.03
   const balance = await connection.getBalance(wallet)
   const solBalance = balance / 1e9
   if (solBalance < minSolRequired) {
     throw new Error(
-      `Insufficient SOL. Need ~${minSolRequired.toFixed(2)} SOL (dev buy + fees) but you have ${solBalance.toFixed(3)} SOL. Add more SOL and try again.`
+      `Insufficient SOL. Need ~${minSolRequired.toFixed(2)} SOL (${devBuySol > 0 ? `${devBuySol} dev buy + ` : ''}~0.03 fees) but you have ${solBalance.toFixed(3)} SOL.`
     )
   }
 
@@ -202,7 +202,7 @@ export async function createPumpFunToken(
     const errMsg = sendErr instanceof Error ? sendErr.message : String(sendErr)
     if (/0x1|custom program error|insufficient/i.test(errMsg)) {
       throw new Error(
-        `Token create failed (likely insufficient SOL). You need ~${(devBuySol + 0.06).toFixed(2)} SOL total (dev buy + fees). Error: ${errMsg}`
+        `Token create failed (likely insufficient SOL). Need ~${minSolRequired.toFixed(2)} SOL (dev buy + ~0.03 fees). ${errMsg}`
       )
     }
     throw sendErr
