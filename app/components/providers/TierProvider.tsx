@@ -26,7 +26,7 @@ const TierContext = createContext<{
   refresh: () => Promise<TierState>
 }>({
   tier: initialState,
-  refresh: async () => {},
+  refresh: async () => initialState,
 })
 
 export function useTier() {
