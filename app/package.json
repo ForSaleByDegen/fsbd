@@ -41,7 +41,8 @@
     "@metaplex-foundation/mpl-bubblegum": "^2.0.0",
     "@metaplex-foundation/mpl-token-metadata": "^3.4.0",
     "@metaplex-foundation/umi-signer-wallet-adapters": "^1.2.0",
-    "resend": "^4.0.0"
+    "resend": "^4.0.0",
+    "sharp": "^0.33.0"
   },
   "devDependencies": {
     "@types/node": "^20",

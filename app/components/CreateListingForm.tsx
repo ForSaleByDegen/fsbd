@@ -31,14 +31,19 @@ export default function CreateListingForm() {
   const router = useRouter()
   const { tier: tierState, refresh } = useTier()
   const [loading, setLoading] = useState(false)
-  const maxImages = getMaxImagesForTier(tierState.tier)
   const [isAdminUser, setIsAdminUser] = useState(false)
   const [limitCheck, setLimitCheck] = useState<{
     currentCount: number
     maxAllowed: number
     canCreate: boolean
+    tier?: string
     fsbd_token_mint?: string | null
   } | null>(null)
+  // Use highest tier from both sources (TierProvider + limit-check) so we don't miss holdings
+  const maxImages = isAdminUser ? 4 : Math.max(
+    getMaxImagesForTier((limitCheck?.tier || 'free') as Tier),
+    getMaxImagesForTier(tierState.tier)
+  )
 
   useEffect(() => {
     if (!publicKey) {
@@ -63,10 +68,11 @@ export default function CreateListingForm() {
           currentCount: data.currentCount ?? 0,
           maxAllowed: data.maxAllowed ?? 3,
           canCreate: data.canCreate !== false,
+          tier: data.tier ?? 'free',
           fsbd_token_mint: data.fsbd_token_mint ?? null,
         })
       )
-      .catch(() => setLimitCheck({ currentCount: 0, maxAllowed: 3, canCreate: true }))
+      .catch(() => setLimitCheck({ currentCount: 0, maxAllowed: 3, canCreate: true, tier: 'free' }))
   }, [publicKey?.toString()])
 
   const [formData, setFormData] = useState({
@@ -85,8 +91,12 @@ export default function CreateListingForm() {
     locationCity: '',
     locationRegion: '',
     externalListingUrl: '',
-    subcategory: ''
+    subcategory: '',
+    assetMint: '',
+    memeCoinMinPercent: 1,
+    assetCollectionName: '',
   })
+  const [assetVerified, setAssetVerified] = useState<{ verified: boolean; error?: string } | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -95,8 +105,19 @@ export default function CreateListingForm() {
       return
     }
     
+    if (formData.category === 'digital-assets') {
+      if (!formData.subcategory || !formData.assetMint) {
+        alert('Select a subcategory (NFT or Meme Coin) and enter the mint address.')
+        return
+      }
+      if (!assetVerified?.verified) {
+        alert('Verify ownership before creating. Click "Verify Ownership" and ensure it succeeds.')
+        return
+      }
+    }
+
     // Check if signMessage is available (required for non-token listings)
-    if (!formData.launchToken && !signMessage) {
+    if (!formData.launchToken && !signMessage && formData.category !== 'digital-assets') {
       alert('Your wallet does not support message signing. Please use a compatible wallet or enable token launch.')
       return
     }
@@ -110,7 +131,7 @@ export default function CreateListingForm() {
     try {
       setLoading(true)
       const fresh = await refresh()
-      const allowedImages = Math.min(formData.images.length, getMaxImagesForTier(fresh.tier))
+      const allowedImages = Math.min(formData.images.length, isAdminUser ? 4 : getMaxImagesForTier(fresh.tier))
       const rawImages = formData.images.slice(0, allowedImages)
       // Strip EXIF/metadata (GPS, camera info, timestamps) before any upload
       const imagesToUpload = await stripImageMetadataBatch(rawImages)
@@ -130,7 +151,7 @@ export default function CreateListingForm() {
       }
 
       // Launch token if requested (pump.fun with dev buy, fallback to SPL)
-      // Token uses listing image and description
+      // Token uses listing image and description; include listing link and profile socials when available
       let tokenMint: string | null = null
       let fee = 0
       if (formData.launchToken && formData.tokenName && formData.tokenSymbol) {
@@ -148,6 +169,31 @@ export default function CreateListingForm() {
         fee = calculateListingFee(fresh.tier)
         const devBuy = Math.max(0, formData.devBuySol ?? 0.01)
 
+        // Fetch profile for socials/banner to include in token metadata
+        let extras: { externalUrl?: string; website?: string; twitter?: string; telegram?: string; discord?: string; bannerUrl?: string } | undefined
+        try {
+          const profileRes = await fetch(`/api/profile?wallet=${encodeURIComponent(publicKey.toString())}`)
+          if (profileRes.ok) {
+            const profileData = await profileRes.json()
+            const p = profileData?.profile
+            const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://fsbd.fun'
+            const sellerUrl = `${baseUrl}/seller?wallet=${encodeURIComponent(publicKey.toString())}`
+            const hasSocials = p?.website_url || p?.twitter_url || p?.telegram_url || p?.discord_url || p?.banner_url
+            if (sellerUrl || hasSocials) {
+              extras = {
+                externalUrl: sellerUrl,
+                website: p?.website_url || undefined,
+                twitter: p?.twitter_url || undefined,
+                telegram: p?.telegram_url || undefined,
+                discord: p?.discord_url || undefined,
+                bannerUrl: p?.banner_url || undefined,
+              }
+            }
+          }
+        } catch {
+          // Non-fatal: use basic metadata
+        }
+
         try {
           tokenMint = await createPumpFunToken(
             publicKey,
@@ -160,6 +206,7 @@ export default function CreateListingForm() {
               imageFile: imageFile || undefined,
               imageUrl: imageUrl || undefined,
               description: listingDescription || formData.description?.slice(0, 500) || undefined,
+              extras,
             }
           )
         } catch (pumpErr: unknown) {
@@ -257,7 +304,8 @@ export default function CreateListingForm() {
       }
 
       // Create listing in database
-      const listingData = {
+      const isDigitalAsset = formData.category === 'digital-assets'
+      const listingData: Record<string, unknown> = {
         title: formData.title,
         description: formData.description,
         category: formData.category,
@@ -277,7 +325,15 @@ export default function CreateListingForm() {
         location_city: formData.locationCity.trim() || null,
         location_region: formData.locationRegion.trim() || null,
         external_listing_url: formData.externalListingUrl.trim() || null,
-        subcategory: formData.subcategory.trim() || null
+        subcategory: formData.subcategory.trim() || null,
+      }
+      if (isDigitalAsset) {
+        listingData.asset_type = formData.subcategory === 'nft' ? 'nft' : 'meme_coin'
+        listingData.asset_chain = 'solana'
+        listingData.asset_mint = formData.assetMint.trim()
+        listingData.meme_coin_min_percent = formData.subcategory === 'meme_coin' ? formData.memeCoinMinPercent : null
+        listingData.asset_collection_name = formData.assetCollectionName.trim() || null
+        listingData.asset_verified_at = new Date().toISOString() // Set on insert; API will verify
       }
       
       console.log('Creating listing with images:', imageUrls)
@@ -359,10 +415,13 @@ export default function CreateListingForm() {
         </div>
         {getSubcategories(formData.category).length > 0 && (
           <div>
-            <label className="block text-sm font-medium mb-2">Subcategory (optional)</label>
+            <label className="block text-sm font-medium mb-2">Subcategory *</label>
             <Select
               value={formData.subcategory || 'none'}
-              onValueChange={(v) => setFormData(prev => ({ ...prev, subcategory: v === 'none' ? '' : v }))}
+              onValueChange={(v) => {
+                setFormData(prev => ({ ...prev, subcategory: v === 'none' ? '' : v }))
+                setAssetVerified(null)
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="None" />
@@ -414,6 +473,93 @@ export default function CreateListingForm() {
         </div>
       </div>
 
+      {formData.category === 'digital-assets' && (
+        <div className="p-4 border-2 border-[#660099] rounded-lg space-y-4 bg-[#660099]/10">
+          <p className="text-sm text-[#00ff00] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+            Prove ownership to list as verified collection. Solana supported.
+          </p>
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              {formData.subcategory === 'nft' ? 'NFT Mint Address *' : 'Token Mint Address *'}
+            </label>
+            <Input
+              placeholder="e.g. 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"
+              value={formData.assetMint}
+              onChange={(e) => {
+                setFormData(prev => ({ ...prev, assetMint: e.target.value.trim() }))
+                setAssetVerified(null)
+              }}
+            />
+          </div>
+          {formData.subcategory === 'meme_coin' && (
+            <div>
+              <label className="block text-sm font-medium mb-2">Min % of supply you hold *</label>
+              <Input
+                type="number"
+                min={0.01}
+                max={100}
+                step={0.01}
+                placeholder="1"
+                value={formData.memeCoinMinPercent || ''}
+                onChange={(e) => {
+                  setFormData(prev => ({ ...prev, memeCoinMinPercent: parseFloat(e.target.value) || 0 }))
+                  setAssetVerified(null)
+                }}
+              />
+              <p className="text-xs text-[#aa77ee] mt-1">You must hold at least this % of total supply to list.</p>
+            </div>
+          )}
+          {formData.subcategory === 'nft' && (
+            <div>
+              <label className="block text-sm font-medium mb-2">Collection name (optional)</label>
+              <Input
+                placeholder="e.g. Mad Lads"
+                value={formData.assetCollectionName}
+                onChange={(e) => setFormData(prev => ({ ...prev, assetCollectionName: e.target.value.trim() }))}
+              />
+            </div>
+          )}
+          <button
+            type="button"
+            disabled={!formData.assetMint || loading}
+            onClick={async () => {
+              if (!publicKey || !formData.assetMint) return
+              setAssetVerified(null)
+              try {
+                const res = await fetch('/api/verify-asset-ownership', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    wallet: publicKey.toString(),
+                    assetType: formData.subcategory === 'nft' ? 'nft' : 'meme_coin',
+                    mint: formData.assetMint,
+                    minPercent: formData.subcategory === 'meme_coin' ? formData.memeCoinMinPercent : 0,
+                  }),
+                })
+                const data = await res.json()
+                if (data.verified) {
+                  setAssetVerified({ verified: true })
+                } else {
+                  setAssetVerified({ verified: false, error: data.error || 'Ownership verification failed' })
+                }
+              } catch {
+                setAssetVerified({ verified: false, error: 'Verification failed. Try again.' })
+              }
+            }}
+            className="px-4 py-2 border-2 border-[#00ff00] text-[#00ff00] hover:bg-[#00ff00] hover:text-black font-pixel-alt text-sm rounded"
+            style={{ fontFamily: 'var(--font-pixel-alt)' }}
+          >
+            Verify Ownership
+          </button>
+          {assetVerified?.verified && (
+            <p className="text-sm text-[#00ff00] font-pixel-alt">✓ Ownership verified</p>
+          )}
+          {assetVerified?.verified === false && (
+            <p className="text-sm text-red-400 font-pixel-alt">{assetVerified.error}</p>
+          )}
+        </div>
+      )}
+
       <div>
         <label className="block text-sm font-medium mb-2">Delivery / Meetup</label>
         <Select
@@ -460,7 +606,35 @@ export default function CreateListingForm() {
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-2">Images (IPFS)</label>
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <label className="block text-sm font-medium">Images (IPFS)</label>
+          {publicKey && (
+            <button
+              type="button"
+              onClick={async () => {
+                await refresh()
+                if (publicKey) {
+                  fetch(`/api/listings/limit-check?wallet=${encodeURIComponent(publicKey.toString())}`)
+                    .then((r) => r.json())
+                    .then((d) =>
+                      setLimitCheck({
+                        currentCount: d.currentCount ?? 0,
+                        maxAllowed: d.maxAllowed ?? 3,
+                        canCreate: d.canCreate !== false,
+                        tier: d.tier ?? 'free',
+                        fsbd_token_mint: d.fsbd_token_mint ?? null,
+                      })
+                    )
+                    .catch(() => {})
+                }
+              }}
+              className="text-xs text-[#660099] hover:text-[#00ff00] font-pixel-alt border border-[#660099] px-2 py-1 rounded transition-colors"
+              style={{ fontFamily: 'var(--font-pixel-alt)' }}
+            >
+              {tierState.loading ? 'Refreshing…' : 'Refresh tier'}
+            </button>
+          )}
+        </div>
         <Input
           type="file"
           multiple={maxImages > 1}
@@ -484,7 +658,7 @@ export default function CreateListingForm() {
           }}
         />
         <p className="text-sm text-[#aa77ee] font-pixel-alt mt-1">
-          Up to {maxImages} image{maxImages > 1 ? 's' : ''} per listing (based on your tier). All metadata (EXIF, GPS, camera info) is stripped before upload for your privacy. Max 1GB per file.
+          Up to {maxImages} image{maxImages > 1 ? 's' : ''} per listing (based on your $FSBD tier). Hold 100k+ for 2, 1M+ for 3, 10M+ for 4. All metadata stripped for privacy. Max 1GB per file.
         </p>
         {formData.images.length > 0 && (
           <p className="text-xs text-[#00ff00] mt-1">
@@ -493,6 +667,7 @@ export default function CreateListingForm() {
         )}
       </div>
 
+      {formData.category !== 'digital-assets' && (
       <div className="border-t pt-4">
         <label className="flex items-center gap-2 mb-4">
           <input
@@ -548,7 +723,10 @@ export default function CreateListingForm() {
           <p className="text-sm text-[#aa77ee] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             {limitCheck.currentCount} of {limitCheck.maxAllowed} listings used
             {!limitCheck.canCreate && (
-              <span className="block text-amber-400 mt-1">At limit. Purchase extra slots with 10,000 $FSBD each.</span>
+              <span className="block text-amber-400 mt-1">
+                At limit. Purchase extra slots with 10,000 $FSBD each.
+                {limitCheck.tier === 'free' && ' If you hold $FSBD, try refreshing—your tier may need to update.'}
+              </span>
             )}
           </p>
           {!limitCheck.canCreate && (
@@ -562,6 +740,7 @@ export default function CreateListingForm() {
                       currentCount: data.currentCount ?? 0,
                       maxAllowed: data.maxAllowed ?? 3,
                       canCreate: data.canCreate !== false,
+                      tier: data.tier ?? 'free',
                       fsbd_token_mint: data.fsbd_token_mint ?? null,
                     })
                   )
@@ -572,7 +751,11 @@ export default function CreateListingForm() {
       )}
       <Button
         type="submit"
-        disabled={loading || (limitCheck !== null && !limitCheck.canCreate)}
+        disabled={
+          loading ||
+          (limitCheck !== null && !limitCheck.canCreate) ||
+          (formData.category === 'digital-assets' && !assetVerified?.verified)
+        }
         className="w-full min-h-[44px] text-base sm:text-sm touch-manipulation"
       >
         {loading ? 'Creating...' : 'Create Listing'}

@@ -3,10 +3,57 @@
  * Browser cannot call pump.fun/api/ipfs directly due to CORS.
  * This API route runs server-side and forwards the upload.
  * Accepts: multipart/form-data (file, name, symbol) OR JSON (imageUrl, name, symbol)
+ * Resizes images to pump.fun's ~1MB limit (512x512 recommended).
  */
 import { NextRequest, NextResponse } from 'next/server'
+import sharp from 'sharp'
 
 const PUMP_IPFS = 'https://pump.fun/api/ipfs'
+const MAX_SIZE_BYTES = 900 * 1024 // pump.fun ~1MB limit; stay under to be safe
+const MAX_DIMENSION = 512
+
+/** Resize/compress image to fit pump.fun's ~1MB limit. Returns { buffer, mime }. */
+async function resizeForPump(blob: Blob): Promise<{ buffer: Buffer; mime: string }> {
+  const buffer = Buffer.from(await blob.arrayBuffer())
+  const isPng = blob.type?.includes('png') ?? false
+  const mime = isPng ? 'image/png' : 'image/jpeg'
+
+  if (buffer.length <= MAX_SIZE_BYTES) {
+    return { buffer, mime: blob.type?.startsWith('image/') ? blob.type : mime }
+  }
+
+  let out: Buffer
+
+  if (isPng) {
+    out = await sharp(buffer)
+      .resize(MAX_DIMENSION, MAX_DIMENSION, { fit: 'inside', withoutEnlargement: true })
+      .png({ compressionLevel: 9 })
+      .toBuffer()
+    let level = 8
+    while (out.length > MAX_SIZE_BYTES && level > 0) {
+      out = await sharp(buffer)
+        .resize(MAX_DIMENSION, MAX_DIMENSION, { fit: 'inside', withoutEnlargement: true })
+        .png({ compressionLevel: level })
+        .toBuffer()
+      level -= 2
+    }
+  } else {
+    let quality = 85
+    out = await sharp(buffer)
+      .resize(MAX_DIMENSION, MAX_DIMENSION, { fit: 'inside', withoutEnlargement: true })
+      .jpeg({ quality })
+      .toBuffer()
+    while (out.length > MAX_SIZE_BYTES && quality > 20) {
+      quality -= 15
+      out = await sharp(buffer)
+        .resize(MAX_DIMENSION, MAX_DIMENSION, { fit: 'inside', withoutEnlargement: true })
+        .jpeg({ quality })
+        .toBuffer()
+    }
+    return { buffer: out, mime: 'image/jpeg' }
+  }
+  return { buffer: out, mime: 'image/png' }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -48,8 +95,12 @@ export async function POST(request: NextRequest) {
     if (!name) return NextResponse.json({ error: 'Missing token name' }, { status: 400 })
     if (!symbol) return NextResponse.json({ error: 'Missing token symbol' }, { status: 400 })
 
+    // Resize if over pump.fun's ~1MB limit to avoid 413
+    const { buffer, mime } = await resizeForPump(file)
+    const resizedBlob = new Blob([buffer], { type: mime })
+
     const pumpForm = new FormData()
-    pumpForm.append('file', file)
+    pumpForm.append('file', resizedBlob, 'token-image.png')
     pumpForm.append('name', name)
     pumpForm.append('symbol', symbol)
     pumpForm.append('description', description)

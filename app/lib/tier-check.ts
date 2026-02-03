@@ -1,5 +1,6 @@
 import { Connection, PublicKey } from '@solana/web3.js'
 import { getAssociatedTokenAddress, getAccount, getMint, TOKEN_PROGRAM_ID } from '@solana/spl-token'
+import { getTokenBalanceViaBitquery } from './bitquery-balance'
 
 // $FSBD token mint - env/config override, or production fallback
 const FSBD_TOKEN_MINT = process.env.NEXT_PUBLIC_FSBD_TOKEN_MINT || 'FSBD_TOKEN_MINT_PLACEHOLDER'
@@ -19,6 +20,22 @@ export const TIER_THRESHOLDS = {
 } as const
 
 export type Tier = 'free' | 'bronze' | 'silver' | 'gold'
+
+/**
+ * Extract fsbd_token_mint from platform_config rows.
+ * Handles both string and { value: string } formats (admin UI may save as object).
+ */
+export function extractFsbdMintFromConfig(rows: { key: string; value_json: unknown }[] | null): string | null {
+  const row = rows?.find((r) => r.key === 'fsbd_token_mint')
+  if (!row) return null
+  const v = row.value_json
+  if (typeof v === 'string' && v && v !== 'FSBD_TOKEN_MINT_PLACEHOLDER') return v
+  if (typeof v === 'object' && v !== null && 'value' in v && typeof (v as { value: unknown }).value === 'string') {
+    const s = (v as { value: string }).value
+    return s && s !== 'FSBD_TOKEN_MINT_PLACEHOLDER' ? s : null
+  }
+  return null
+}
 
 /**
  * Resolve which $FSBD mint to use (config/env override, production fallback, or devnet mock)
@@ -77,7 +94,15 @@ export async function getUserTokenBalance(
     return Number(accountInfo.amount) / (10 ** mintInfo.decimals)
   } catch { /* ignore */ }
   try {
-    return await tryAllAccounts()
+    const balance = await tryAllAccounts()
+    if (balance > 0) return balance
+  } catch {
+    /* ignore */
+  }
+  // Bitquery fallback (same logic as balance-check API / chat) when RPC returns 0
+  try {
+    const bitqueryBalance = getTokenBalanceViaBitquery(walletAddress, mintToUse)
+    return await bitqueryBalance
   } catch {
     return 0
   }
@@ -99,21 +124,9 @@ export async function getUserTier(
   mintOverride?: string | null
 ): Promise<Tier> {
   const th = thresholds ?? TIER_THRESHOLDS
-  const mintToUse = getFsbdMintAddress(mintOverride)
 
   try {
-    const mintPublicKey = new PublicKey(mintToUse)
-    const userPublicKey = new PublicKey(walletAddress)
-
-    const tokenAccount = await getAssociatedTokenAddress(
-      mintPublicKey,
-      userPublicKey
-    )
-
-    const accountInfo = await getAccount(connection, tokenAccount)
-    const mintInfo = await getMint(connection, mintPublicKey)
-    const balance = Number(accountInfo.amount) / (10 ** mintInfo.decimals)
-
+    const balance = await getUserTokenBalance(walletAddress, connection, mintOverride)
     if (balance >= th.gold) return 'gold'
     if (balance >= th.silver) return 'silver'
     if (balance >= th.bronze) return 'bronze'

@@ -10,6 +10,7 @@ import BuyerOrderActions from '@/components/BuyerOrderActions'
 import ShippingAddressGuidance from '@/components/ShippingAddressGuidance'
 import LocalShippingAddressForm from '@/components/LocalShippingAddressForm'
 import ProfileAreaTag from '@/components/ProfileAreaTag'
+import ProfileSocialsBanner from '@/components/ProfileSocialsBanner'
 import NotificationsPanel from '@/components/NotificationsPanel'
 import { useTier } from '@/components/providers/TierProvider'
 
@@ -45,7 +46,17 @@ function getWalletAddress(
 }
 
 type ProfileData = {
-  profile: { listings_count: number; total_fees_paid: number; total_listings_sold: number; area_tag?: string | null } | null
+  profile: {
+    listings_count: number
+    total_fees_paid: number
+    total_listings_sold: number
+    area_tag?: string | null
+    banner_url?: string | null
+    twitter_url?: string | null
+    telegram_url?: string | null
+    discord_url?: string | null
+    website_url?: string | null
+  } | null
   listings: Array<{
     id: string
     title: string
@@ -192,6 +203,7 @@ export default function ProfilePage() {
   const [profileData, setProfileData] = useState<ProfileData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [deliverySectionOpen, setDeliverySectionOpen] = useState(false)
+  const [socialsSectionOpen, setSocialsSectionOpen] = useState(false)
 
   const walletAddress = getWalletAddress(publicKey, wallets)
 
@@ -371,6 +383,27 @@ export default function ProfilePage() {
               initialValue={profileData?.profile?.area_tag ?? null}
               onSaved={loadProfile}
             />
+
+            <div className="mt-4 pt-4 border-t border-[#660099]/30">
+              <button
+                type="button"
+                onClick={() => setSocialsSectionOpen(!socialsSectionOpen)}
+                className="w-full flex items-center justify-between text-left font-pixel-alt text-[#00ff00] hover:bg-[#660099]/20 transition-colors p-2 rounded"
+                style={{ fontFamily: 'var(--font-pixel-alt)' }}
+              >
+                <span>Socials & banner (for token metadata)</span>
+                <span className="text-[#660099]">{socialsSectionOpen ? '▼' : '▶'}</span>
+              </button>
+              {socialsSectionOpen && (
+                <div className="pt-3 space-y-4">
+                  <ProfileSocialsBanner
+                    walletAddress={walletAddress}
+                    initialValue={profileData?.profile ?? null}
+                    onSaved={loadProfile}
+                  />
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

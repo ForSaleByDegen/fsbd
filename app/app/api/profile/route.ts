@@ -156,6 +156,13 @@ export async function PATCH(request: NextRequest) {
       const tag = body.area_tag.trim().slice(0, 100)
       updates.area_tag = tag || null
     }
+    const urlFields = ['banner_url', 'twitter_url', 'telegram_url', 'discord_url', 'website_url'] as const
+    for (const key of urlFields) {
+      if (typeof body[key] === 'string') {
+        const v = body[key].trim().slice(0, 500)
+        updates[key] = v || null
+      }
+    }
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ ok: true })

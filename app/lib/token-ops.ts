@@ -13,29 +13,75 @@ import { WalletContextState } from '@solana/wallet-adapter-react'
 
 const PUMP_TRADE_LOCAL = 'https://pumpportal.fun/api/trade-local'
 
-/** Use our API proxy to avoid CORS (pump.fun blocks browser requests) */
+/** Extended metadata for token (listing link, socials, banner) — uses custom Pinata metadata when provided */
+export type TokenMetadataExtras = {
+  externalUrl?: string
+  website?: string
+  twitter?: string
+  telegram?: string
+  discord?: string
+  bannerUrl?: string
+}
+
+/** Use our API proxy to avoid CORS (pump.fun blocks browser requests).
+ * Prefer imageUrl over imageFile to avoid 413 (Content Too Large) from Vercel's 4.5MB body limit.
+ * When extras (externalUrl, socials, banner) are provided, uses /api/token-metadata for extended metadata. */
+async function getMetadataUri(
+  tokenName: string,
+  tokenSymbol: string,
+  options: {
+    imageFile?: File
+    imageUrl?: string
+    description?: string
+    extras?: TokenMetadataExtras
+  }
+): Promise<string> {
+  const hasExtras = options.extras && (
+    options.extras.externalUrl ||
+    options.extras.website ||
+    options.extras.twitter ||
+    options.extras.telegram ||
+    options.extras.discord ||
+    options.extras.bannerUrl
+  )
+
+  if (hasExtras && options.imageUrl) {
+    const res = await fetch('/api/token-metadata', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: tokenName,
+        symbol: tokenSymbol,
+        description: options.description || `Token for listing on $FSBD`,
+        imageUrl: options.imageUrl,
+        externalUrl: options.extras?.externalUrl,
+        website: options.extras?.website,
+        twitter: options.extras?.twitter,
+        telegram: options.extras?.telegram,
+        discord: options.extras?.discord,
+        bannerUrl: options.extras?.bannerUrl,
+      }),
+    })
+    if (res.ok) {
+      const data = await res.json()
+      const uri = data.metadataUri || data.uri
+      if (uri) return uri
+    }
+  }
+
+  return uploadToPumpIpfs(tokenName, tokenSymbol, {
+    imageFile: options.imageFile,
+    imageUrl: options.imageUrl,
+    description: options.description,
+  })
+}
+
 async function uploadToPumpIpfs(
   tokenName: string,
   tokenSymbol: string,
   options: { imageFile?: File; imageUrl?: string; description?: string }
 ): Promise<string> {
-  if (options.imageFile) {
-    const formData = new FormData()
-    formData.append('file', options.imageFile)
-    formData.append('name', tokenName)
-    formData.append('symbol', tokenSymbol)
-    formData.append('description', options.description || `Token for listing on $FSBD`)
-
-    const res = await fetch('/api/pump-ipfs', { method: 'POST', body: formData })
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}))
-      throw new Error(err.error || `IPFS upload failed (${res.status})`)
-    }
-    const data = await res.json()
-    const uri = data.metadataUri || data.uri
-    if (!uri) throw new Error('No metadata URI returned')
-    return uri
-  }
+  // Prefer imageUrl: sends tiny JSON, server fetches image - avoids 413 on large files
   if (options.imageUrl) {
     const res = await fetch('/api/pump-ipfs', {
       method: 'POST',
@@ -50,6 +96,23 @@ async function uploadToPumpIpfs(
     if (!res.ok) {
       const err = await res.json().catch(() => ({}))
       throw new Error(err.error || `IPFS upload failed (${res.status})`)
+    }
+    const data = await res.json()
+    const uri = data.metadataUri || data.uri
+    if (!uri) throw new Error('No metadata URI returned')
+    return uri
+  }
+  if (options.imageFile) {
+    const formData = new FormData()
+    formData.append('file', options.imageFile)
+    formData.append('name', tokenName)
+    formData.append('symbol', tokenSymbol)
+    formData.append('description', options.description || `Token for listing on $FSBD`)
+
+    const res = await fetch('/api/pump-ipfs', { method: 'POST', body: formData })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error || `IPFS upload failed (${res.status}). Try a smaller image (under 4MB) or ensure listing image uploaded successfully.`)
     }
     const data = await res.json()
     const uri = data.metadataUri || data.uri
@@ -71,6 +134,7 @@ export async function createPumpFunToken(
     imageFile?: File
     imageUrl?: string
     description?: string
+    extras?: TokenMetadataExtras
   } = {}
 ): Promise<string> {
   const mintKeypair = Keypair.generate()

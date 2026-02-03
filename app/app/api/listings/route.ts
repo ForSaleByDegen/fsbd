@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Connection, PublicKey } from '@solana/web3.js'
 import { supabase, hashWalletAddress } from '@/lib/supabase'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { getUserTokenBalance, getUserTier, getMaxListingsForTier } from '@/lib/tier-check'
+import { getUserTokenBalance, getUserTier, getMaxListingsForTier, getMaxImagesForTier, extractFsbdMintFromConfig, getFsbdMintAddress } from '@/lib/tier-check'
 
 const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/
 
@@ -116,10 +116,60 @@ export async function POST(request: NextRequest) {
     }
 
     const walletHash = hashWalletAddress(wa)
-    const listingData = { ...body, wallet_address: wa, wallet_address_hash: walletHash }
+    let listingData = { ...body, wallet_address: wa, wallet_address_hash: walletHash }
 
-    // Enforce listing cap (tier + extra paid slots)
+    // Resolve fsbd mint for tier checks - robust parsing (string or { value } object)
+    let fsbdMint: string | null = null
     if (supabaseAdmin) {
+      const { data: configRows } = await supabaseAdmin.from('platform_config').select('key, value_json')
+      fsbdMint = extractFsbdMintFromConfig((configRows as { key: string; value_json: unknown }[]) || null)
+    }
+    const mintForTier = fsbdMint || getFsbdMintAddress(null)
+
+    // Admin bypass for image limit (admins get max 4)
+    let isAdmin = false
+    if (supabaseAdmin) {
+      const { data: adminRow } = await supabaseAdmin
+        .from('admins')
+        .select('id')
+        .eq('wallet_address_hash', walletHash)
+        .eq('is_active', true)
+        .maybeSingle()
+      isAdmin = !!adminRow
+    }
+
+    // Get tier via balance-check API (same as limit-check/chat) for reliable $FSBD detection
+    let tier: 'free' | 'bronze' | 'silver' | 'gold' = 'free'
+    try {
+      const base = request.nextUrl?.origin || `https://${process.env.VERCEL_URL || 'fsbd.fun'}`
+      const res = await fetch(`${base}/api/config/balance-check?wallet=${encodeURIComponent(wa)}`)
+      const data = await res.json().catch(() => ({}))
+      if (res.ok && typeof data.tier === 'string') {
+        tier = data.tier as 'free' | 'bronze' | 'silver' | 'gold'
+      } else {
+        const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || 'https://api.mainnet-beta.solana.com'
+        const connection = new Connection(rpcUrl)
+        tier = await getUserTier(wa, connection, undefined, mintForTier)
+      }
+    } catch {
+      const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || 'https://api.mainnet-beta.solana.com'
+      const connection = new Connection(rpcUrl)
+      tier = await getUserTier(wa, connection, undefined, mintForTier)
+    }
+
+    // Enforce image limit by tier
+    const images = Array.isArray(body.images) ? body.images : []
+    const maxImages = isAdmin ? 4 : getMaxImagesForTier(tier)
+    if (images.length > maxImages) {
+      return NextResponse.json(
+        { error: `Your tier allows up to ${maxImages} image(s) per listing. You submitted ${images.length}. Hold more $FSBD to unlock more images.` },
+        { status: 403 }
+      )
+    }
+    listingData = { ...listingData, images: images.slice(0, maxImages) }
+
+    // Enforce listing cap (tier + extra paid slots) - admin bypass
+    if (supabaseAdmin && !isAdmin) {
       const { count } = await supabaseAdmin
         .from('listings')
         .select('*', { count: 'exact', head: true })
@@ -127,14 +177,7 @@ export async function POST(request: NextRequest) {
         .in('status', ['active', 'removed'])
       const currentCount = count ?? 0
 
-      let fsbdMint: string | null = null
       let extraSlots = 0
-      const { data: configRows } = await supabaseAdmin.from('platform_config').select('key, value_json')
-      for (const row of configRows || []) {
-        const key = (row as { key: string }).key
-        const val = (row as { value_json: unknown }).value_json
-        if (key === 'fsbd_token_mint' && typeof val === 'string') fsbdMint = val
-      }
       try {
         const { data: profile } = await supabaseAdmin
           .from('profiles')
@@ -144,9 +187,6 @@ export async function POST(request: NextRequest) {
         extraSlots = Number((profile as { extra_paid_slots?: number } | null)?.extra_paid_slots) || 0
       } catch {}
 
-      const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || 'https://api.mainnet-beta.solana.com'
-      const connection = new Connection(rpcUrl)
-      const tier = await getUserTier(wa, connection, undefined, fsbdMint || undefined)
       const maxAllowed = getMaxListingsForTier(tier) + extraSlots
       if (currentCount >= maxAllowed) {
         return NextResponse.json(
@@ -155,6 +195,32 @@ export async function POST(request: NextRequest) {
           },
           { status: 403 }
         )
+      }
+    }
+
+    // Digital asset: verify ownership server-side before insert
+    if (body.asset_type && body.asset_mint) {
+      const base = request.nextUrl?.origin || `https://${process.env.VERCEL_URL || 'fsbd.fun'}`
+      const verifyRes = await fetch(`${base}/api/verify-asset-ownership`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          wallet: wa,
+          assetType: body.asset_type,
+          mint: body.asset_mint,
+          minPercent: body.meme_coin_min_percent || 0,
+        }),
+      })
+      const verifyData = await verifyRes.json().catch(() => ({}))
+      if (!verifyData.verified) {
+        return NextResponse.json(
+          { error: verifyData.error || 'Ownership verification failed. Ensure you hold the asset.' },
+          { status: 403 }
+        )
+      }
+      listingData = {
+        ...listingData,
+        asset_verified_at: new Date().toISOString(),
       }
     }
 

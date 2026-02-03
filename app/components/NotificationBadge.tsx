@@ -4,6 +4,23 @@ import { useState, useEffect } from 'react'
 import { useWallet } from '@solana/wallet-adapter-react'
 import Link from 'next/link'
 
+const STORAGE_KEY = 'fsbd_dismissed_notifications'
+
+function loadDismissed(wallet: string): Set<string> {
+  if (typeof window === 'undefined') return new Set()
+  try {
+    const raw = localStorage.getItem(`${STORAGE_KEY}_${wallet}`)
+    const arr = raw ? JSON.parse(raw) : []
+    return new Set(Array.isArray(arr) ? arr : [])
+  } catch {
+    return new Set()
+  }
+}
+
+function getItemKey(item: { type: string; listingId: string; createdAt: string }): string {
+  return `${item.type}:${item.listingId}:${item.createdAt}`
+}
+
 export default function NotificationBadge() {
   const { publicKey } = useWallet()
   const [count, setCount] = useState(0)
@@ -13,10 +30,21 @@ export default function NotificationBadge() {
       setCount(0)
       return
     }
-    fetch(`/api/notifications?wallet=${encodeURIComponent(publicKey.toString())}`)
-      .then((r) => r.json())
-      .then((d) => setCount(typeof d.total === 'number' ? d.total : 0))
-      .catch(() => setCount(0))
+    const doFetch = () => {
+      fetch(`/api/notifications?wallet=${encodeURIComponent(publicKey.toString())}`)
+        .then((r) => r.json())
+        .then((d) => {
+          const items = Array.isArray(d.items) ? d.items : []
+          const dismissed = loadDismissed(publicKey.toString())
+          const visible = items.filter((i: { type: string; listingId: string; createdAt: string }) => !dismissed.has(getItemKey(i)))
+          setCount(visible.length)
+        })
+        .catch(() => setCount(0))
+    }
+    doFetch()
+    const onDismissed = () => doFetch()
+    window.addEventListener('fsbd-notifications-dismissed', onDismissed)
+    return () => window.removeEventListener('fsbd-notifications-dismissed', onDismissed)
   }, [publicKey?.toString()])
 
   if (!publicKey || count === 0) return null
