@@ -7,7 +7,9 @@ import { Connection } from '@solana/web3.js'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { supabase } from '@/lib/supabase'
 import { hashWalletAddress } from '@/lib/supabase'
-import { getUserTokenBalance } from '@/lib/tier-check'
+import { getUserTokenBalance, getFsbdMintAddress } from '@/lib/tier-check'
+
+const FSBD_PRODUCTION_MINT = 'A8sdJBY6UGErXW2gNVT6s13Qn4FJwGyRp63Y5mZBpump'
 
 function extractMintFromConfig(data: { key: string; value_json: unknown }[]): string | null {
   const row = data?.find((r) => r.key === 'fsbd_token_mint')
@@ -75,7 +77,10 @@ export async function POST(
     }
 
     const connection = new Connection(rpcUrl)
-    const balance = await getUserTokenBalance(wallet, connection, mintOverride || undefined)
+    let balance = await getUserTokenBalance(wallet, connection, mintOverride || undefined)
+    if (balance === 0 && getFsbdMintAddress(mintOverride || undefined) !== FSBD_PRODUCTION_MINT) {
+      balance = await getUserTokenBalance(wallet, connection, FSBD_PRODUCTION_MINT)
+    }
 
     if (balance < minTokens) {
       return NextResponse.json(

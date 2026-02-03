@@ -10,6 +10,8 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 import { supabase } from '@/lib/supabase'
 import { getFsbdMintAddress, getUserTier } from '@/lib/tier-check'
 
+const FSBD_PRODUCTION_MINT = 'A8sdJBY6UGErXW2gNVT6s13Qn4FJwGyRp63Y5mZBpump'
+
 /** Fallback: use getParsedTokenAccountsByOwner when ATA lookup fails (some RPCs/tokens work better) */
 async function getBalanceViaParsedAccounts(
   connection: Connection,
@@ -94,7 +96,25 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const tier = await getUserTier(wallet, connection, undefined, mintOverride)
+    if (balance === 0 && mintToUse !== FSBD_PRODUCTION_MINT) {
+      try {
+        const prodMintKey = new PublicKey(FSBD_PRODUCTION_MINT)
+        let prodBalance = 0
+        try {
+          const ata = await getAssociatedTokenAddress(prodMintKey, userKey)
+          const account = await getAccount(connection, ata)
+          const mint = await getMint(connection, prodMintKey)
+          prodBalance = Number(account.amount) / 10 ** mint.decimals
+        } catch {
+          prodBalance = await getBalanceViaParsedAccounts(connection, userKey, prodMintKey)
+        }
+        if (prodBalance > 0) balance = prodBalance
+      } catch {
+        // Ignore fallback errors
+      }
+    }
+
+    const tier = await getUserTier(wallet, connection, undefined, balance > 0 ? FSBD_PRODUCTION_MINT : mintOverride)
 
     return NextResponse.json({
       balance,
