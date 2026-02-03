@@ -33,7 +33,7 @@ function loadDismissed(wallet: string): Set<string> {
 function saveDismissed(wallet: string, dismissed: Set<string>) {
   if (typeof window === 'undefined') return
   try {
-    localStorage.setItem(`${STORAGE_KEY}_${wallet}`, JSON.stringify([...dismissed]))
+    localStorage.setItem(`${STORAGE_KEY}_${wallet}`, JSON.stringify(Array.from(dismissed)))
   } catch {
     /* ignore */
   }
