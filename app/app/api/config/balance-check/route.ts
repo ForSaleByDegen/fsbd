@@ -59,10 +59,13 @@ export async function GET(request: NextRequest) {
     const connection = new Connection(rpcUrl)
 
     let mintOverride: string | null = null
+    let chatMinTokens = 10000
     const client = supabaseAdmin || supabase
     if (client) {
       const { data } = await client.from('platform_config').select('key, value_json')
-      mintOverride = extractMintFromConfig((data as { key: string; value_json: unknown }[]) || [])
+      const rows = (data as { key: string; value_json: unknown }[]) || []
+      mintOverride = extractMintFromConfig(rows)
+      chatMinTokens = getChatMinTokens(rows)
     }
     if (!mintOverride || mintOverride === 'FSBD_TOKEN_MINT_PLACEHOLDER') {
       mintOverride = process.env.NEXT_PUBLIC_FSBD_TOKEN_MINT || null
