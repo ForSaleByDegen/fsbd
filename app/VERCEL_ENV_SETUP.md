@@ -66,6 +66,7 @@ You may also want to add:
 - `NEXT_PUBLIC_PINATA_JWT` - Your Pinata JWT for IPFS uploads
 - `NEXT_PUBLIC_PRIVY_APP_ID` - Your Privy App ID (if using Privy)
 - `NEXT_PUBLIC_ENCRYPTION_KEY` - A 32-character encryption key (optional)
+- `BITQUERY_API_KEY` - Bitquery API key (optional fallback for $FSBD balance when RPC fails) - see BITQUERY_SETUP.md
 
 ## Security Notes
 

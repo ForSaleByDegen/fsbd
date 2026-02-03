@@ -9,6 +9,7 @@ import { getAssociatedTokenAddress, getAccount, getMint } from '@solana/spl-toke
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { supabase } from '@/lib/supabase'
 import { getFsbdMintAddress, getUserTier } from '@/lib/tier-check'
+import { getTokenBalanceViaBitquery } from '@/lib/bitquery-balance'
 
 const FSBD_PRODUCTION_MINT = 'A8sdJBY6UGErXW2gNVT6s13Qn4FJwGyRp63Y5mZBpump'
 
@@ -98,6 +99,12 @@ export async function GET(request: NextRequest) {
             balance = alt
             mintToUse = configuredMint
           }
+        }
+      }
+      if (balance === 0) {
+        const bitqueryBalance = await getTokenBalanceViaBitquery(wallet, prodMintKey.toString())
+        if (bitqueryBalance > 0) {
+          balance = bitqueryBalance
         }
       }
     } catch {

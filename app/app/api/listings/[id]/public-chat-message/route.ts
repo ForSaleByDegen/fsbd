@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase'
 import { hashWalletAddress } from '@/lib/supabase'
 import { getAdminUser } from '@/lib/admin'
 import { getUserTokenBalance, getFsbdMintAddress } from '@/lib/tier-check'
+import { getTokenBalanceViaBitquery } from '@/lib/bitquery-balance'
 
 const FSBD_PRODUCTION_MINT = 'A8sdJBY6UGErXW2gNVT6s13Qn4FJwGyRp63Y5mZBpump'
 
@@ -90,6 +91,9 @@ export async function POST(
       let balance = await getUserTokenBalance(wallet, connection, FSBD_PRODUCTION_MINT)
       if (balance === 0 && mintOverride && getFsbdMintAddress(mintOverride) !== FSBD_PRODUCTION_MINT) {
         balance = await getUserTokenBalance(wallet, connection, mintOverride)
+      }
+      if (balance === 0) {
+        balance = await getTokenBalanceViaBitquery(wallet, FSBD_PRODUCTION_MINT)
       }
 
       if (balance < minTokens) {

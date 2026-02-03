@@ -1,6 +1,6 @@
 # Bitquery Balance Verification (Optional Fallback)
 
-When Solana RPC reports 0 SOL incorrectly (common with public RPC or Phantom on mobile), we use **Bitquery** as a balance verification fallback.
+When Solana RPC fails or returns 0 incorrectly (common with public RPC or rate limits), we use **Bitquery** as a balance verification fallback.
 
 > **Important:** Bitquery is **read-only**. It cannot send transactions. Actual purchases still require a working Solana RPC (Helius, QuickNode, etc.). Bitquery only helps verify balance when RPC is wrong.
 
@@ -12,9 +12,14 @@ When Solana RPC reports 0 SOL incorrectly (common with public RPC or Phantom on 
 
 ## What It Does
 
+**SOL balance (purchase flow):**
 - When RPC reports 0 SOL, the app calls `/api/balance/verify?wallet=XXX`
 - If Bitquery confirms you have SOL, shows: "Bitquery confirms you have X.XX SOL. Proceed with purchase?"
-- User can proceed with more confidence
+
+**$FSBD token balance (tier, public chat):**
+- When RPC returns 0 for $FSBD, `/api/config/balance-check` and public chat message API try Bitquery
+- If Bitquery returns a positive balance, tier/chat access is granted
+- Helps when RPC is rate-limited or pump.fun tokens are slow to index
 
 ## Related Bitquery APIs (for future use)
 
