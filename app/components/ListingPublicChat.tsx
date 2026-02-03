@@ -16,6 +16,8 @@ import {
 } from '@/lib/chat-encryption'
 import { Button } from './ui/button'
 
+const PUBLIC_CHAT_MIN_FSBD = 10000
+
 interface ListingPublicChatProps {
   listingId: string
   currentUserWallet: string
