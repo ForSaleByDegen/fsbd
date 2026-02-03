@@ -176,7 +176,7 @@ export async function createPumpFunToken(
 
   const createBuffer = await createRes.arrayBuffer()
   const createTx = VersionedTransaction.deserialize(new Uint8Array(createBuffer))
-  createTx.partialSign(mintKeypair)
+  createTx.sign([mintKeypair])
 
   if (!signTransaction) throw new Error('Wallet signTransaction not available')
   const signedCreate = await signTransaction(createTx)
