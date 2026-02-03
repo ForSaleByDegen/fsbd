@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
 
     // Resize if over pump.fun's ~1MB limit to avoid 413
     const { buffer, mime } = await resizeForPump(file)
-    const resizedBlob = new Blob([buffer], { type: mime })
+    const resizedBlob = new Blob([new Uint8Array(buffer)], { type: mime })
 
     const pumpForm = new FormData()
     pumpForm.append('file', resizedBlob, 'token-image.png')
