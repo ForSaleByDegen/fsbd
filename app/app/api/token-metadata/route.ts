@@ -36,20 +36,39 @@ export async function POST(request: NextRequest) {
     const telegram = typeof body.telegram === 'string' ? body.telegram.trim().slice(0, 500) : ''
     const discord = typeof body.discord === 'string' ? body.discord.trim().slice(0, 500) : ''
     const bannerUrl = typeof body.bannerUrl === 'string' ? body.bannerUrl.trim().slice(0, 500) : ''
+    // Use listing URL (externalUrl) as website when no custom website provided
+    const websiteDisplay = website || externalUrl
 
     const attributes: Array<{ trait_type: string; value: string }> = []
-    if (website) attributes.push({ trait_type: 'website', value: website })
+    if (websiteDisplay) attributes.push({ trait_type: 'website', value: websiteDisplay })
     if (twitter) attributes.push({ trait_type: 'twitter', value: twitter })
     if (telegram) attributes.push({ trait_type: 'telegram', value: telegram })
     if (discord) attributes.push({ trait_type: 'discord', value: discord })
     if (bannerUrl) attributes.push({ trait_type: 'banner', value: bannerUrl })
 
+    // Pump.fun expects twitter, telegram, website as top-level fields and optionally a links object
     const metadata: Record<string, unknown> = {
       name,
       symbol,
       description,
       image: imageUrl,
       external_url: externalUrl || website || BASE_URL,
+      showName: true,
+      // Top-level fields for pump.fun social display
+      ...(websiteDisplay && { website: websiteDisplay }),
+      ...(twitter && { twitter }),
+      ...(telegram && { telegram }),
+      ...(discord && { discord }),
+      ...(bannerUrl && { banner: bannerUrl }),
+      // Links object for platforms that expect this structure (e.g. Moralis)
+      ...((websiteDisplay || twitter || telegram || discord) && {
+        links: {
+          ...(websiteDisplay && { website: websiteDisplay }),
+          ...(twitter && { twitter }),
+          ...(telegram && { telegram }),
+          ...(discord && { discord }),
+        },
+      }),
       attributes: attributes.length > 0 ? attributes : undefined,
       properties: {
         files: bannerUrl

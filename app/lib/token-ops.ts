@@ -73,26 +73,40 @@ async function getMetadataUri(
   return uploadToPumpIpfs(tokenName, tokenSymbol, {
     imageFile: options.imageFile,
     imageUrl: options.imageUrl,
-        description: options.description || `Token for listing on $FSBD`,
+    description: desc,
+    extras: options.extras,
   })
 }
 
 async function uploadToPumpIpfs(
   tokenName: string,
   tokenSymbol: string,
-  options: { imageFile?: File; imageUrl?: string; description?: string }
+  options: {
+    imageFile?: File
+    imageUrl?: string
+    description?: string
+    extras?: TokenMetadataExtras
+  }
 ): Promise<string> {
   // Prefer imageUrl: sends tiny JSON, server fetches image - avoids 413 on large files
   if (options.imageUrl) {
+    const body: Record<string, unknown> = {
+      imageUrl: options.imageUrl,
+      name: tokenName,
+      symbol: tokenSymbol,
+      description: options.description,
+    }
+    if (options.extras) {
+      if (options.extras.website) body.website = options.extras.website
+      if (options.extras.externalUrl && !body.website) body.website = options.extras.externalUrl
+      if (options.extras.twitter) body.twitter = options.extras.twitter
+      if (options.extras.telegram) body.telegram = options.extras.telegram
+      if (options.extras.bannerUrl) body.bannerUrl = options.extras.bannerUrl
+    }
     const res = await fetch('/api/pump-ipfs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        imageUrl: options.imageUrl,
-        name: tokenName,
-        symbol: tokenSymbol,
-        description: options.description,
-      }),
+      body: JSON.stringify(body),
     })
     if (!res.ok) {
       const err = await res.json().catch(() => ({}))

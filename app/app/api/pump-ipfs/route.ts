@@ -62,6 +62,7 @@ export async function POST(request: NextRequest) {
     let name: string
     let symbol: string
     let description: string
+    let pumpExtras: { twitter?: string; telegram?: string; website?: string; banner?: string } = {}
 
     if (contentType.includes('multipart/form-data')) {
       const formData = await request.formData()
@@ -85,6 +86,13 @@ export async function POST(request: NextRequest) {
       const imgRes = await fetch(imageUrl)
       if (!imgRes.ok) throw new Error('Could not fetch image from URL')
       file = await imgRes.blob()
+      // Extract optional socials for pump.fun FormData
+      pumpExtras = {
+        twitter: typeof body.twitter === 'string' ? body.twitter.trim().slice(0, 500) : undefined,
+        telegram: typeof body.telegram === 'string' ? body.telegram.trim().slice(0, 500) : undefined,
+        website: typeof body.website === 'string' ? body.website.trim().slice(0, 500) : undefined,
+        banner: typeof body.bannerUrl === 'string' ? body.bannerUrl.trim().slice(0, 500) : undefined,
+      }
     } else {
       return NextResponse.json(
         { error: 'Expected multipart/form-data or application/json' },
@@ -105,6 +113,9 @@ export async function POST(request: NextRequest) {
     pumpForm.append('symbol', symbol)
     pumpForm.append('description', description)
     pumpForm.append('showName', 'true')
+    if (pumpExtras.website) pumpForm.append('website', pumpExtras.website)
+    if (pumpExtras.twitter) pumpForm.append('twitter', pumpExtras.twitter)
+    if (pumpExtras.telegram) pumpForm.append('telegram', pumpExtras.telegram)
 
     const res = await fetch(PUMP_IPFS, {
       method: 'POST',
