@@ -149,15 +149,15 @@ export async function createPumpFunToken(
     description: options.description,
   })
 
-  // Step 1: Create token only (amount: 0 avoids combined create+buy which triggers read-only account error)
+  // Create token with dev buy in one tx (PumpPortal docs use amount > 0; amount: 0 can cause read-only account errors)
   const createBody = {
     publicKey: wallet.toBase58(),
     action: 'create',
     tokenMetadata: { name: tokenName, symbol: tokenSymbol, uri: metadataUri },
     mint: mintKeypair.publicKey.toBase58(),
     denominatedInSol: 'true',
-    amount: 0,
-    slippage: 10,
+    amount: devBuySol,
+    slippage: 15,
     priorityFee: 0.0005,
     pool: 'pump',
     isMayhemMode: 'false',
@@ -176,7 +176,7 @@ export async function createPumpFunToken(
 
   const createBuffer = await createRes.arrayBuffer()
   const createTx = VersionedTransaction.deserialize(new Uint8Array(createBuffer))
-  createTx.sign([mintKeypair])
+  createTx.partialSign(mintKeypair)
 
   if (!signTransaction) throw new Error('Wallet signTransaction not available')
   const signedCreate = await signTransaction(createTx)
@@ -186,45 +186,6 @@ export async function createPumpFunToken(
     preflightCommitment: 'confirmed',
   })
   await connection.confirmTransaction(createSig, 'confirmed')
-
-  // Step 2: Dev buy (separate tx — avoids Instruction 2 read-only account error in combined create+buy)
-  if (devBuySol > 0) {
-    const buyBody = {
-      publicKey: wallet.toBase58(),
-      action: 'buy',
-      mint: mintKeypair.publicKey.toBase58(),
-      denominatedInSol: 'true',
-      amount: devBuySol,
-      slippage: 15,
-      priorityFee: 0.0005,
-      pool: 'pump',
-    }
-
-    const buyRes = await fetch(PUMP_TRADE_LOCAL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(buyBody),
-    })
-
-    if (!buyRes.ok) {
-      const errText = await buyRes.text()
-      console.warn('Dev buy API failed (token created, buy skipped):', errText)
-    } else {
-      const buyBuffer = await buyRes.arrayBuffer()
-      const buyTx = VersionedTransaction.deserialize(new Uint8Array(buyBuffer))
-      const signedBuy = await signTransaction(buyTx)
-      try {
-        await connection.sendTransaction(signedBuy as VersionedTransaction, {
-          skipPreflight: true,
-          maxRetries: 5,
-          preflightCommitment: 'confirmed',
-        })
-      } catch (buyErr) {
-        console.warn('Dev buy send failed (token created, user can buy on pump.fun):', buyErr)
-        // Don't throw — token is created, listing can still be saved
-      }
-    }
-  }
 
   return mintKeypair.publicKey.toBase58()
 }
