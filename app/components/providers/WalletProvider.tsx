@@ -6,6 +6,7 @@ import { WalletModalProvider } from '@solana/wallet-adapter-react-ui'
 import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets'
 import { clusterApiUrl } from '@solana/web3.js'
 import { useMemo } from 'react'
+import TierProvider from './TierProvider'
 import '@solana/wallet-adapter-react-ui/styles.css'
 
 export default function WalletProvider({ children }: { children: React.ReactNode }) {
@@ -26,7 +27,9 @@ export default function WalletProvider({ children }: { children: React.ReactNode
     <ConnectionProvider endpoint={endpoint} config={config}>
       <SolanaWalletProvider wallets={wallets} autoConnect>
         <WalletModalProvider>
-          {children}
+          <TierProvider>
+            {children}
+          </TierProvider>
         </WalletModalProvider>
       </SolanaWalletProvider>
     </ConnectionProvider>

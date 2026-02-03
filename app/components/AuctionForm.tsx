@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useWallet, useConnection } from '@solana/wallet-adapter-react'
 import { useRouter } from 'next/navigation'
 import { Transaction, SystemProgram, LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js'
-import { getUserTier, getUserTokenBalance, calculateListingFee, canCreateAuctionWithBalance } from '@/lib/tier-check'
+import { calculateListingFee, canCreateAuctionWithBalance } from '@/lib/tier-check'
 import { hashWalletAddress } from '@/lib/supabase'
 import { uploadImageToIPFS } from '@/lib/pinata'
 import { createAuctionToken, simulateDevBuy } from '@/lib/auction-utils'
@@ -18,17 +18,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select'
+import { useTier } from './providers/TierProvider'
 
 export default function AuctionForm() {
   const { publicKey, signTransaction } = useWallet()
   const { connection } = useConnection()
   const router = useRouter()
+  const { tier: tierState, refresh } = useTier()
   const [loading, setLoading] = useState(false)
-  const [tier, setTier] = useState<'free' | 'bronze' | 'silver' | 'gold'>('free')
-  const [userBalance, setUserBalance] = useState(0)
   const [auctionMinTokens, setAuctionMinTokens] = useState(10000000)
-  const [tierLoading, setTierLoading] = useState(true)
-  const [balanceHint, setBalanceHint] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -43,52 +41,14 @@ export default function AuctionForm() {
     tokenSymbol: ''
   })
 
-  // Check tier, balance, and config on mount
   useEffect(() => {
-    if (publicKey && connection) {
-      checkTier()
-    } else {
-      setTierLoading(false)
-    }
-  }, [publicKey, connection])
-
-  const checkTier = async () => {
-    if (!publicKey || !connection) return
-    
-    try {
-      setTierLoading(true)
-      setBalanceHint(null)
-      const configRes = await fetch('/api/config').then((r) => r.json()).catch(() => ({}))
-      if (typeof configRes.auction_min_tokens === 'number') {
-        setAuctionMinTokens(configRes.auction_min_tokens)
-      }
-      const serverRes = await fetch(`/api/config/balance-check?wallet=${encodeURIComponent(publicKey.toString())}`).then((r) => r.json()).catch(() => ({}))
-      if (typeof serverRes.balance === 'number') {
-        setUserBalance(serverRes.balance)
-        setTier(serverRes.tier || 'free')
-        if (serverRes.balance === 0 && serverRes.hint) {
-          setBalanceHint(serverRes.hint)
-        }
-      } else {
-        const mintOverride = configRes.fsbd_token_mint && configRes.fsbd_token_mint !== 'FSBD_TOKEN_MINT_PLACEHOLDER'
-          ? configRes.fsbd_token_mint
-          : undefined
-        const [balance, userTier] = await Promise.all([
-          getUserTokenBalance(publicKey.toString(), connection, mintOverride),
-          getUserTier(publicKey.toString(), connection, undefined, mintOverride),
-        ])
-        setTier(userTier)
-        setUserBalance(balance)
-        if (balance === 0) {
-          setBalanceHint('Set your $FSBD contract address in Admin → Platform Config, or NEXT_PUBLIC_FSBD_TOKEN_MINT in Vercel.')
-        }
-      }
-    } catch (error) {
-      console.error('Error checking tier:', error)
-    } finally {
-      setTierLoading(false)
-    }
-  }
+    fetch('/api/config')
+      .then((r) => r.json())
+      .then((c) => {
+        if (typeof c.auction_min_tokens === 'number') setAuctionMinTokens(c.auction_min_tokens)
+      })
+      .catch(() => {})
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -98,9 +58,9 @@ export default function AuctionForm() {
       return
     }
 
-    // Check auction gate (admin-configurable threshold)
-    if (!canCreateAuctionWithBalance(userBalance, auctionMinTokens)) {
-      alert(`Auction creation requires ${auctionMinTokens.toLocaleString()} $FSBD. Your balance: ${userBalance.toLocaleString()} $FSBD.`)
+    const fresh = await refresh()
+    if (!canCreateAuctionWithBalance(fresh.balance, auctionMinTokens)) {
+      alert(`Auction creation requires ${auctionMinTokens.toLocaleString()} $FSBD. Your balance: ${fresh.balance.toLocaleString()} $FSBD.`)
       return
     }
 
@@ -108,7 +68,7 @@ export default function AuctionForm() {
       setLoading(true)
       
       // Ensure sufficient SOL for token creation (~0.01) + fee + buffer
-      const fee = calculateListingFee(tier)
+      const fee = calculateListingFee(fresh.tier)
       const minSol = 0.02 + fee
       const balance = await connection.getBalance(publicKey)
       if (balance < minSol * LAMPORTS_PER_SOL) {
@@ -214,9 +174,9 @@ export default function AuctionForm() {
     }
   }
 
-  const canCreateAuction = canCreateAuctionWithBalance(userBalance, auctionMinTokens)
+  const canCreateAuction = canCreateAuctionWithBalance(tierState.balance, auctionMinTokens)
 
-  if (tierLoading) {
+  if (publicKey && tierState.loading) {
     return <div className="text-center py-12">Checking tier...</div>
   }
 
@@ -226,20 +186,18 @@ export default function AuctionForm() {
         <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-400 rounded">
           <p className="text-sm text-yellow-800 dark:text-yellow-200">
             <strong>Auction Creation Gated:</strong> You need {auctionMinTokens.toLocaleString()} $FSBD to create auctions. 
-            Your balance: <strong>{userBalance.toLocaleString()} $FSBD</strong> (tier: {tier})
+            Your balance: <strong>{tierState.balance.toLocaleString()} $FSBD</strong> (tier: {tierState.tier})
           </p>
-          {balanceHint && (
-            <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-2">
-              {balanceHint}
-            </p>
+          {tierState.error && (
+            <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-2">{tierState.error}</p>
           )}
           <button
             type="button"
-            onClick={checkTier}
-            disabled={tierLoading}
+            onClick={() => refresh()}
+            disabled={tierState.loading}
             className="mt-2 text-sm underline text-yellow-700 dark:text-yellow-300 hover:no-underline"
           >
-            {tierLoading ? 'Checking...' : 'Refresh balance'}
+            {tierState.loading ? 'Checking...' : 'Refresh balance'}
           </button>
         </div>
       )}

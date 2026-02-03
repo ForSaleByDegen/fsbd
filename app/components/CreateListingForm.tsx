@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useWallet, useConnection } from '@solana/wallet-adapter-react'
 import { useRouter } from 'next/navigation'
 import { Transaction, SystemProgram, LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js'
-import { getUserTier, calculateListingFee, getMaxImagesForTier } from '@/lib/tier-check'
+import { calculateListingFee, getMaxImagesForTier } from '@/lib/tier-check'
 import { supabase, hashWalletAddress } from '@/lib/supabase'
 import { incrementListingCount, addToTotalFees, upsertUserProfile } from '@/lib/admin'
 import { uploadMultipleImagesToIPFS } from '@/lib/pinata'
@@ -37,16 +37,6 @@ export default function CreateListingForm() {
     canCreate: boolean
     fsbd_token_mint?: string | null
   } | null>(null)
-
-  useEffect(() => {
-    if (!publicKey || !connection) {
-      setMaxImages(1)
-      return
-    }
-    getUserTier(publicKey.toString(), connection)
-      .then((tier) => setMaxImages(getMaxImagesForTier(tier)))
-      .catch(() => setMaxImages(1))
-  }, [publicKey?.toString(), connection])
 
   useEffect(() => {
     if (!publicKey) {
@@ -117,10 +107,8 @@ export default function CreateListingForm() {
 
     try {
       setLoading(true)
-      
-      // Enforce tier-based image limit (in case of stale state)
-      const tier = await getUserTier(publicKey.toString(), connection)
-      const allowedImages = Math.min(formData.images.length, getMaxImagesForTier(tier))
+      const fresh = await refresh()
+      const allowedImages = Math.min(formData.images.length, getMaxImagesForTier(fresh.tier))
       const rawImages = formData.images.slice(0, allowedImages)
       // Strip EXIF/metadata (GPS, camera info, timestamps) before any upload
       const imagesToUpload = await stripImageMetadataBatch(rawImages)
@@ -155,7 +143,7 @@ export default function CreateListingForm() {
           .join('. ')
           .slice(0, 500)
 
-        fee = calculateListingFee(tier)
+        fee = calculateListingFee(fresh.tier)
         const devBuy = Math.max(0, formData.devBuySol ?? 0.01)
 
         try {
@@ -229,7 +217,7 @@ export default function CreateListingForm() {
 
         // Update user profile stats
         try {
-          await upsertUserProfile(publicKey.toString(), { tier })
+          await upsertUserProfile(publicKey.toString(), { tier: fresh.tier })
           await incrementListingCount(publicKey.toString())
           await addToTotalFees(publicKey.toString(), fee)
         } catch (error) {
@@ -258,7 +246,7 @@ export default function CreateListingForm() {
 
         // Update user profile stats (no fee paid)
         try {
-          await upsertUserProfile(publicKey.toString(), { tier })
+          await upsertUserProfile(publicKey.toString(), { tier: fresh.tier })
           await incrementListingCount(publicKey.toString())
         } catch (error) {
           console.error('Error updating user profile:', error)

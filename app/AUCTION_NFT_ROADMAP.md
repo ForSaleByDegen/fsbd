@@ -8,29 +8,58 @@
 
 ## NFT-First + Metaplex Auction House (Future)
 
-Your idea: **mint the item as an NFT, then run the auction on that NFT** aligns with industry standards.
+**Flow:** mint the item as an NFT → list on Auction House → bid → execute sale.
 
-### Option A: Metaplex Auction House (Recommended)
-- **Escrow-less**: NFT stays in seller wallet until sale
-- **Standard protocol**: Used by Magic Eden, Tensor, etc.
-- **SDK**: `@metaplex-foundation/js` or `@metaplex-foundation/auction-house`
-- **Flow**: Create Auction House → List NFT → Bid → Execute sale
-- **Requires**: Metaplex Token Metadata (mpl-token-metadata) for NFT metadata
+---
 
-### Option B: NFT Mint + Custom Auction
-- Mint listing image as NFT (Token Metadata or cNFT/Bubblegum)
-- Store NFT mint in listing
-- Keep current off-chain auction logic; settle by transferring NFT to winner
+## Metaplex Auction House (SDK)
 
-### Steps to Integrate Metaplex Auction House
-1. Add `@metaplex-foundation/mpl-token-metadata` (or mpl-auction-house JS bindings)
-2. Create an Auction House account for FSBD (one-time setup)
-3. When creating auction: mint item as NFT with metadata (name, image, description)
-4. List NFT on Auction House at reserve price
-5. Bidders place bids via Auction House
-6. Execute sale when auction ends (or instant buy at list price)
+Auction House runs on **Mainnet Beta** and **Devnet**. Use the JS SDK for a simpler integration.
 
-### Resources
-- [Metaplex Auction House Docs](https://developers.metaplex.com/auction-house/overview)
-- [Metaplex Developer Portal](https://developers.metaplex.com)
-- Note: Original Auction House is deprecated; Metaplex recommends Auctioneer for timed auctions
+### JS SDK API (`metaplex.auctionHouse()`)
+
+```js
+// Creating and updating the Auction House
+metaplex.auctionHouse().create();
+metaplex.auctionHouse().update();
+
+// Trading on Auction House
+metaplex.auctionHouse().bid();
+metaplex.auctionHouse().list();
+metaplex.auctionHouse().executeSale();
+
+// Cancelling a bid or listing
+metaplex.auctionHouse().cancelBid();
+metaplex.auctionHouse().cancelListing();
+
+// Finding bids, listings and purchases
+metaplex.auctionHouse().findBidBy();
+metaplex.auctionHouse().findBidByTradeState();
+metaplex.auctionHouse().findListingsBy();
+metaplex.auctionHouse().findListingByTradeState();
+metaplex.auctionHouse().findPurchasesBy();
+```
+
+### Integration Steps
+1. Add `@metaplex-foundation/js` (includes Auction House module)
+2. Create FSBD Auction House (one-time)
+3. When creating auction: mint item as NFT (Token Metadata) → list via `list()`
+4. Bidders: `bid()`, seller/anyone: `executeSale()` when auction ends
+5. Escrow-less: NFT stays in seller wallet until sale
+
+---
+
+## Resources
+
+| Resource | Link | Notes |
+|----------|------|-------|
+| Metaplex Auction House Program | [metaplex-program-library/auction-house](https://github.com/metaplex-foundation/metaplex-program-library/tree/master/auction-house/program) | Rust program (IDL) |
+| Metaplex JS SDK | NPM `@metaplex-foundation/js` | High-level API |
+| Anchor Auction (yoshidan) | [anchor-auction](https://github.com/yoshidan/anchor-auction) | NFT auction with Anchor; exhibitor → bidder flow |
+| Solana Auction House (udbhav1) | [solana-auctionhouse](https://github.com/udbhav1/solana-auctionhouse) | English, sealed first-price, sealed second-price |
+| Solana Program Examples | [program-examples](https://github.com/solana-developers/program-examples) | Escrow, token minting, NFT minting examples |
+
+---
+
+## Note on Deprecation
+Metaplex marks the original Auction House as deprecated. For **timed auctions** (English, Dutch), consider Auctioneer. For FSBD-style instant sales and list-at-reserve, the SDK above still applies.

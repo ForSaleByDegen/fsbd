@@ -4,13 +4,13 @@ import { useWallet, useConnection } from '@solana/wallet-adapter-react'
 import { useEffect, useState } from 'react'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
-import { getUserTier } from '@/lib/tier-check'
 import Link from 'next/link'
 import ListingCard from '@/components/ListingCard'
 import BuyerOrderActions from '@/components/BuyerOrderActions'
 import ShippingAddressGuidance from '@/components/ShippingAddressGuidance'
 import LocalShippingAddressForm from '@/components/LocalShippingAddressForm'
 import ProfileAreaTag from '@/components/ProfileAreaTag'
+import { useTier } from '@/components/providers/TierProvider'
 
 // Dynamic import for Privy to avoid build issues
 let usePrivy: any = null
@@ -185,7 +185,8 @@ export default function ProfilePage() {
   const { wallets } = walletsHook
   const { publicKey, connected } = useWallet()
   const { connection } = useConnection()
-  const [tier, setTier] = useState<'free' | 'bronze' | 'silver' | 'gold'>('free')
+  const { tier: tierState } = useTier()
+  const tier = tierState.tier
   const [loading, setLoading] = useState(true)
   const [profileData, setProfileData] = useState<ProfileData | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -209,12 +210,7 @@ export default function ProfilePage() {
     setLoading(true)
     setError(null)
     try {
-      const [apiRes, userTier] = await Promise.all([
-        fetch(`/api/profile?wallet=${encodeURIComponent(walletAddress)}`),
-        connection ? getUserTier(walletAddress, connection).catch(() => 'free' as const) : Promise.resolve('free' as const),
-      ])
-
-      setTier(userTier)
+      const apiRes = await fetch(`/api/profile?wallet=${encodeURIComponent(walletAddress)}`)
 
       if (!apiRes.ok) {
         const err = await apiRes.json().catch(() => ({}))

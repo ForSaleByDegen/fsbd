@@ -1,17 +1,18 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useWallet, useConnection } from '@solana/wallet-adapter-react'
-import { getUserTier, TIER_THRESHOLDS, getTierBenefits, type TierThresholds } from '@/lib/tier-check'
+import { useWallet } from '@solana/wallet-adapter-react'
+import { TIER_THRESHOLDS, getTierBenefits, type TierThresholds } from '@/lib/tier-check'
 import BuyFsbdSection from './BuyFsbdSection'
+import { useTier } from './providers/TierProvider'
 
 export default function TierDisplay() {
   const { publicKey } = useWallet()
-  const { connection } = useConnection()
-  const [tier, setTier] = useState<'free' | 'bronze' | 'silver' | 'gold'>('free')
-  const [loading, setLoading] = useState(true)
+  const { tier: tierState, refresh } = useTier()
   const [thresholds, setThresholds] = useState<TierThresholds>(TIER_THRESHOLDS)
   const [fsbdMint, setFsbdMint] = useState<string | null>(null)
+  const tier = tierState.tier
+  const loading = publicKey ? tierState.loading : false
 
   useEffect(() => {
     fetch('/api/config')
@@ -26,31 +27,6 @@ export default function TierDisplay() {
       })
       .catch(() => {})
   }, [])
-
-  useEffect(() => {
-    if (publicKey && connection) {
-      loadTier()
-    } else {
-      setLoading(false)
-    }
-  }, [publicKey, connection, thresholds, fsbdMint])
-
-  const loadTier = async () => {
-    if (!publicKey || !connection) return
-    try {
-      const serverRes = await fetch(`/api/config/balance-check?wallet=${encodeURIComponent(publicKey.toString())}`).then((r) => r.json()).catch(() => null)
-      if (serverRes && typeof serverRes.tier === 'string') {
-        setTier(serverRes.tier)
-      } else {
-        const userTier = await getUserTier(publicKey.toString(), connection, thresholds, fsbdMint ?? undefined)
-        setTier(userTier)
-      }
-    } catch (error) {
-      console.error('Error loading tier:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const tiers = [
     {
@@ -79,11 +55,23 @@ export default function TierDisplay() {
     <>
       {publicKey ? (
         <div className="mb-8 p-4 bg-muted rounded-lg">
-          <p className="font-semibold">Your Current Tier: <span className="capitalize">{tier}</span></p>
-          <p className="text-sm text-muted-foreground mt-2">
-            Hold $FSBD tokens to unlock higher tiers and fee reductions. 
-            Balance checked on-chain - no data sharing.
-          </p>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="font-semibold">Your Current Tier: <span className="capitalize">{tier}</span></p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Hold $FSBD tokens to unlock higher tiers and fee reductions. 
+                Balance checked on-chain - no data sharing.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => refresh()}
+              disabled={loading}
+              className="text-sm underline hover:no-underline text-muted-foreground hover:text-foreground disabled:opacity-50"
+            >
+              {loading ? 'Checking…' : 'Refresh balance'}
+            </button>
+          </div>
         </div>
       ) : (
         <div className="mb-8 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">

@@ -15,8 +15,7 @@ import {
   decryptMessageWithKey,
 } from '@/lib/chat-encryption'
 import { Button } from './ui/button'
-
-const PUBLIC_CHAT_MIN_FSBD = 10000
+import { useTier } from './providers/TierProvider'
 
 interface ListingPublicChatProps {
   listingId: string
@@ -45,9 +44,14 @@ export default function ListingPublicChat({
   const [sending, setSending] = useState(false)
   const [chatKey, setChatKey] = useState<Uint8Array | null>(null)
   const [keyError, setKeyError] = useState<string | null>(null)
-  const [canChatByFsbd, setCanChatByFsbd] = useState<boolean | null>(null)
-  const [fsbdChatError, setFsbdChatError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const { tier: tierState } = useTier()
+  const canChatByFsbd = tierState.loading ? null : tierState.balance >= tierState.chatMinTokens
+  const fsbdChatError = tierState.error
+    ? tierState.error
+    : !tierState.loading && canChatByFsbd === false
+      ? `Hold at least ${tierState.chatMinTokens.toLocaleString()} $FSBD to post in public chat`
+      : null
   const myHash = hashWalletAddress(currentUserWallet)
   const isTokenGated = !!(tokenMint && tokenMint.trim())
 
@@ -73,28 +77,6 @@ export default function ListingPublicChat({
     },
     []
   )
-
-  useEffect(() => {
-    if (!currentUserWallet) return
-    fetch(`/api/config/balance-check?wallet=${encodeURIComponent(currentUserWallet)}`)
-      .then((r) => r.json())
-      .then((d) => {
-        if (!d.mintSet) {
-          setCanChatByFsbd(true)
-          setFsbdChatError(null)
-          return
-        }
-        const balance = typeof d.balance === 'number' ? d.balance : 0
-        const minReq = typeof d.chatMinTokens === 'number' ? d.chatMinTokens : PUBLIC_CHAT_MIN_FSBD
-        const canChat = balance >= minReq
-        setCanChatByFsbd(canChat)
-        setFsbdChatError(canChat ? null : `Hold at least ${minReq.toLocaleString()} $FSBD to post in public chat`)
-      })
-      .catch(() => {
-        setCanChatByFsbd(null)
-        setFsbdChatError(null)
-      })
-  }, [currentUserWallet])
 
   useEffect(() => {
     if (!listingId) return
