@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
     let balance = 0
     let mintToUse = FSBD_PRODUCTION_MINT
     try {
-      balance = await fetchBalance(prodMintKey)
+      balance = await fetchBalanceForMint(connection, userKey, prodMintKey)
       if (balance === 0) {
         const configuredMint = getFsbdMintAddress(mintOverride || undefined)
         if (configuredMint !== FSBD_PRODUCTION_MINT) {
