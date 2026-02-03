@@ -26,6 +26,21 @@ async function getBalanceViaParsedAccounts(
   return typeof ui === 'number' ? ui : Number(info.tokenAmount.amount || 0) / Math.pow(10, info.tokenAmount.decimals || 6)
 }
 
+async function fetchBalanceForMint(
+  connection: Connection,
+  userKey: PublicKey,
+  mint: PublicKey
+): Promise<number> {
+  try {
+    const ata = await getAssociatedTokenAddress(mint, userKey)
+    const account = await getAccount(connection, ata)
+    const mintInfo = await getMint(connection, mint)
+    return Number(account.amount) / 10 ** mintInfo.decimals
+  } catch {
+    return getBalanceViaParsedAccounts(connection, userKey, mint)
+  }
+}
+
 function getChatMinTokens(rows: { key: string; value_json: unknown }[]): number {
   const row = rows?.find((r) => r.key === 'chat_min_tokens')
   if (!row) return 10000
@@ -71,17 +86,6 @@ export async function GET(request: NextRequest) {
     const userKey = new PublicKey(wallet)
     const prodMintKey = new PublicKey(FSBD_PRODUCTION_MINT)
 
-    const fetchBalance = async (mint: PublicKey): Promise<number> => {
-      try {
-        const ata = await getAssociatedTokenAddress(mint, userKey)
-        const account = await getAccount(connection, ata)
-        const mintInfo = await getMint(connection, mint)
-        return Number(account.amount) / 10 ** mintInfo.decimals
-      } catch {
-        return getBalanceViaParsedAccounts(connection, userKey, mint)
-      }
-    }
-
     let balance = 0
     let mintToUse = FSBD_PRODUCTION_MINT
     try {
@@ -89,7 +93,7 @@ export async function GET(request: NextRequest) {
       if (balance === 0) {
         const configuredMint = getFsbdMintAddress(mintOverride || undefined)
         if (configuredMint !== FSBD_PRODUCTION_MINT) {
-          const alt = await fetchBalance(new PublicKey(configuredMint))
+          const alt = await fetchBalanceForMint(connection, userKey, new PublicKey(configuredMint))
           if (alt > 0) {
             balance = alt
             mintToUse = configuredMint

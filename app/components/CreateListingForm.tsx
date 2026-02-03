@@ -23,13 +23,15 @@ import {
 } from './ui/select'
 import { CATEGORIES, getSubcategories } from '@/lib/categories'
 import BuyListingSlotButton from './BuyListingSlotButton'
+import { useTier } from './providers/TierProvider'
 
 export default function CreateListingForm() {
   const { publicKey, signTransaction, signMessage } = useWallet()
   const { connection } = useConnection()
   const router = useRouter()
+  const { tier: tierState, refresh } = useTier()
   const [loading, setLoading] = useState(false)
-  const [maxImages, setMaxImages] = useState(1)
+  const maxImages = getMaxImagesForTier(tierState.tier)
   const [isAdminUser, setIsAdminUser] = useState(false)
   const [limitCheck, setLimitCheck] = useState<{
     currentCount: number
