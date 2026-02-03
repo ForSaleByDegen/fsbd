@@ -41,7 +41,7 @@ export default function CreateListingForm() {
   } | null>(null)
   // Use highest tier from both sources (TierProvider + limit-check) so we don't miss holdings
   const maxImages = isAdminUser ? 4 : Math.max(
-    getMaxImagesForTier((limitCheck?.tier || 'free') as Tier),
+    getMaxImagesForTier((limitCheck?.tier ?? 'free') as 'free' | 'bronze' | 'silver' | 'gold'),
     getMaxImagesForTier(tierState.tier)
   )
 
@@ -717,6 +717,7 @@ export default function CreateListingForm() {
           </div>
         )}
       </div>
+      )}
 
       {limitCheck && (
         <div className="mb-2">
