@@ -57,10 +57,7 @@ export async function POST(
       return NextResponse.json({ error: 'Database not configured' }, { status: 500 })
     }
 
-    const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL
-    if (!rpcUrl) {
-      return NextResponse.json({ error: 'RPC not configured' }, { status: 500 })
-    }
+    const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || 'https://api.mainnet-beta.solana.com'
 
     // Token-gate: require minimum 10k $FSBD to chat in public
     let mintOverride: string | null = null
@@ -77,9 +74,9 @@ export async function POST(
     }
 
     const connection = new Connection(rpcUrl)
-    let balance = await getUserTokenBalance(wallet, connection, mintOverride || undefined)
-    if (balance === 0 && getFsbdMintAddress(mintOverride || undefined) !== FSBD_PRODUCTION_MINT) {
-      balance = await getUserTokenBalance(wallet, connection, FSBD_PRODUCTION_MINT)
+    let balance = await getUserTokenBalance(wallet, connection, FSBD_PRODUCTION_MINT)
+    if (balance === 0 && mintOverride && getFsbdMintAddress(mintOverride) !== FSBD_PRODUCTION_MINT) {
+      balance = await getUserTokenBalance(wallet, connection, mintOverride)
     }
 
     if (balance < minTokens) {

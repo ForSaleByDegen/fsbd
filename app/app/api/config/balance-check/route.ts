@@ -53,11 +53,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'wallet required' }, { status: 400 })
     }
 
-    const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL
-    if (!rpcUrl) {
-      return NextResponse.json({ error: 'RPC not configured' }, { status: 500 })
-    }
-
+    const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || 'https://api.mainnet-beta.solana.com'
     const connection = new Connection(rpcUrl)
 
     let mintOverride: string | null = null
@@ -72,49 +68,46 @@ export async function GET(request: NextRequest) {
     if (!mintOverride || mintOverride === 'FSBD_TOKEN_MINT_PLACEHOLDER') {
       mintOverride = process.env.NEXT_PUBLIC_FSBD_TOKEN_MINT || null
     }
-    const mintToUse = getFsbdMintAddress(mintOverride || undefined)
-    const mintKey = new PublicKey(mintToUse)
     const userKey = new PublicKey(wallet)
+    const prodMintKey = new PublicKey(FSBD_PRODUCTION_MINT)
+
+    async function fetchBalance(mint: PublicKey): Promise<number> {
+      try {
+        const ata = await getAssociatedTokenAddress(mint, userKey)
+        const account = await getAccount(connection, ata)
+        const mintInfo = await getMint(connection, mint)
+        return Number(account.amount) / 10 ** mintInfo.decimals
+      } catch {
+        return getBalanceViaParsedAccounts(connection, userKey, mint)
+      }
+    }
 
     let balance = 0
+    let mintToUse = FSBD_PRODUCTION_MINT
     try {
-      const ata = await getAssociatedTokenAddress(mintKey, userKey)
-      const account = await getAccount(connection, ata)
-      const mint = await getMint(connection, mintKey)
-      balance = Number(account.amount) / 10 ** mint.decimals
-    } catch {
-      try {
-        balance = await getBalanceViaParsedAccounts(connection, userKey, mintKey)
-      } catch {
-        return NextResponse.json({
-          balance: 0,
-          tier: 'free',
-          mintSet: true,
-          mintSuffix: '...' + mintToUse.slice(-8),
-          hint: 'RPC failed or mint may be wrong. In Phantom: tap $FSBD → Details → copy Contract Address. Set it in Admin → Platform Config.',
-        })
-      }
-    }
-
-    if (balance === 0 && mintToUse !== FSBD_PRODUCTION_MINT) {
-      try {
-        const prodMintKey = new PublicKey(FSBD_PRODUCTION_MINT)
-        let prodBalance = 0
-        try {
-          const ata = await getAssociatedTokenAddress(prodMintKey, userKey)
-          const account = await getAccount(connection, ata)
-          const mint = await getMint(connection, prodMintKey)
-          prodBalance = Number(account.amount) / 10 ** mint.decimals
-        } catch {
-          prodBalance = await getBalanceViaParsedAccounts(connection, userKey, prodMintKey)
+      balance = await fetchBalance(prodMintKey)
+      if (balance === 0) {
+        const configuredMint = getFsbdMintAddress(mintOverride || undefined)
+        if (configuredMint !== FSBD_PRODUCTION_MINT) {
+          const alt = await fetchBalance(new PublicKey(configuredMint))
+          if (alt > 0) {
+            balance = alt
+            mintToUse = configuredMint
+          }
         }
-        if (prodBalance > 0) balance = prodBalance
-      } catch {
-        // Ignore fallback errors
       }
+    } catch {
+      return NextResponse.json({
+        balance: 0,
+        tier: 'free',
+        mintSet: true,
+        mintSuffix: '...' + FSBD_PRODUCTION_MINT.slice(-8),
+        chatMinTokens,
+        hint: 'RPC failed. Ensure NEXT_PUBLIC_RPC_URL points to mainnet (e.g. Helius, QuickNode). Free RPCs may be rate-limited.',
+      })
     }
 
-    const tier = await getUserTier(wallet, connection, undefined, balance > 0 ? FSBD_PRODUCTION_MINT : mintOverride)
+    const tier = await getUserTier(wallet, connection, undefined, balance > 0 ? mintToUse : mintOverride || undefined)
 
     return NextResponse.json({
       balance,
@@ -122,7 +115,7 @@ export async function GET(request: NextRequest) {
       mintSet: true,
       mintSuffix: '...' + mintToUse.slice(-8),
       chatMinTokens,
-      hint: balance === 0 ? 'Balance is 0. If you hold $FSBD, verify Admin → Platform Config mint matches Phantom (Token → Details → Contract Address).' : undefined,
+      hint: balance === 0 ? 'Balance is 0. If you hold $FSBD, verify RPC is mainnet and Admin → Platform Config mint matches Phantom (Token → Details → Contract Address).' : undefined,
     })
   } catch (e) {
     console.error('Balance check error:', e)
