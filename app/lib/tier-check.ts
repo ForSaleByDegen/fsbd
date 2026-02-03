@@ -1,12 +1,14 @@
 import { Connection, PublicKey } from '@solana/web3.js'
 import { getAssociatedTokenAddress, getAccount, getMint } from '@solana/spl-token'
 
-// TODO: Replace with actual $FSBD token mint address after launch
-// For devnet testing, use a mock mint address
+// $FSBD token mint - env/config override, or production fallback
 const FSBD_TOKEN_MINT = process.env.NEXT_PUBLIC_FSBD_TOKEN_MINT || 'FSBD_TOKEN_MINT_PLACEHOLDER'
 
-// Mock mint for devnet testing (replace with actual after launch)
-const MOCK_FSBD_MINT = 'So11111111111111111111111111111111111111112' // Wrapped SOL as placeholder
+// Production $FSBD (pump.fun) - used when env/config not set
+const FSBD_PRODUCTION_MINT = 'A8sdJBY6UGErXW2gNVT6s13Qn4FJwGyRp63Y5mZBpump'
+
+// Mock mint for devnet testing only
+const MOCK_FSBD_MINT = 'So11111111111111111111111111111111111111112' // Wrapped SOL
 
 // Tier thresholds (token amounts)
 // Updated: Start at 100k, top tier at 10M
@@ -19,13 +21,14 @@ export const TIER_THRESHOLDS = {
 export type Tier = 'free' | 'bronze' | 'silver' | 'gold'
 
 /**
- * Resolve which $FSBD mint to use (config/env override, or placeholder for devnet)
+ * Resolve which $FSBD mint to use (config/env override, production fallback, or devnet mock)
  */
 export function getFsbdMintAddress(mintOverride?: string | null): string {
   const fromOverride = mintOverride?.trim()
   if (fromOverride && fromOverride !== 'FSBD_TOKEN_MINT_PLACEHOLDER') return fromOverride
-  if (FSBD_TOKEN_MINT !== 'FSBD_TOKEN_MINT_PLACEHOLDER') return FSBD_TOKEN_MINT
-  return MOCK_FSBD_MINT
+  if (FSBD_TOKEN_MINT && FSBD_TOKEN_MINT !== 'FSBD_TOKEN_MINT_PLACEHOLDER') return FSBD_TOKEN_MINT
+  const isDevnet = process.env.NEXT_PUBLIC_SOLANA_NETWORK === 'devnet'
+  return isDevnet ? MOCK_FSBD_MINT : FSBD_PRODUCTION_MINT
 }
 
 /**

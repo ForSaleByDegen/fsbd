@@ -55,19 +55,10 @@ export async function GET(request: NextRequest) {
       const { data } = await client.from('platform_config').select('key, value_json')
       mintOverride = extractMintFromConfig((data as { key: string; value_json: unknown }[]) || [])
     }
-    if (!mintOverride) {
+    if (!mintOverride || mintOverride === 'FSBD_TOKEN_MINT_PLACEHOLDER') {
       mintOverride = process.env.NEXT_PUBLIC_FSBD_TOKEN_MINT || null
     }
-    if (!mintOverride || mintOverride === 'FSBD_TOKEN_MINT_PLACEHOLDER') {
-      return NextResponse.json({
-        balance: 0,
-        tier: 'free',
-        mintSet: false,
-        hint: 'Set $FSBD contract address in Admin → Platform Config, or NEXT_PUBLIC_FSBD_TOKEN_MINT in Vercel.',
-      })
-    }
-
-    const mintToUse = getFsbdMintAddress(mintOverride)
+    const mintToUse = getFsbdMintAddress(mintOverride || undefined)
     const mintKey = new PublicKey(mintToUse)
     const userKey = new PublicKey(wallet)
 
