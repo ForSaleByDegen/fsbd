@@ -21,9 +21,9 @@ DROP POLICY IF EXISTS "Public chat messages readable by all" ON listing_public_m
 CREATE POLICY "Public chat messages readable by all"
   ON listing_public_messages FOR SELECT USING (true);
 
+-- No INSERT policy for anon/client: inserts go through API (service role) only
+-- DROP the permissive policy if it exists (from older migration)
 DROP POLICY IF EXISTS "Public chat messages insert by any user" ON listing_public_messages;
-CREATE POLICY "Public chat messages insert by any user"
-  ON listing_public_messages FOR INSERT WITH CHECK (true);
 
 -- 2. Add token-gated columns (encrypted chat)
 ALTER TABLE listing_public_messages
