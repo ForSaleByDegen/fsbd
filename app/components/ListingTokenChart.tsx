@@ -87,7 +87,9 @@ export default function ListingTokenChart({ tokenMint, tokenName, tokenSymbol }:
           height="400"
           frameBorder="0"
           allowFullScreen
+          loading="lazy"
           className="min-h-[300px] sm:min-h-[400px]"
+          tabIndex={-1}
         />
       </div>
 

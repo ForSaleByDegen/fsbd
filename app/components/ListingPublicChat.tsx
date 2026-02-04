@@ -47,6 +47,7 @@ export default function ListingPublicChat({
   const [chatKey, setChatKey] = useState<Uint8Array | null>(null)
   const [keyError, setKeyError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const shouldScrollToEndRef = useRef(false)
   const { tier: tierState } = useTier()
   const [isAdmin, setIsAdmin] = useState(false)
   useEffect(() => {
@@ -183,7 +184,10 @@ export default function ListingPublicChat({
   }, [listingId, isTokenGated, chatKey, decryptMessages])
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (shouldScrollToEndRef.current) {
+      shouldScrollToEndRef.current = false
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
   }, [messages, decryptedMessages])
 
   const handleSend = async () => {
@@ -205,6 +209,7 @@ export default function ListingPublicChat({
         const result = await sendPublicMessage(listingId, currentUserWallet, text)
         if (result.ok) {
           setInput('')
+          shouldScrollToEndRef.current = true
           const msgs = await fetchPublicMessages(listingId)
           setMessages(msgs)
         } else {

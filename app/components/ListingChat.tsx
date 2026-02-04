@@ -47,6 +47,7 @@ export default function ListingChat({
   const [pinInput, setPinInput] = useState('')
   const [loadingAddress, setLoadingAddress] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const shouldScrollToEndRef = useRef(false)
   const { signMessage } = useWallet()
 
   const sellerHash = hashWalletAddress(listing.wallet_address)
@@ -155,7 +156,10 @@ export default function ListingChat({
   }, [threadId, sellerHash, threadBuyerHash, onThreadLoaded])
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (shouldScrollToEndRef.current) {
+      shouldScrollToEndRef.current = false
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
   }, [messages])
 
   const handleSend = async () => {
@@ -165,6 +169,7 @@ export default function ListingChat({
     const ok = await sendEncryptedMessage(threadId, sellerHash, threadBuyerHash, myHash, text)
     if (ok) {
       setInput('')
+      shouldScrollToEndRef.current = true
       const msgs = await fetchMessages(threadId, sellerHash, threadBuyerHash)
       setMessages(msgs)
     } else {
