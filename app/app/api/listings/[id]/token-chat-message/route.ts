@@ -4,10 +4,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { Connection, PublicKey } from '@solana/web3.js'
-import { getAssociatedTokenAddress, getAccount, getMint } from '@solana/spl-token'
+import { Connection } from '@solana/web3.js'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { hashWalletAddress } from '@/lib/supabase'
+import { getHolderBalance } from '@/lib/token-balance-check'
 
 export async function POST(
   request: NextRequest,
@@ -62,17 +62,8 @@ export async function POST(
     let allowed = sellerWallet && wallet.toLowerCase() === sellerWallet.toLowerCase()
 
     if (!allowed) {
-      try {
-        const mintPubkey = new PublicKey(tokenMint)
-        const userPubkey = new PublicKey(wallet)
-        const tokenAccount = await getAssociatedTokenAddress(mintPubkey, userPubkey)
-        const accountInfo = await getAccount(connection, tokenAccount)
-        const mintInfo = await getMint(connection, mintPubkey)
-        const balance = Number(accountInfo.amount) / 10 ** mintInfo.decimals
-        allowed = balance > 0
-      } catch {
-        allowed = false
-      }
+      const balance = await getHolderBalance(connection, tokenMint, wallet)
+      allowed = balance > 0
     }
 
     if (!allowed) {

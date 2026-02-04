@@ -52,7 +52,11 @@ export default function ListingChatSection({
         <ListingPublicChat
           listingId={listing.id}
           currentUserWallet={currentUserWallet}
-          tokenMint={listing.has_token && (listing.chat_token_gated !== false) ? listing.token_mint : null}
+          tokenMint={
+            listing.token_mint && listing.token_mint.length > 32 && (listing.chat_token_gated !== false)
+              ? listing.token_mint
+              : null
+          }
           sellerWallet={listing.wallet_address}
         />
       )}

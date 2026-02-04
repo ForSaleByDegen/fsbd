@@ -4,10 +4,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { Connection, PublicKey } from '@solana/web3.js'
-import { getAssociatedTokenAddress, getAccount, getMint } from '@solana/spl-token'
+import { Connection } from '@solana/web3.js'
 import { createHmac } from 'crypto'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getHolderBalance } from '@/lib/token-balance-check'
 
 export async function GET(
   request: NextRequest,
@@ -55,22 +55,13 @@ export async function GET(
       return NextResponse.json({ key: Buffer.from(key).toString('base64'), encrypted: true })
     }
 
-    // Check token balance
+    // Check token balance (supports both SPL Token and Token-2022)
     const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || 'https://api.mainnet-beta.solana.com'
     const connection = new Connection(rpcUrl)
-    try {
-      const mintPubkey = new PublicKey(tokenMint)
-      const userPubkey = new PublicKey(wallet)
-      const tokenAccount = await getAssociatedTokenAddress(mintPubkey, userPubkey)
-      const accountInfo = await getAccount(connection, tokenAccount)
-      const mintInfo = await getMint(connection, mintPubkey)
-      const balance = Number(accountInfo.amount) / 10 ** mintInfo.decimals
-      if (balance > 0) {
-        const key = deriveChatKey(secret, listingId, tokenMint)
-        return NextResponse.json({ key: Buffer.from(key).toString('base64'), encrypted: true })
-      }
-    } catch {
-      // No token account or error = 0 balance
+    const balance = await getHolderBalance(connection, tokenMint, wallet)
+    if (balance > 0) {
+      const key = deriveChatKey(secret, listingId, tokenMint)
+      return NextResponse.json({ key: Buffer.from(key).toString('base64'), encrypted: true })
     }
 
     return NextResponse.json(
