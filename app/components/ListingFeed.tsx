@@ -12,8 +12,10 @@ import type { ListedTimeFilter, ListedSort } from './SearchBar'
 import { Button } from './ui/button'
 
 const FETCH_TIMEOUT_MS = 15000
+const TOKEN_STATS_POLL_MS = 30000
 
 type TabType = 'browse' | 'activity'
+type TokenStats = Record<string, { priceChange24h: number | null; recentBuys5m: number }>
 
 export default function ListingFeed() {
   const { publicKey, connected } = useWallet()
