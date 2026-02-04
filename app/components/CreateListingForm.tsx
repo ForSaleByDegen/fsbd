@@ -187,6 +187,7 @@ export default function CreateListingForm() {
     imagesToUpload: File[]
   } | null>(null)
   const [creatingListing, setCreatingListing] = useState(false)
+  const [importingFromUrl, setImportingFromUrl] = useState(false)
   const [tokenLaunchRecovery, setTokenLaunchRecovery] = useState<{ listingId: string; listingUrl: string } | null>(null)
 
   const { keypair: vanityKeypair, generating: vanityGenerating, consume: consumeVanity } = useVanityGrind(
@@ -686,6 +687,54 @@ export default function CreateListingForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6 w-full max-w-full relative z-10">
+      <div className="p-4 border-2 border-[#660099]/50 rounded-lg bg-[#660099]/5">
+        <label className="block text-sm font-medium mb-2">Import from product URL (optional)</label>
+        <div className="flex gap-2">
+          <Input
+            type="url"
+            placeholder="https://amazon.com/dp/... or eBay, Etsy, etc."
+            value={formData.externalListingUrl}
+            onChange={(e) => setFormData(prev => ({ ...prev, externalListingUrl: e.target.value }))}
+            className="flex-1"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!formData.externalListingUrl.trim() || importingFromUrl}
+            onClick={async () => {
+              const url = formData.externalListingUrl.trim()
+              if (!url) return
+              setImportingFromUrl(true)
+              try {
+                const res = await fetch('/api/fetch-product-info', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ url }),
+                })
+                const data = await res.json().catch(() => ({}))
+                if (!res.ok) throw new Error(data.error || 'Failed to fetch')
+                setFormData(prev => ({
+                  ...prev,
+                  title: data.title || prev.title,
+                  description: data.description || prev.description,
+                  price: data.price || prev.price,
+                }))
+                if (!data.title && !data.description && !data.price) {
+                  alert('Could not extract product details from this URL. Try another site or enter manually.')
+                }
+              } catch (e) {
+                alert('Import failed: ' + (e instanceof Error ? e.message : String(e)))
+              } finally {
+                setImportingFromUrl(false)
+              }
+            }}
+          >
+            {importingFromUrl ? 'Importing…' : 'Import'}
+          </Button>
+        </div>
+        <p className="text-sm text-[#aa77ee] font-pixel-alt mt-1">Paste a product URL and click Import to fill title, description, and price below.</p>
+      </div>
+
       <div>
         <label className="block text-sm font-medium mb-2">Title *</label>
         <Input

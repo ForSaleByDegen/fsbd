@@ -1,10 +1,11 @@
 # Pre-Publish Checklist — Open Source
 
-Run this before making the repo public.
+Run this before making the repo public **and before every push** (repo is now public).
 
-## ✅ Verify
+## ✅ Verify Before Every Push
 
-- [ ] **No secrets:** `git log -p` shows no `.env`, API keys, or keypairs ever committed
+- [ ] **No secrets staged:** `git status` shows no `.env`, `*.keypair`, `*.pem`, `*.key`, or `vanity-result.json`
+- [ ] **No secrets in history:** `git log -p` shows no `.env`, API keys, or keypairs ever committed
 - [ ] **git status:** No `.env`, `*.keypair`, or `vanity-result.json` staged
 - [ ] **Placeholders:** Code checks for `FSBD_TOKEN_MINT_PLACEHOLDER` and `YOUR_WALLET_ADDRESS` before use
 - [ ] **Docs:** Review [docs/OPEN_SOURCE_AUDIT.md](docs/OPEN_SOURCE_AUDIT.md)
