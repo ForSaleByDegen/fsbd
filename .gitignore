@@ -39,6 +39,7 @@ Thumbs.db
 *-mint-authority.json
 *-authority.json
 test-ledger/
+vanity-result.json
 
 # Database
 *.db

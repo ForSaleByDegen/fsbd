@@ -10,6 +10,7 @@ import { incrementListingCount, addToTotalFees, upsertUserProfile } from '@/lib/
 import { uploadMultipleImagesToIPFS } from '@/lib/pinata'
 import { stripImageMetadataBatch } from '@/lib/strip-image-metadata'
 import { createPumpFunToken, createListingToken } from '@/lib/token-ops'
+import { useVanityGrind } from '@/lib/useVanityGrind'
 import { sendTransactionWithRebate, shouldUseRebate } from '@/lib/helius-rebate'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -163,6 +164,7 @@ export default function CreateListingForm() {
     tokenDiscord: '',
     tokenBannerUrl: '',
     chatTokenGated: true,
+    vanitySuffix: 'pump',
   })
   const [assetVerified, setAssetVerified] = useState<{ verified: boolean; error?: string } | null>(null)
   const [createdListingForToken, setCreatedListingForToken] = useState<{
@@ -173,6 +175,11 @@ export default function CreateListingForm() {
   } | null>(null)
   const [creatingListing, setCreatingListing] = useState(false)
   const [tokenLaunchRecovery, setTokenLaunchRecovery] = useState<{ listingId: string; listingUrl: string } | null>(null)
+
+  const { keypair: vanityKeypair, generating: vanityGenerating, consume: consumeVanity } = useVanityGrind(
+    formData.vanitySuffix || 'pump',
+    formData.launchToken
+  )
 
   const handleCreateListingFirst = async () => {
     if (!publicKey || !formData.launchToken) return
@@ -439,8 +446,10 @@ export default function CreateListingForm() {
               imageUrl: imageUrl || undefined,
               description: listingDescription || formData.description?.slice(0, 500) || undefined,
               extras,
+              mintKeypair: vanityKeypair ?? undefined,
             }
           )
+          if (vanityKeypair) consumeVanity()
         } catch (pumpErr: unknown) {
           const msg = pumpErr instanceof Error ? pumpErr.message : String(pumpErr)
           const txMayHaveSucceeded =
@@ -517,6 +526,19 @@ export default function CreateListingForm() {
         router.push(`/listings/${listingId}`)
         return
       } else {
+        // Donate unused vanity keypair to pool for the next person
+        if (vanityKeypair) {
+          fetch('/api/vanity-pool/donate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              publicKey: vanityKeypair.publicKey.toBase58(),
+              secretKey: Array.from(vanityKeypair.secretKey),
+              suffix: formData.vanitySuffix || 'pump',
+            }),
+          }).catch(() => {})
+          consumeVanity()
+        }
         // For regular listings (no token), just sign a message of intent
         if (!signMessage) {
           throw new Error('Wallet signMessage is not available. Please use a compatible wallet.')
@@ -995,9 +1017,17 @@ export default function CreateListingForm() {
                 placeholder="0.01"
               />
               <p className="text-xs text-[#aa77ee] font-pixel-alt mt-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-                Optional SOL to buy your token at launch (pump.fun). Use 0 to skip. Want an address ending in &quot;pump&quot;?{' '}
-                <a href="/vanity" target="_blank" rel="noopener noreferrer" className="text-[#00ff00] underline hover:text-[#ff00ff]">Vanity generator</a>.
+                Optional SOL to buy your token at launch (pump.fun). Use 0 to skip.
               </p>
+              {(vanityGenerating || vanityKeypair) && (
+                <p className="text-xs mt-1 font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                  {vanityGenerating ? (
+                    <span className="text-[#aa77ee]">Generating vanity address ending in &quot;pump&quot;… (runs in background)</span>
+                  ) : vanityKeypair ? (
+                    <span className="text-[#00ff00]">✓ Vanity address ready! Token will end in &quot;pump&quot;.</span>
+                  ) : null}
+                </p>
+              )}
             </div>
             {(canAddSocialsForTier((limitCheck?.tier ?? tierState.tier) as 'free' | 'bronze' | 'silver' | 'gold') || isAdminUser) && (
               <div className="col-span-2 space-y-2 pt-2 border-t border-[#660099]/30">

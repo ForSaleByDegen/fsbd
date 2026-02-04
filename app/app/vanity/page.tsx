@@ -74,8 +74,14 @@ export default function VanityAddressPage() {
         <h1 className="text-2xl font-pixel text-[#00ff00] mb-2" style={{ fontFamily: 'var(--font-pixel)' }}>
           Vanity Address Generator
         </h1>
-        <p className="text-sm text-[#aa77ee] font-pixel-alt mb-6" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+        <p className="text-sm text-[#aa77ee] font-pixel-alt mb-4" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
           Generate a Solana wallet address ending in your chosen suffix (e.g. &quot;pump&quot;). Keys are generated locally — never sent to any server.
+        </p>
+        <p className="text-xs text-[#888] font-mono mb-6 p-3 rounded bg-black/30 border border-[#333] space-y-1">
+          <span className="text-[#00ff00]">Faster?</span> Run locally:
+          <br /><code className="text-[#aa77ee]">cd app &amp;&amp; npm run vanity pump</code> (uses all CPU cores)
+          <br /><code className="text-[#aa77ee]">npm run vanity pump -- --background</code> (runs in background, writes to vanity-result.json)
+          <br />Or install Solana CLI for 10-100x speed: <code className="text-[#aa77ee]">solana-keygen grind --ends-with pump:1</code>
         </p>
 
         <div className="flex gap-2 mb-4">

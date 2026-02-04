@@ -150,9 +150,10 @@ export async function createPumpFunToken(
     imageUrl?: string
     description?: string
     extras?: TokenMetadataExtras
+    mintKeypair?: Keypair
   } = {}
 ): Promise<string> {
-  const mintKeypair = Keypair.generate()
+  const mintKeypair = options.mintKeypair ?? Keypair.generate()
   const devBuySol = Math.max(0, options.devBuySol ?? 0.01)
 
   // Where your SOL goes: ~0.02–0.025 SOL creation/network fee → pump.fun; dev buy → bonding curve (you receive tokens); ~0.001 tx fee
