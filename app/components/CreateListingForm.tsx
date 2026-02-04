@@ -24,6 +24,7 @@ import {
 } from './ui/select'
 import { CATEGORIES, getSubcategories } from '@/lib/categories'
 import BuyListingSlotButton from './BuyListingSlotButton'
+import TokenPreviewCard from './TokenPreviewCard'
 import { useTier } from './providers/TierProvider'
 
 const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/
@@ -180,6 +181,18 @@ export default function CreateListingForm() {
     formData.vanitySuffix || 'pump',
     formData.launchToken
   )
+
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null)
+  useEffect(() => {
+    const file = formData.images[0]
+    if (!file) {
+      setPreviewImageUrl(null)
+      return
+    }
+    const url = URL.createObjectURL(file)
+    setPreviewImageUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [formData.images])
 
   const handleCreateListingFirst = async () => {
     if (!publicKey || !formData.launchToken) return
@@ -975,6 +988,20 @@ export default function CreateListingForm() {
                 <p className="text-xs text-[#aa77ee] mt-1">Link auto-filled below. Add optional socials, then click &quot;Launch token&quot;.</p>
               </div>
             )}
+            <div className="col-span-2">
+              <TokenPreviewCard
+                tokenName={formData.tokenName}
+                tokenSymbol={formData.tokenSymbol}
+                description={[formData.title, formData.description].filter(Boolean).join('. ')}
+                imageUrl={createdListingForToken?.imageUrls?.[0] ?? previewImageUrl}
+                bannerUrl={formData.tokenBannerUrl || undefined}
+                website={formData.tokenWebsite || createdListingForToken?.url}
+                twitter={formData.tokenTwitter}
+                telegram={formData.tokenTelegram}
+                discord={formData.tokenDiscord}
+                contractPreview={vanityKeypair ? `${vanityKeypair.publicKey.toBase58().slice(0, 4)}...${vanityKeypair.publicKey.toBase58().slice(-4)}` : undefined}
+              />
+            </div>
             <div>
               <label className="block text-sm font-medium mb-2">Token Name</label>
               <Input
