@@ -23,6 +23,7 @@ import {
   getMint,
 } from '@solana/spl-token'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { maskWallet } from '@/lib/sanitize-log'
 import CryptoJS from 'crypto-js'
 
 function hashWalletAddress(address: string): string {
@@ -110,7 +111,7 @@ export async function POST(
 
     const wa = String(data.wallet_address ?? '').trim()
     if (!wa || !BASE58.test(wa)) {
-      console.error('[prepare-transfer] Invalid wallet_address for listing', id)
+      console.error('[prepare-transfer] Invalid wallet_address for listing', id, maskWallet(wa))
       return NextResponse.json(
         { error: 'This listing has invalid seller data. The seller needs to re-list.' },
         { status: 400, headers: { 'Cache-Control': 'no-store' } }

@@ -38,6 +38,9 @@ export default function TokenPreviewCard({
       <p className="text-[10px] uppercase tracking-wider text-[#aa77ee]/70 px-3 pt-3 font-mono">
         Preview — how it will look on pump.fun
       </p>
+      <p className="text-[10px] text-[#660099]/80 px-3 mt-0.5 font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+        Line breaks display on pump.fun &amp; DEXes
+      </p>
       {bannerUrl && (
         <div className="mt-2 h-16 w-full overflow-hidden bg-[#660099]/20">
           <img
@@ -76,8 +79,8 @@ export default function TokenPreviewCard({
         </div>
       </div>
       {description && (
-        <p className="text-xs text-[#aa77ee]/90 mt-2 px-3 line-clamp-2 font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-          {description.slice(0, 120)}{description.length > 120 ? '…' : ''}
+        <p className="text-xs text-[#aa77ee]/90 mt-2 px-3 line-clamp-4 font-pixel-alt whitespace-pre-line" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          {description.slice(0, 200)}{description.length > 200 ? '…' : ''}
         </p>
       )}
       {hasSocials && (

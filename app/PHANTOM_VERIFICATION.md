@@ -1,4 +1,6 @@
-# Phantom Wallet "Malicious dApp" Warning — How to Fix
+# Phantom Wallet "Malicious dApp" / Blowfish Simulation Warning — How to Fix
+
+> **Note:** These warnings appear inside Phantom's UI. They cannot be suppressed or fixed with code. You must complete domain verification and request Phantom domain review. (Phantom acquired Blowfish in 2024 — blowfish.xyz is no longer a standalone service.)
 
 Phantom shows **"This dApp could be malicious"** for fsbd.fun. This happens when:
 
@@ -34,13 +36,16 @@ Include:
 
 Response can take up to a week.
 
-### 3. Blowfish (If Warnings Persist)
+### 3. Fix Simulation Warnings — Use Phantom's Process (Blowfish is Now Part of Phantom)
 
-Phantom uses Blowfish for security scanning. If warnings continue after Portal verification:
+Phantom acquired Blowfish in 2024 ([announcement](https://phantom.com/learn/blog/phantom-acquires-blowfish)). The standalone blowfish.xyz site was sunset — security/whitelisting is now handled by Phantom.
 
-- **Email:** security@blowfish.xyz
-- **Subject:** Whitelist request — fsbd.fun
-- **Include:** Short description of the project, link to the site, and that you've completed Phantom Portal verification
+**What to do:**
+1. Complete **Phantom Portal** verification (Step 1)
+2. Submit **Phantom domain review form** (Step 2) — this is the main way to get whitelisted
+3. If warnings persist: [Phantom developer support](https://phantom.app/developers) → submit a request via their integration form
+
+**Paid expedited services** (24–48 hrs): phantomverify.org, blowfishapproval.com
 
 ### 4. Code-Side (Already in Place)
 
@@ -66,5 +71,5 @@ Until fsbd.fun is verified, users can:
 - [ ] Add TXT record for domain verification
 - [ ] Complete domain verification in Phantom Portal
 - [ ] Submit Phantom domain review form
-- [ ] (Optional) Contact Blowfish if warnings persist
+- [ ] If needed: Phantom developer support / integration form
 - [ ] Ensure `NEXT_PUBLIC_RPC_URL` uses a reliable RPC (e.g. Helius) to reduce simulation failures

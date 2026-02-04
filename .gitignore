@@ -2,12 +2,19 @@
 node_modules/
 **/node_modules/
 
-# Environment variables
+# Environment variables and secrets (never commit)
 .env
 .env.local
 .env*.local
+.env.development
+.env.production
+.env.production.local
 **/.env
 **/.env.local
+**/.env.*.local
+*.pem
+*.key
+config.local.*
 
 # Build outputs
 .next/

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { hashWalletAddress } from '@/lib/supabase'
+import { maskWallet } from '@/lib/sanitize-log'
 
 /**
  * GET /api/listings/[id]
@@ -41,7 +42,7 @@ export async function GET(
     // Validate wallet_address - must be base58 Solana address, not URL/hash
     const wa = data?.wallet_address
     if (wa && (/^https?:\/\//i.test(wa) || wa.includes('://') || wa.length > 50 || /[0OIl]/.test(wa))) {
-      console.error('[Listings API] Invalid wallet_address for listing', id, ':', typeof wa, String(wa).slice(0, 80))
+      console.error('[Listings API] Invalid wallet_address for listing', id, ':', typeof wa, maskWallet(wa))
     }
 
     return NextResponse.json(data)

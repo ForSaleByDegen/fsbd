@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { PublicKey } from '@solana/web3.js'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { maskWallet } from '@/lib/sanitize-log'
 
 // Solana base58 alphabet - excludes 0, O, I, l
 const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/
@@ -68,7 +69,7 @@ export async function GET(
 
     const wa = String(data.wallet_address ?? '').trim()
     if (!wa || !BASE58.test(wa)) {
-      console.error('[purchase-params] Invalid wallet_address for listing', id, ':', typeof data.wallet_address, String(wa).slice(0, 50))
+      console.error('[purchase-params] Invalid wallet_address for listing', id, ':', maskWallet(wa))
       return NextResponse.json(
         { error: 'This listing has invalid seller data. The seller needs to re-list the item.' },
         { status: 400, headers: { 'Cache-Control': 'no-store' } }
@@ -77,7 +78,7 @@ export async function GET(
     try {
       new PublicKey(wa)
     } catch (e) {
-      console.error('[purchase-params] PublicKey validation failed for listing', id, ':', String(wa).slice(0, 50), e)
+      console.error('[purchase-params] PublicKey validation failed for listing', id, maskWallet(wa), e)
       return NextResponse.json(
         { error: 'This listing has invalid seller address. The seller needs to re-list the item.' },
         { status: 400, headers: { 'Cache-Control': 'no-store' } }

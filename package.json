@@ -1,7 +1,7 @@
 {
   "name": "solana-marketplace",
   "version": "1.0.0",
-  "description": "Decentralized marketplace on Solana with crypto payments and token gating",
+  "description": "For Sale By Degen ($FSBD) — Anonymous decentralized marketplace on Solana with crypto payments and tiered access",
   "private": true,
   "workspaces": [
     "app",

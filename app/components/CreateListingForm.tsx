@@ -10,6 +10,8 @@ import { incrementListingCount, addToTotalFees, upsertUserProfile } from '@/lib/
 import { uploadMultipleImagesToIPFS } from '@/lib/pinata'
 import { stripImageMetadataBatch } from '@/lib/strip-image-metadata'
 import { createPumpFunToken, createListingToken } from '@/lib/token-ops'
+import { formatPriceToken } from '@/lib/utils'
+import { validateIconImage } from '@/lib/image-validation'
 import { useVanityGrind } from '@/lib/useVanityGrind'
 import { sendTransactionWithRebate, shouldUseRebate } from '@/lib/helius-rebate'
 import { Button } from './ui/button'
@@ -28,6 +30,15 @@ import TokenPreviewCard from './TokenPreviewCard'
 import { useTier } from './providers/TierProvider'
 
 const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/
+
+/** Build formatted token description for pump.fun/DEX — newlines create line breaks */
+function buildTokenDescription(opts: { title: string; description: string; price: string; priceLabel: string }): string {
+  const parts: string[] = []
+  if (opts.title?.trim()) parts.push(opts.title.trim())
+  if (opts.description?.trim()) parts.push(opts.description.trim())
+  if (opts.price && opts.priceLabel) parts.push(`Listing Price: ${opts.price} ${opts.priceLabel}`)
+  return parts.join('\n\n').slice(0, 800)
+}
 
 function TokenLaunchRecoveryForm({
   listingId,
@@ -183,6 +194,7 @@ export default function CreateListingForm() {
   )
 
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null)
+  const [imageValidationError, setImageValidationError] = useState<string | null>(null)
   useEffect(() => {
     const file = formData.images[0]
     if (!file) {
@@ -203,6 +215,15 @@ export default function CreateListingForm() {
     if (!formData.tokenName?.trim() || !formData.tokenSymbol?.trim()) {
       alert('Enter token name and symbol.')
       return
+    }
+    const firstImage = formData.images[0]
+    if (firstImage) {
+      const iconResult = await validateIconImage(firstImage)
+      if (!iconResult.ok) {
+        setImageValidationError(iconResult.error)
+        alert(iconResult.error)
+        return
+      }
     }
     try {
       setCreatingListing(true)
@@ -353,11 +374,21 @@ export default function CreateListingForm() {
         if (!imageFile && !imageUrl) {
           throw new Error('Token launch on pump.fun requires at least one image. Add an image and create the listing first.')
         }
+        if (imageFile) {
+          const iconResult = await validateIconImage(imageFile)
+          if (!iconResult.ok) {
+            setImageValidationError(iconResult.error)
+            throw new Error(iconResult.error)
+          }
+        }
 
-        const listingDescription = [formData.title, formData.description]
-          .filter(Boolean)
-          .join('. ')
-          .slice(0, 500)
+        const priceLabel = formatPriceToken(formData.priceToken, formData.tokenSymbol)
+        const listingDescription = buildTokenDescription({
+          title: formData.title,
+          description: formData.description,
+          price: formData.price,
+          priceLabel,
+        })
 
         fee = calculateListingFee(fresh.tier)
         const devBuy = Math.max(0, formData.devBuySol ?? 0.01)
@@ -466,7 +497,7 @@ export default function CreateListingForm() {
         } catch (pumpErr: unknown) {
           const msg = pumpErr instanceof Error ? pumpErr.message : String(pumpErr)
           const txMayHaveSucceeded =
-            /Transaction may have succeeded|check your wallet for the token|read-only account|instruction changed the balance/i.test(msg)
+            /Transaction may have succeeded|check your wallet for the token|read-only account|instruction changed the balance|Transaction simulation failed|custom program error|0x1/i.test(msg)
           if (txMayHaveSucceeded) {
             setTokenLaunchRecovery({ listingId, listingUrl })
             setLoading(false)
@@ -642,7 +673,7 @@ export default function CreateListingForm() {
     } catch (error: any) {
       console.error('Error creating listing:', error)
       const errorMessage = error?.message || 'Unknown error'
-      if (!/Transaction may have succeeded|check your wallet|read-only account|instruction changed the balance/i.test(errorMessage)) {
+      if (!/Transaction may have succeeded|check your wallet|read-only account|instruction changed the balance|Transaction simulation failed|custom program error|0x1/i.test(errorMessage)) {
         alert('Failed to create listing: ' + errorMessage)
       }
     } finally {
@@ -921,28 +952,37 @@ export default function CreateListingForm() {
         <Input
           type="file"
           multiple={maxImages > 1}
-          accept="image/*"
+          accept="image/png,image/jpeg,image/webp,image/gif"
           className="min-h-[44px] text-base sm:text-sm w-full"
-          onChange={(e) => {
+          onChange={async (e) => {
             const files = Array.from(e.target.files || [])
-            // Enforce tier-based image limit
             const limited = files.slice(0, maxImages)
             if (files.length > maxImages) {
               alert(`Your tier allows up to ${maxImages} image(s) per listing. Only the first ${maxImages} will be used.`)
             }
-            // Validate file sizes
-            const maxSize = 1024 * 1024 * 1024 // 1GB (Pinata free tier limit)
-            const invalidFiles = limited.filter((f: File) => f.size > maxSize)
-            if (invalidFiles.length > 0) {
-              alert(`Some files are too large (max 1GB). Please select smaller images.`)
+            const maxSize = 4.5 * 1024 * 1024 // 4.5MB for marketplace compatibility
+            const invalidSize = limited.find((f: File) => f.size > maxSize)
+            if (invalidSize) {
+              setImageValidationError('Image must be under 4.5MB for pump.fun/DEX. Use PNG, JPG, WebP, or GIF.')
               return
+            }
+            setImageValidationError(null)
+            if (formData.launchToken && limited[0]) {
+              const result = await validateIconImage(limited[0])
+              if (!result.ok) {
+                setImageValidationError(result.error)
+                return
+              }
             }
             setFormData(prev => ({ ...prev, images: limited }))
           }}
         />
         <p className="text-sm text-[#aa77ee] font-pixel-alt mt-1">
-          Up to {maxImages} image{maxImages > 1 ? 's' : ''} per listing (based on your $FSBD tier). Hold 100k+ for 2, 1M+ for 3, 10M+ for 4. All metadata stripped for privacy. Max 1GB per file.
+          Up to {maxImages} image{maxImages > 1 ? 's' : ''} per listing. Icon (1st image): 1:1 square, min 100px, max 4.5MB. PNG/JPG/WebP/GIF.
         </p>
+        {imageValidationError && (
+          <p className="text-xs text-amber-400 mt-1 font-pixel-alt">{imageValidationError}</p>
+        )}
         {formData.images.length > 0 && (
           <p className="text-xs text-[#00ff00] mt-1">
             {formData.images.length} file(s) selected (max {maxImages})
@@ -992,7 +1032,12 @@ export default function CreateListingForm() {
               <TokenPreviewCard
                 tokenName={formData.tokenName}
                 tokenSymbol={formData.tokenSymbol}
-                description={[formData.title, formData.description].filter(Boolean).join('. ')}
+                description={buildTokenDescription({
+                  title: formData.title,
+                  description: formData.description,
+                  price: formData.price,
+                  priceLabel: formatPriceToken(formData.priceToken, formData.tokenSymbol),
+                })}
                 imageUrl={createdListingForToken?.imageUrls?.[0] ?? previewImageUrl}
                 bannerUrl={formData.tokenBannerUrl || undefined}
                 website={formData.tokenWebsite || createdListingForToken?.url}
@@ -1066,7 +1111,7 @@ export default function CreateListingForm() {
                   <Input placeholder="Twitter/X URL" value={formData.tokenTwitter} onChange={(e) => setFormData(prev => ({ ...prev, tokenTwitter: e.target.value }))} className="bg-black border-[#660099] text-[#00ff00]" />
                   <Input placeholder="Telegram URL" value={formData.tokenTelegram} onChange={(e) => setFormData(prev => ({ ...prev, tokenTelegram: e.target.value }))} className="bg-black border-[#660099] text-[#00ff00]" />
                   <Input placeholder="Discord URL" value={formData.tokenDiscord} onChange={(e) => setFormData(prev => ({ ...prev, tokenDiscord: e.target.value }))} className="bg-black border-[#660099] text-[#00ff00]" />
-                  <Input placeholder="Banner image URL" value={formData.tokenBannerUrl} onChange={(e) => setFormData(prev => ({ ...prev, tokenBannerUrl: e.target.value }))} className="bg-black border-[#660099] text-[#00ff00]" />
+                  <Input placeholder="Banner image URL — 3:1 ratio, min 600px wide (e.g. 600x200)" value={formData.tokenBannerUrl} onChange={(e) => setFormData(prev => ({ ...prev, tokenBannerUrl: e.target.value }))} className="bg-black border-[#660099] text-[#00ff00]" />
                 </div>
               </div>
             )}

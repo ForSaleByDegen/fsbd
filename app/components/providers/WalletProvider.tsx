@@ -1,6 +1,8 @@
 'use client'
 
+import { useEffect } from 'react'
 import { WalletAdapterNetwork } from '@solana/wallet-adapter-base'
+import { initSuppressWalletWarnings } from '@/lib/suppress-wallet-warnings'
 import { ConnectionProvider, WalletProvider as SolanaWalletProvider } from '@solana/wallet-adapter-react'
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui'
 import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets'
@@ -22,6 +24,10 @@ export default function WalletProvider({ children }: { children: React.ReactNode
     () => [new PhantomWalletAdapter(), new SolflareWalletAdapter()],
     []
   )
+
+  useEffect(() => {
+    initSuppressWalletWarnings()
+  }, [])
 
   return (
     <ConnectionProvider endpoint={endpoint} config={config}>

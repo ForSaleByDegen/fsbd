@@ -4,7 +4,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { encryptData } from '@/lib/supabase'
+import { encryptVanitySecret } from '@/lib/vanity-encryption'
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
     }
 
-    const encrypted = encryptData(JSON.stringify(secretKey))
+    const encrypted = encryptVanitySecret(JSON.stringify(secretKey))
     const { error } = await supabaseAdmin.from('vanity_pool').insert({
       public_key: publicKey,
       secret_key_encrypted: encrypted,

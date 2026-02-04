@@ -45,6 +45,26 @@ async function getMetadataUri(
     options.extras.bannerUrl
   )
 
+  // Always use pump-ipfs for logo — uploads image to pump.fun so it displays correctly.
+  // token-metadata references external URLs which pump.fun often does not render for the main logo.
+  if (options.imageUrl || options.imageFile) {
+    const desc = (options.description || `Token for listing on $FSBD`) + '\n\nLaunched on FSBD.fun'
+    try {
+      const uri = await uploadToPumpIpfs(tokenName, tokenSymbol, {
+        imageFile: options.imageFile,
+        imageUrl: options.imageUrl,
+        description: desc,
+        extras: options.extras,
+      })
+      if (uri) return uri
+    } catch (err) {
+      console.error('[token-ops] pump-ipfs failed:', err)
+      throw new Error(
+        `Logo upload failed. Ensure your image is square (1:1), under 4.5MB, and PNG/JPG/WebP. ${err instanceof Error ? err.message : String(err)}`
+      )
+    }
+  }
+
   if (hasExtras && options.imageUrl) {
     const res = await fetch('/api/token-metadata', {
       method: 'POST',
@@ -239,7 +259,7 @@ export async function createPumpFunToken(
     if (status?.confirmationStatus === 'confirmed' || status?.confirmationStatus === 'finalized') {
       return mintKeypair.publicKey.toBase58()
     }
-    if (/0x1|custom program error|read-only account|instruction changed the balance/i.test(errMsg)) {
+    if (/0x1|custom program error|read-only account|instruction changed the balance|Transaction simulation failed/i.test(errMsg)) {
       throw new Error(
         `Transaction may have succeeded — check your wallet for the token. If you see it, you can manually link it to your listing. Error: ${errMsg}`
       )

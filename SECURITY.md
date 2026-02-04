@@ -39,7 +39,8 @@ If you discover a security vulnerability, please:
 - **User wallets**: Users connect via Phantom, Solflare, etc. Private keys stay in the wallet extension. We only receive `publicKey` and `signTransaction` (the wallet signs; we never see the key).
 - **No `NEXT_PUBLIC_*` secrets**: Never put private keys, API secrets, or signing keys in `NEXT_PUBLIC_*` env vars—they are bundled into client JavaScript and exposed.
 - **Server-side only**: Any keypair (e.g. cNFT tree creator, deploy scripts) must use server-only env vars (`KEYPAIR_PATH`, `TREE_CREATOR_KEYPAIR`) and run only in API routes or Node scripts, never in client code.
-- **Encryption**: If we ever need to handle sensitive data, it is encrypted before storage and keys are never stored insecurely.
+- **Vanity pool**: Donated vanity keypairs are encrypted with `VANITY_POOL_ENCRYPTION_KEY` (server-only) before storage. Never use `NEXT_PUBLIC_*` for this.
+- **Encryption**: Sensitive data is encrypted before storage. See [docs/SECURITY_DATA_PROTECTION.md](docs/SECURITY_DATA_PROTECTION.md) for full details.
 
 ## Best Practices for Users
 

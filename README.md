@@ -50,8 +50,8 @@ cp .env.example .env
 NEXT_PUBLIC_SOLANA_NETWORK=devnet
 NEXT_PUBLIC_RPC_URL=https://api.devnet.solana.com
 
-# $FBSD Token (TODO: Replace after launch)
-NEXT_PUBLIC_FBSD_TOKEN_MINT=FBSD_TOKEN_MINT_PLACEHOLDER
+# $FSBD Token (TODO: Replace after launch)
+NEXT_PUBLIC_FSBD_TOKEN_MINT=FSBD_TOKEN_MINT_PLACEHOLDER
 
 # App Wallet
 NEXT_PUBLIC_APP_WALLET=YOUR_WALLET_ADDRESS
@@ -132,7 +132,7 @@ app/
 │   ├── CreateListingForm.tsx
 │   └── ...
 ├── lib/
-│   ├── tier-check.ts      # $FBSD balance & tier logic
+│   ├── tier-check.ts      # $FSBD balance & tier logic
 │   ├── supabase.ts        # Database client
 │   ├── ipfs.ts            # IPFS upload
 │   └── token-ops.ts        # Token creation
@@ -163,7 +163,7 @@ Tiers are checked on-chain—no data sharing, fully private.
 
 ### Disclaimers
 
-This is an **experimental side project MVP**. Not financial advice. $FBSD is a utility token only. Use at your own risk. All transactions are final. No guarantees or warranties.
+This is an **experimental side project MVP**. Not financial advice. $FSBD is a utility token only. Use at your own risk. All transactions are final. No guarantees or warranties.
 
 ## Deployment
 
@@ -201,6 +201,7 @@ See [HACKATHON.md](HACKATHON.md) for submission info.
 
 ## Security Notes
 
+- Set `VANITY_POOL_ENCRYPTION_KEY` (server-only, 32+ chars) for vanity pool; never use `NEXT_PUBLIC_*` for secrets
 - Change `NEXT_PUBLIC_ENCRYPTION_KEY` in production
 - Use your own IPFS node for production
 - Set up proper RLS in Supabase
@@ -210,6 +211,12 @@ See [HACKATHON.md](HACKATHON.md) for submission info.
 ## License
 
 MIT
+
+## Documentation
+
+- [Open Source Audit](docs/OPEN_SOURCE_AUDIT.md) — Pre-publish checklist and audit
+- [On-Chain Migration Plan](docs/ON_CHAIN_MIGRATION_PLAN.md) — Roadmap for 100% on-chain / less hosting
+- [Phantom Verification](app/PHANTOM_VERIFICATION.md) — Resolve "malicious dApp" warnings
 
 ---
 

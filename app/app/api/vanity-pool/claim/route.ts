@@ -4,7 +4,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { decryptData } from '@/lib/supabase'
+import { decryptVanitySecret } from '@/lib/vanity-encryption'
 
 export async function GET(request: NextRequest) {
   try {
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     const row = rows[0]
     let secretKey: number[]
     try {
-      secretKey = JSON.parse(decryptData(row.secret_key_encrypted))
+      secretKey = JSON.parse(decryptVanitySecret(row.secret_key_encrypted))
     } catch {
       console.error('[vanity-pool] decrypt failed for', row.id)
       await supabaseAdmin.from('vanity_pool').delete().eq('id', row.id)
