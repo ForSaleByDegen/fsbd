@@ -5,7 +5,7 @@ import ListingPublicChat from './ListingPublicChat'
 import ListingChat from './ListingChat'
 
 interface ListingChatSectionProps {
-  listing: { id: string; wallet_address: string; has_token?: boolean; token_mint?: string | null; chat_token_gated?: boolean }
+  listing: { id: string; wallet_address: string; has_token?: boolean; token_mint?: string | null; chat_token_gated?: boolean; chat_min_tokens?: number }
   currentUserWallet: string
   onEscrowProposed?: () => void
   onEscrowAccepted?: () => void
@@ -58,6 +58,7 @@ export default function ListingChatSection({
               : null
           }
           sellerWallet={listing.wallet_address}
+          chatMinTokens={listing.chat_min_tokens ?? 1}
         />
       )}
       {activeTab === 'private' && (

@@ -37,7 +37,7 @@ export async function POST(
 
     const { data: listing, error } = await supabaseAdmin
       .from('listings')
-      .select('id, token_mint, wallet_address')
+      .select('id, token_mint, wallet_address, chat_min_tokens')
       .eq('id', listingId)
       .single()
 
@@ -47,6 +47,7 @@ export async function POST(
 
     const tokenMint = (listing as { token_mint?: string | null }).token_mint
     const sellerWallet = (listing as { wallet_address?: string }).wallet_address
+    const chatMinTokens = Math.max(1, Math.floor(Number((listing as { chat_min_tokens?: number | null }).chat_min_tokens) || 1))
 
     if (!tokenMint || !tokenMint.trim()) {
       return NextResponse.json(
@@ -63,12 +64,12 @@ export async function POST(
 
     if (!allowed) {
       const balance = await getHolderBalance(connection, tokenMint, wallet)
-      allowed = balance > 0
+      allowed = balance >= chatMinTokens
     }
 
     if (!allowed) {
       return NextResponse.json(
-        { error: 'Hold this listing token to post in the chat' },
+        { error: chatMinTokens === 1 ? 'Hold this listing token to post in the chat' : `Hold at least ${chatMinTokens.toLocaleString()} tokens to post in the chat` },
         { status: 403 }
       )
     }

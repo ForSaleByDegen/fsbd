@@ -22,6 +22,7 @@ interface ListingPublicChatProps {
   currentUserWallet: string
   tokenMint?: string | null
   sellerWallet?: string | null
+  chatMinTokens?: number
 }
 
 function base64ToUint8Array(b64: string): Uint8Array {
@@ -36,6 +37,7 @@ export default function ListingPublicChat({
   currentUserWallet,
   tokenMint,
   sellerWallet,
+  chatMinTokens = 1,
 }: ListingPublicChatProps) {
   const [messages, setMessages] = useState<PublicChatMessage[]>([])
   const [decryptedMessages, setDecryptedMessages] = useState<Array<{ id: string; sender_wallet_hash: string; content: string; created_at: string }>>([])
@@ -299,7 +301,7 @@ export default function ListingPublicChat({
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-          placeholder={canSend ? 'Message the community...' : isTokenGated ? 'Hold the listing token to post' : !fsbdOk ? (canChatByFsbd === null ? 'Checking…' : 'Hold $FSBD to chat') : 'Message...'}
+          placeholder={canSend ? 'Message the community...' : isTokenGated ? (chatMinTokens === 1 ? 'Hold the listing token to post' : `Hold at least ${chatMinTokens.toLocaleString()} tokens to post`) : !fsbdOk ? (canChatByFsbd === null ? 'Checking…' : 'Hold $FSBD to chat') : 'Message...'}
           maxLength={2000}
           disabled={!canSend}
           className="flex-1 bg-black border-2 border-[#660099] px-3 py-2 text-[#00ff00] placeholder-[#660099]/60 rounded font-pixel-alt text-sm disabled:opacity-50"

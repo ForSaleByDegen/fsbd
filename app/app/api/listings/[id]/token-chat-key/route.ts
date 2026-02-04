@@ -34,7 +34,7 @@ export async function GET(
 
     const { data: listing, error } = await supabaseAdmin
       .from('listings')
-      .select('id, token_mint, wallet_address')
+      .select('id, token_mint, wallet_address, chat_min_tokens')
       .eq('id', listingId)
       .single()
 
@@ -44,6 +44,7 @@ export async function GET(
 
     const tokenMint = (listing as { token_mint?: string | null }).token_mint
     const sellerWallet = (listing as { wallet_address?: string }).wallet_address
+    const chatMinTokens = Math.max(1, Math.floor(Number((listing as { chat_min_tokens?: number | null }).chat_min_tokens) || 1))
 
     if (!tokenMint || !tokenMint.trim()) {
       return NextResponse.json({ encrypted: false })
@@ -55,17 +56,17 @@ export async function GET(
       return NextResponse.json({ key: Buffer.from(key).toString('base64'), encrypted: true })
     }
 
-    // Check token balance (supports both SPL Token and Token-2022)
+    // Check token balance >= min required
     const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || 'https://api.mainnet-beta.solana.com'
     const connection = new Connection(rpcUrl)
     const balance = await getHolderBalance(connection, tokenMint, wallet)
-    if (balance > 0) {
+    if (balance >= chatMinTokens) {
       const key = deriveChatKey(secret, listingId, tokenMint)
       return NextResponse.json({ key: Buffer.from(key).toString('base64'), encrypted: true })
     }
 
     return NextResponse.json(
-      { error: 'Hold this listing token to access the chat' },
+      { error: chatMinTokens === 1 ? 'Hold this listing token to access the chat' : `Hold at least ${chatMinTokens.toLocaleString()} tokens to access the chat`, minTokens: chatMinTokens },
       { status: 403 }
     )
   } catch (e) {

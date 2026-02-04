@@ -82,6 +82,7 @@ export async function PATCH(
     const action = body.action
     const tokenMint = typeof body.token_mint === 'string' ? body.token_mint.trim() : null
     const chatTokenGated = body.chat_token_gated
+    const chatMinTokens = typeof body.chat_min_tokens === 'number' ? Math.max(1, Math.floor(body.chat_min_tokens)) : body.chat_min_tokens === undefined ? undefined : Math.max(1, Math.floor(Number(body.chat_min_tokens) || 1))
     const priceToken = typeof body.price_token === 'string' ? body.price_token.trim() : null
 
     if (!wallet) {
@@ -90,7 +91,7 @@ export async function PATCH(
         { status: 400 }
       )
     }
-    if (!action && !tokenMint && chatTokenGated === undefined && !priceToken) {
+    if (!action && !tokenMint && chatTokenGated === undefined && chatMinTokens === undefined && !priceToken) {
       return NextResponse.json(
         { error: 'Invalid request. Provide action ("unlist"|"relist"), token_mint, chat_token_gated, or price_token.' },
         { status: 400 }
@@ -126,6 +127,7 @@ export async function PATCH(
       updates.has_token = true
     }
     if (typeof chatTokenGated === 'boolean') updates.chat_token_gated = chatTokenGated
+    if (chatMinTokens !== undefined) updates.chat_min_tokens = chatMinTokens
     if (priceToken && ['SOL', 'USDC', 'LISTING_TOKEN'].includes(priceToken)) updates.price_token = priceToken
 
     if (Object.keys(updates).length > 0) {

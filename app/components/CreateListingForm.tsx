@@ -176,6 +176,7 @@ export default function CreateListingForm() {
     tokenDiscord: '',
     tokenBannerUrl: '',
     chatTokenGated: true,
+    chatMinTokens: 1,
     vanitySuffix: 'pump',
   })
   const [assetVerified, setAssetVerified] = useState<{ verified: boolean; error?: string } | null>(null)
@@ -262,6 +263,7 @@ export default function CreateListingForm() {
         external_listing_url: formData.externalListingUrl.trim() || null,
         subcategory: formData.subcategory.trim() || null,
         chat_token_gated: formData.chatTokenGated,
+        chat_min_tokens: Math.max(1, Math.floor(Number(formData.chatMinTokens) || 1)),
         price_token: formData.priceToken === 'LISTING_TOKEN' ? 'LISTING_TOKEN' : formData.priceToken,
       }
       if (isDigitalAsset) {
@@ -423,6 +425,7 @@ export default function CreateListingForm() {
             external_listing_url: formData.externalListingUrl.trim() || null,
             subcategory: formData.subcategory.trim() || null,
             chat_token_gated: formData.chatTokenGated,
+            chat_min_tokens: Math.max(1, Math.floor(Number(formData.chatMinTokens) || 1)),
           }
           if (isDigitalAsset) {
             listingDataForCreate.asset_type = formData.subcategory === 'nft' ? 'nft' : 'meme_coin'
@@ -635,6 +638,7 @@ export default function CreateListingForm() {
         external_listing_url: formData.externalListingUrl.trim() || null,
         subcategory: formData.subcategory.trim() || null,
         chat_token_gated: formData.chatTokenGated,
+        chat_min_tokens: Math.max(1, Math.floor(Number(formData.chatMinTokens) || 1)),
       }
       if (isDigitalAsset) {
         listingData.asset_type = formData.subcategory === 'nft' ? 'nft' : 'meme_coin'
@@ -1075,6 +1079,37 @@ export default function CreateListingForm() {
                 <span className="text-sm">Token-gate public chat (holders only)</span>
               </label>
               <p className="text-xs text-muted-foreground">When enabled, only token holders and you can read/post in the listing&apos;s public chat.</p>
+              {formData.chatTokenGated && (
+                <div className="flex flex-wrap items-center gap-2 mt-1">
+                  <span className="text-xs text-muted-foreground">Min tokens to chat:</span>
+                  {[1, 10, 100, 1000, 10000].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, chatMinTokens: n }))}
+                      className={`px-2 py-1 text-xs rounded border transition-colors ${
+                        formData.chatMinTokens === n
+                          ? 'border-[#00ff00] bg-[#00ff00]/20 text-[#00ff00]'
+                          : 'border-[#660099] text-[#aa77ee] hover:bg-[#660099]/20'
+                      }`}
+                    >
+                      {n === 1 ? '1 (default)' : n.toLocaleString()}
+                    </button>
+                  ))}
+                  <span className="text-xs text-muted-foreground">or</span>
+                  <input
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={formData.chatMinTokens}
+                    onChange={(e) => {
+                      const v = Math.max(1, Math.floor(Number(e.target.value) || 1))
+                      setFormData(prev => ({ ...prev, chatMinTokens: v }))
+                    }}
+                    className="w-20 px-2 py-1 text-xs bg-black border border-[#660099] text-[#00ff00] rounded"
+                  />
+                </div>
+              )}
             </div>
             <div className="col-span-2">
               <label className="block text-sm font-medium mb-2">Dev buy (SOL) — initial buy on pump.fun</label>

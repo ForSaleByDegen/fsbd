@@ -585,6 +585,7 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
               has_token: listing.has_token,
               token_mint: listing.token_mint,
               chat_token_gated: listing.chat_token_gated,
+              chat_min_tokens: listing.chat_min_tokens ?? 1,
             }}
             currentUserWallet={publicKey.toString()}
           />
