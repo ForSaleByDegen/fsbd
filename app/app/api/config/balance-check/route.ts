@@ -116,12 +116,14 @@ export async function GET(request: NextRequest) {
 
     let mintOverride: string | null = null
     let chatMinTokens = 10000
+    let tierThresholds: TierThresholds | undefined
     const client = supabaseAdmin || supabase
     if (client) {
       const { data } = await client.from('platform_config').select('key, value_json')
       const rows = (data as { key: string; value_json: unknown }[]) || []
       mintOverride = extractMintFromConfig(rows)
       chatMinTokens = getChatMinTokens(rows)
+      tierThresholds = getTierThresholdsFromConfig(rows)
     }
     if (!mintOverride || mintOverride === 'FSBD_TOKEN_MINT_PLACEHOLDER') {
       mintOverride = process.env.NEXT_PUBLIC_FSBD_TOKEN_MINT || null
