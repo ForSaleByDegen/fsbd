@@ -86,7 +86,8 @@ export default function VanityAddressPage() {
             totalAttemptsRef.current = sum
             setAttempts(sum)
           } else if (e.data?.publicKey && Array.isArray(e.data.secretKey)) {
-            done({ publicKey: e.data.publicKey, secretKey: e.data.secretKey })
+            const workerAttempts = progressRef.current[workerIndex] || REPORT_INTERVAL
+            done({ publicKey: e.data.publicKey, secretKey: e.data.secretKey }, workerAttempts)
           }
         }
         worker.onerror = () => {
