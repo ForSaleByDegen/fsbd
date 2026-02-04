@@ -1,4 +1,7 @@
+'use client'
+
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
 import { getIPFSGatewayURL } from '@/lib/pinata'
 import { getSubcategoryLabel } from '@/lib/categories'
 import { formatRelativeTime } from '@/lib/format-time'
@@ -12,6 +15,7 @@ interface ListingCardProps {
     price: number
     price_token: string
     token_symbol?: string | null
+    token_mint?: string | null
     category: string
     subcategory?: string
     images?: string[]
@@ -24,9 +28,19 @@ interface ListingCardProps {
     created_at?: string
     updated_at?: string
   }
+  priceChange24h?: number | null
+  shouldFlash?: boolean
 }
 
-export default function ListingCard({ listing }: ListingCardProps) {
+export default function ListingCard({ listing, priceChange24h, shouldFlash = false }: ListingCardProps) {
+  const [flashing, setFlashing] = useState(false)
+  useEffect(() => {
+    if (shouldFlash) {
+      setFlashing(true)
+      const t = setTimeout(() => setFlashing(false), 2500)
+      return () => clearTimeout(t)
+    }
+  }, [shouldFlash])
   const formatPrice = () => {
     return `${listing.price} ${formatPriceToken(listing.price_token, listing.token_symbol)}`
   }
@@ -53,9 +67,19 @@ export default function ListingCard({ listing }: ListingCardProps) {
     ? getImageUrl(listing.images[0])
     : null
 
+  const hasToken = listing.has_token || (listing.token_mint && listing.token_mint.length > 32)
+  const showPriceChange = hasToken && typeof priceChange24h === 'number'
+
   return (
     <Link href={`/listings/${listing.id}`} className="block w-full">
-      <div className="bg-black/80 border-2 sm:border-4 border-[#660099] p-3 sm:p-4 hover:border-[#00ff00] hover:shadow-[0_0_20px_rgba(0,255,0,0.5)] transition-all cursor-pointer h-full flex flex-col pixel-art min-h-[200px]">
+      <div
+        className={`bg-black/80 border-2 sm:border-4 p-3 sm:p-4 hover:border-[#00ff00] hover:shadow-[0_0_20px_rgba(0,255,0,0.5)] transition-all duration-300 cursor-pointer h-full flex flex-col pixel-art min-h-[200px] relative overflow-hidden ${
+          flashing ? 'border-[#00ff00] ring-2 ring-[#00ff00]/60' : 'border-[#660099]'
+        }`}
+      >
+        {flashing && (
+          <div className="absolute inset-0 bg-[#00ff00]/15 pointer-events-none animate-pulse" style={{ animationDuration: '0.4s', animationIterationCount: 4 }} />
+        )}
         {imageUrl ? (
           <div className="w-full h-32 sm:h-40 md:h-48 bg-black/50 border border-[#660099] rounded mb-2 sm:mb-3 overflow-hidden relative">
             <img 
@@ -101,6 +125,20 @@ export default function ListingCard({ listing }: ListingCardProps) {
             )}
           </span>
         </div>
+        {showPriceChange && (
+          <div className="mt-2 text-xs font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+            <span
+              className={
+                (priceChange24h ?? 0) >= 0
+                  ? 'text-[#00ff00]'
+                  : 'text-red-500'
+              }
+            >
+              24h {(priceChange24h ?? 0) >= 0 ? '+' : ''}
+              {(priceChange24h ?? 0).toFixed(1)}%
+            </span>
+          </div>
+        )}
         <div className="flex flex-wrap gap-1 mt-2">
           {listing.status === 'active' && listing.created_at && (
             <span className="inline-block text-xs text-muted-foreground" title={`Listed ${listing.created_at}`}>

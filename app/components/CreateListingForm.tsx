@@ -31,10 +31,10 @@ import { useTier } from './providers/TierProvider'
 
 const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/
 
-/** Build formatted token description for pump.fun/DEX — newlines create line breaks */
-function buildTokenDescription(opts: { title: string; description: string; price: string; priceLabel: string }): string {
+/** Build formatted token description for pump.fun/DEX — newlines create line breaks.
+ * Does NOT include token name or listing title — pump.fun shows the name separately. */
+function buildTokenDescription(opts: { description: string; price: string; priceLabel: string }): string {
   const parts: string[] = []
-  if (opts.title?.trim()) parts.push(opts.title.trim())
   if (opts.description?.trim()) parts.push(opts.description.trim())
   if (opts.price && opts.priceLabel) parts.push(`Listing Price: ${opts.price} ${opts.priceLabel}`)
   return parts.join('\n\n').slice(0, 800)
@@ -384,7 +384,6 @@ export default function CreateListingForm() {
 
         const priceLabel = formatPriceToken(formData.priceToken, formData.tokenSymbol)
         const listingDescription = buildTokenDescription({
-          title: formData.title,
           description: formData.description,
           price: formData.price,
           priceLabel,
@@ -1033,7 +1032,6 @@ export default function CreateListingForm() {
                 tokenName={formData.tokenName}
                 tokenSymbol={formData.tokenSymbol}
                 description={buildTokenDescription({
-                  title: formData.title,
                   description: formData.description,
                   price: formData.price,
                   priceLabel: formatPriceToken(formData.priceToken, formData.tokenSymbol),

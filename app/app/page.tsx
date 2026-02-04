@@ -5,6 +5,7 @@ import ListingFeed from '@/components/ListingFeed'
 import NotificationsPanel from '@/components/NotificationsPanel'
 import ExternalListingsSection from '@/components/ExternalListingsSection'
 import AsciiLogo from '@/components/AsciiLogo'
+import CreateListingCTA from '@/components/CreateListingCTA'
 import LoadingScreen from '@/components/LoadingScreen'
 import Footer from '@/components/Footer'
 
@@ -35,6 +36,10 @@ export default function Home() {
       <main className="max-w-6xl mx-auto px-2 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 w-full">
         <div className="mb-6 sm:mb-8 md:mb-10 text-center w-full">
           <AsciiLogo />
+        </div>
+
+        <div className="mb-6 sm:mb-8 flex justify-center">
+          <CreateListingCTA />
         </div>
 
         <div className="mb-6">

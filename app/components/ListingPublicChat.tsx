@@ -97,6 +97,12 @@ export default function ListingPublicChat({
             setLoading(false)
             return
           }
+          if ('error' in result && result.error) {
+            setKeyError(result.error)
+            setChatKey(null)
+            setLoading(false)
+            return
+          }
           if ('encrypted' in result && result.encrypted === false) {
             setKeyError(null)
             setChatKey(null)
@@ -106,9 +112,6 @@ export default function ListingPublicChat({
           if ('key' in result && result.key) {
             setChatKey(base64ToUint8Array(result.key))
             setKeyError(null)
-          } else if ('error' in result) {
-            setKeyError((result as { error?: string }).error || 'Hold the listing token to access this chat')
-            setChatKey(null)
           } else {
             setKeyError('Hold the listing token to access this chat')
             setChatKey(null)
@@ -218,7 +221,8 @@ export default function ListingPublicChat({
 
   const displayMessages = isTokenGated && chatKey ? decryptedMessages : messages
   const fsbdOk = canChatByFsbd === true
-  const canSend = fsbdOk && (!isTokenGated || (isTokenGated && chatKey))
+  // Token-gated: only listing token required. Non-token-gated: $FSBD required (spam filter).
+  const canSend = isTokenGated ? !!chatKey : fsbdOk
 
   if (!supabase) return null
 
@@ -295,7 +299,7 @@ export default function ListingPublicChat({
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-          placeholder={canSend ? 'Message the community...' : !fsbdOk ? (canChatByFsbd === null ? 'Checking…' : 'Hold $FSBD to chat') : isTokenGated ? 'Hold token to post' : 'Message...'}
+          placeholder={canSend ? 'Message the community...' : isTokenGated ? 'Hold the listing token to post' : !fsbdOk ? (canChatByFsbd === null ? 'Checking…' : 'Hold $FSBD to chat') : 'Message...'}
           maxLength={2000}
           disabled={!canSend}
           className="flex-1 bg-black border-2 border-[#660099] px-3 py-2 text-[#00ff00] placeholder-[#660099]/60 rounded font-pixel-alt text-sm disabled:opacity-50"

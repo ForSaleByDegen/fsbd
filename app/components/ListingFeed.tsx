@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -11,6 +11,8 @@ import SearchBar from './SearchBar'
 import type { ListedTimeFilter, ListedSort } from './SearchBar'
 import { Button } from './ui/button'
 
+const FETCH_TIMEOUT_MS = 15000
+
 type TabType = 'browse' | 'activity'
 
 export default function ListingFeed() {
@@ -19,6 +21,10 @@ export default function ListingFeed() {
   const tabParam = searchParams.get('tab')
   const categoryParam = searchParams.get('category')
   const [tab, setTab] = useState<TabType>(tabParam === 'activity' ? 'activity' : 'browse')
+  const tabRef = useRef(tab)
+  useEffect(() => {
+    tabRef.current = tab
+  }, [tab])
 
   useEffect(() => {
     if (tabParam === 'activity') setTab('activity')
@@ -30,6 +36,9 @@ export default function ListingFeed() {
   }, [categoryParam])
   const [listings, setListings] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [tokenStats, setTokenStats] = useState<TokenStats>({})
+  const [flashingListingId, setFlashingListingId] = useState<string | null>(null)
+  const prevBuysRef = useRef<Record<string, number>>({})
   const [searchQuery, setSearchQuery] = useState('')
   const [category, setCategory] = useState(categoryParam && CATEGORIES.some((c) => c.value === categoryParam) ? categoryParam : 'all')
   const [subcategory, setSubcategory] = useState('')
@@ -51,26 +60,105 @@ export default function ListingFeed() {
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (!document.hidden) {
-        fetchListings()
+        if (tabRef.current === 'activity') {
+          fetchActivity()
+        } else {
+          fetchListings()
+        }
       }
     }
     document.addEventListener('visibilitychange', handleVisibilityChange)
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
   }, [])
 
+  const fetchTokenStats = async (mints: string[]) => {
+    if (mints.length === 0) return {}
+    try {
+      const res = await fetch(`/api/token-stats?mints=${mints.join(',')}`, { cache: 'no-store' })
+      const data = (await res.json()) as TokenStats
+      return data || {}
+    } catch {
+      return {}
+    }
+  }
+
+  // Fetch token stats when listings load (for 24h % and initial buy counts)
+  useEffect(() => {
+    const tokenMints = listings
+      .filter((l) => l.token_mint && l.token_mint.length > 32)
+      .map((l) => l.token_mint)
+      .filter(Boolean) as string[]
+    if (tokenMints.length === 0) {
+      setTokenStats({})
+      return
+    }
+    fetchTokenStats(tokenMints).then(setTokenStats)
+  }, [listings.map((l) => l.id).join(',')])
+
+  // Poll token stats on browse tab - detect buys and pop + flash
+  useEffect(() => {
+    if (tab !== 'browse') return
+    const tokenMints = listings
+      .filter((l) => l.token_mint && l.token_mint.length > 32)
+      .map((l) => l.token_mint)
+      .filter(Boolean) as string[]
+    if (tokenMints.length === 0) return
+    const interval = setInterval(async () => {
+      const stats = await fetchTokenStats(tokenMints)
+      setTokenStats((prev) => ({ ...prev, ...stats }))
+      let listingToPop: string | null = null
+      for (const listing of listings) {
+        const mint = listing.token_mint
+        if (!mint || !stats[mint]) continue
+        const buys = stats[mint].recentBuys5m ?? 0
+        const prev = prevBuysRef.current[mint] ?? 0
+        if (buys > prev && buys > 0) {
+          listingToPop = listing.id
+          break
+        }
+        prevBuysRef.current[mint] = buys
+      }
+      if (listingToPop) {
+        setFlashingListingId(listingToPop)
+        setListings((prev) => {
+          const idx = prev.findIndex((l) => l.id === listingToPop)
+          if (idx <= 0) return prev
+          const copy = [...prev]
+          const [item] = copy.splice(idx, 1)
+          copy.unshift(item)
+          return copy
+        })
+        setTimeout(() => setFlashingListingId(null), 3000)
+      }
+    }, TOKEN_STATS_POLL_MS)
+    return () => clearInterval(interval)
+  }, [tab, listings.map((l) => l.id).join(',')])
+
   const fetchActivity = async () => {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
     try {
       setLoading(true)
-      const response = await fetch('/api/listings/activity', { cache: 'no-store' })
+      const response = await fetch('/api/listings/activity', { cache: 'no-store', signal: controller.signal })
+      clearTimeout(timeoutId)
       const data = await response.json()
-      const arr = Array.isArray(data) ? data : []
-      const normalized = arr.map((listing: any) => ({
-        ...listing,
-        images: Array.isArray(listing.images) ? listing.images : typeof listing.images === 'string' ? JSON.parse(listing.images || '[]') : [],
-      }))
+      const arr = Array.isArray(data) ? data : (data?.error ? [] : [])
+      const normalized = arr.map((listing: any) => {
+        let images: string[] = []
+        if (Array.isArray(listing.images)) images = listing.images
+        else if (typeof listing.images === 'string') {
+          try { images = JSON.parse(listing.images || '[]') } catch { images = [] }
+        }
+        return { ...listing, images }
+      })
       setListings(normalized)
     } catch (err) {
-      console.error('Error fetching activity:', err)
+      clearTimeout(timeoutId)
+      if ((err as Error).name === 'AbortError') {
+        console.error('Activity fetch timed out')
+      } else {
+        console.error('Error fetching activity:', err)
+      }
       setListings([])
     } finally {
       setLoading(false)
@@ -231,7 +319,12 @@ export default function ListingFeed() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6 w-full">
           {listings.map((listing) => (
-            <ListingCard key={listing.id} listing={listing} />
+            <ListingCard
+              key={listing.id}
+              listing={listing}
+              priceChange24h={listing.token_mint ? tokenStats[listing.token_mint]?.priceChange24h ?? null : null}
+              shouldFlash={flashingListingId === listing.id}
+            />
           ))}
         </div>
       )}

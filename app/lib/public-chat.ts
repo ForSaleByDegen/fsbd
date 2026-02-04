@@ -70,10 +70,13 @@ export async function sendTokenGatedMessage(
 export async function fetchTokenChatKey(
   listingId: string,
   wallet: string
-): Promise<{ key: string; encrypted: boolean } | { encrypted: false } | null> {
+): Promise<{ key: string; encrypted: boolean } | { encrypted: false } | { error: string } | null> {
   const res = await fetch(
     `/api/listings/${listingId}/token-chat-key?wallet=${encodeURIComponent(wallet)}`
   )
-  if (!res.ok) return null
-  return res.json()
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    return { error: (data as { error?: string }).error || 'Could not verify token access' }
+  }
+  return data
 }
