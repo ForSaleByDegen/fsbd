@@ -14,6 +14,8 @@ import {
   encryptMessageWithKey,
   decryptMessageWithKey,
 } from '@/lib/chat-encryption'
+import { uploadImageToIPFS } from '@/lib/pinata'
+import { parseChatContent } from '@/lib/chat-utils'
 import { Button } from './ui/button'
 import { useTier } from './providers/TierProvider'
 
@@ -42,8 +44,10 @@ export default function ListingPublicChat({
   const [messages, setMessages] = useState<PublicChatMessage[]>([])
   const [decryptedMessages, setDecryptedMessages] = useState<Array<{ id: string; sender_wallet_hash: string; content: string; created_at: string }>>([])
   const [input, setInput] = useState('')
+  const [pendingImage, setPendingImage] = useState<File | null>(null)
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
+  const imageInputRef = useRef<HTMLInputElement>(null)
   const [chatKey, setChatKey] = useState<Uint8Array | null>(null)
   const [keyError, setKeyError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -192,11 +196,28 @@ export default function ListingPublicChat({
 
   const handleSend = async () => {
     const text = input.trim()
-    if (!text || sending) return
+    if ((!text && !pendingImage) || sending) return
     setSending(true)
     try {
+      let imageUrl: string | undefined
+      if (pendingImage) {
+        if (pendingImage.size > 4.5 * 1024 * 1024) {
+          alert('Image must be under 4.5MB')
+          setSending(false)
+          return
+        }
+        try {
+          imageUrl = await uploadImageToIPFS(pendingImage)
+          setPendingImage(null)
+        } catch (e) {
+          alert(e instanceof Error ? e.message : 'Failed to upload image')
+          setSending(false)
+          return
+        }
+      }
+      const content = imageUrl ? JSON.stringify({ text: text || undefined, imageUrl }) : text
       if (isTokenGated && chatKey) {
-        const { encrypted, nonce } = encryptMessageWithKey(text, chatKey)
+        const { encrypted, nonce } = encryptMessageWithKey(content, chatKey)
         const ok = await sendTokenGatedMessage(listingId, currentUserWallet, encrypted, nonce)
         if (ok) {
           setInput('')
@@ -206,7 +227,7 @@ export default function ListingPublicChat({
           alert('Failed to send message')
         }
       } else {
-        const result = await sendPublicMessage(listingId, currentUserWallet, text)
+        const result = await sendPublicMessage(listingId, currentUserWallet, content)
         if (result.ok) {
           setInput('')
           shouldScrollToEndRef.current = true
@@ -279,12 +300,26 @@ export default function ListingPublicChat({
                     : 'bg-[#660099]/20 border border-[#660099]'
                 }`}
               >
-                <p className="text-xs text-[#aa77ee] mb-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                <p className="text-sm text-[#aa77ee] mb-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                   {displaySender(m.sender_wallet_hash)}
                 </p>
-                <p className="text-sm text-[#00ff00] break-words" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-                  {m.content}
-                </p>
+                {(() => {
+                  const { text, imageUrl } = parseChatContent(m.content)
+                  return (
+                    <>
+                      {imageUrl && (
+                        <a href={imageUrl} target="_blank" rel="noopener noreferrer" className="block mb-2">
+                          <img src={imageUrl} alt="Chat" className="max-w-full max-h-48 rounded object-contain border border-[#660099]/50" />
+                        </a>
+                      )}
+                      {text && (
+                        <p className="text-sm text-[#00ff00] break-words" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                          {text}
+                        </p>
+                      )}
+                    </>
+                  )
+                })()}
                 <p className="text-xs text-[#660099] mt-1">
                   {new Date(m.created_at).toLocaleTimeString()}
                 </p>
@@ -300,26 +335,53 @@ export default function ListingPublicChat({
             {fsbdChatError}
           </p>
         )}
-        <div className="flex gap-2">
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-          placeholder={canSend ? 'Message the community...' : isTokenGated ? (chatMinTokens === 1 ? 'Hold the listing token to post' : `Hold at least ${chatMinTokens.toLocaleString()} tokens to post`) : !fsbdOk ? (canChatByFsbd === null ? 'Checking…' : 'Hold $FSBD to chat') : 'Message...'}
-          maxLength={2000}
-          disabled={!canSend}
-          className="flex-1 bg-black border-2 border-[#660099] px-3 py-2 text-[#00ff00] placeholder-[#660099]/60 rounded font-pixel-alt text-sm disabled:opacity-50"
-          style={{ fontFamily: 'var(--font-pixel-alt)' }}
-        />
-        <Button
-          onClick={handleSend}
-          disabled={sending || !input.trim() || !canSend}
-          className="border-2 border-[#00ff00] text-[#00ff00] hover:bg-[#00ff00] hover:text-black px-4"
-        >
-          {sending ? '…' : 'Send'}
-        </Button>
+        <div className="flex gap-2 items-end">
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/gif"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0]
+              if (f && f.size <= 4.5 * 1024 * 1024) setPendingImage(f)
+              else if (f) alert('Image must be under 4.5MB')
+              e.target.value = ''
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => imageInputRef.current?.click()}
+            disabled={!canSend}
+            className="p-2 border-2 border-[#660099] text-[#660099] hover:border-[#00ff00] hover:text-[#00ff00] rounded shrink-0 disabled:opacity-50"
+            title="Attach image"
+          >
+            📷
+          </button>
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+            placeholder={canSend ? (pendingImage ? 'Add caption (optional)...' : 'Message the community...') : isTokenGated ? (chatMinTokens === 1 ? 'Hold the listing token to post' : `Hold at least ${chatMinTokens.toLocaleString()} tokens to post`) : !fsbdOk ? (canChatByFsbd === null ? 'Checking…' : 'Hold $FSBD to chat') : 'Message...'}
+            maxLength={2000}
+            disabled={!canSend}
+            className="flex-1 bg-black border-2 border-[#660099] px-3 py-2 text-[#00ff00] placeholder-[#660099]/60 rounded font-pixel-alt text-sm disabled:opacity-50 min-w-0"
+            style={{ fontFamily: 'var(--font-pixel-alt)' }}
+          />
+          <Button
+            onClick={handleSend}
+            disabled={sending || (!input.trim() && !pendingImage) || !canSend}
+            className="border-2 border-[#00ff00] text-[#00ff00] hover:bg-[#00ff00] hover:text-black px-4 shrink-0"
+          >
+            {sending ? '…' : 'Send'}
+          </Button>
         </div>
+        {pendingImage && (
+          <div className="mt-2 flex items-center gap-2 text-sm text-[#00ff00]">
+            <span>{pendingImage.name}</span>
+            <button type="button" onClick={() => setPendingImage(null)} className="text-amber-400 hover:text-red-400">Remove</button>
+          </div>
+        )}
       </div>
     </div>
   )

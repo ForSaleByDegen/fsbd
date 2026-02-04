@@ -26,13 +26,13 @@ export async function fetchPublicMessages(listingId: string): Promise<PublicChat
   return (data ?? []) as PublicChatMessage[]
 }
 
-/** Send plain public message (via API - uses service role, token-gated by $FSBD) */
+/** Send plain public message (via API - uses service role, token-gated by $FSBD). Content can be plain text or JSON { text?, imageUrl? }. */
 export async function sendPublicMessage(
   listingId: string,
   senderWallet: string,
   content: string
 ): Promise<{ ok: boolean; error?: string }> {
-  const trimmed = content.trim().slice(0, 2000)
+  const trimmed = content.trim().slice(0, 2500)
   if (!trimmed) return { ok: false, error: 'Message is empty' }
   const res = await fetch(`/api/listings/${listingId}/public-chat-message`, {
     method: 'POST',

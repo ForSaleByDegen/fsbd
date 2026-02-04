@@ -172,7 +172,7 @@ export function getTierBenefits(tier: Tier): string[] {
       '1 free listing (hold $FSBD or subscribe for more)',
       `Platform fee: ${feePercent}% on sales`,
       `Up to ${maxListings} active listing`,
-      `${maxImages} image per listing`,
+      `${maxImages} images per listing`,
       `Token launch fee: ${listingFee} SOL (full price)`,
     ],
     bronze: [
@@ -255,17 +255,17 @@ export const EARLY_ADOPTER_LISTING_LIMIT = 99
 export const EXTRA_LISTING_SLOT_COST_FSBD = 10_000
 
 /**
- * Maximum listing images allowed per tier
+ * Maximum listing images allowed per tier (2–4 based on $FSBD holdings)
  */
 export function getMaxImagesForTier(tier: Tier): number {
   const limits: Record<Tier, number> = {
-    free: 1,
+    free: 2,
     bronze: 2,
     silver: 3,
     gold: 4,
     platinum: 4,
   }
-  return limits[tier] ?? 1
+  return limits[tier] ?? 2
 }
 
 /**

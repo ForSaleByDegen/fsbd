@@ -19,6 +19,8 @@ import {
   decryptAndGet,
   formatAddressForChat,
 } from '@/lib/local-shipping-address'
+import { uploadImageToIPFS } from '@/lib/pinata'
+import { parseChatContent } from '@/lib/chat-utils'
 import { Button } from './ui/button'
 
 interface ListingChatProps {
@@ -164,18 +166,40 @@ export default function ListingChat({
 
   const handleSend = async () => {
     const text = input.trim()
-    if (!text || !threadId || !threadBuyerHash || sending) return
+    if ((!text && !pendingImage) || !threadId || !threadBuyerHash || sending) return
     setSending(true)
-    const ok = await sendEncryptedMessage(threadId, sellerHash, threadBuyerHash, myHash, text)
-    if (ok) {
-      setInput('')
-      shouldScrollToEndRef.current = true
-      const msgs = await fetchMessages(threadId, sellerHash, threadBuyerHash)
-      setMessages(msgs)
-    } else {
-      alert('Failed to send message')
+    try {
+      let imageUrl: string | undefined
+      if (pendingImage) {
+        if (pendingImage.size > 4.5 * 1024 * 1024) {
+          alert('Image must be under 4.5MB')
+          setSending(false)
+          return
+        }
+        try {
+          imageUrl = await uploadImageToIPFS(pendingImage)
+          setPendingImage(null)
+        } catch (e) {
+          alert(e instanceof Error ? e.message : 'Failed to upload image')
+          setSending(false)
+          return
+        }
+      }
+      const payload = imageUrl
+        ? JSON.stringify({ text: text || undefined, imageUrl })
+        : text
+      const ok = await sendEncryptedMessage(threadId, sellerHash, threadBuyerHash, myHash, payload)
+      if (ok) {
+        setInput('')
+        shouldScrollToEndRef.current = true
+        const msgs = await fetchMessages(threadId, sellerHash, threadBuyerHash)
+        setMessages(msgs)
+      } else {
+        alert('Failed to send message')
+      }
+    } finally {
+      setSending(false)
     }
-    setSending(false)
   }
 
   const handleProposeEscrow = async () => {
@@ -354,24 +378,56 @@ export default function ListingChat({
         ))}
         <div ref={messagesEndRef} />
       </div>
-      <div className="p-2 border-t border-[#660099] flex gap-2">
+      <div className="p-2 border-t border-[#660099] flex gap-2 items-end">
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/gif"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0]
+            if (f && f.size <= 4.5 * 1024 * 1024) setPendingImage(f)
+            else if (f) alert('Image must be under 4.5MB')
+            e.target.value = ''
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => imageInputRef.current?.click()}
+          className="p-2 border-2 border-[#660099] text-[#660099] hover:border-[#00ff00] hover:text-[#00ff00] rounded shrink-0"
+          title="Attach image"
+        >
+          📷
+        </button>
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-          placeholder="Type a message..."
-          className="flex-1 bg-black border-2 border-[#660099] px-3 py-2 text-[#00ff00] placeholder-[#660099]/60 rounded font-pixel-alt text-sm"
+          placeholder={pendingImage ? 'Add caption (optional)...' : 'Type a message...'}
+          className="flex-1 bg-black border-2 border-[#660099] px-3 py-2 text-[#00ff00] placeholder-[#660099]/60 rounded font-pixel-alt text-sm min-w-0"
           style={{ fontFamily: 'var(--font-pixel-alt)' }}
         />
         <Button
           onClick={handleSend}
-          disabled={sending || !input.trim()}
-          className="border-2 border-[#00ff00] text-[#00ff00] hover:bg-[#00ff00] hover:text-black px-4"
+          disabled={sending || (!input.trim() && !pendingImage)}
+          className="border-2 border-[#00ff00] text-[#00ff00] hover:bg-[#00ff00] hover:text-black px-4 shrink-0"
         >
           {sending ? '…' : 'Send'}
         </Button>
       </div>
+      {pendingImage && (
+        <div className="px-2 pb-2 flex items-center gap-2 text-sm text-[#00ff00]">
+          <span>{pendingImage.name}</span>
+          <button
+            type="button"
+            onClick={() => setPendingImage(null)}
+            className="text-amber-400 hover:text-red-400"
+          >
+            Remove
+          </button>
+        </div>
+      )}
       {!isSeller && hasAddress && (
         <div className="p-2 border-t border-[#660099]">
           <Button

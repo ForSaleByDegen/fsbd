@@ -111,7 +111,7 @@ export default function ListingCard({ listing, priceChange24h, shouldFlash = fal
           </div>
         )}
         <h3 className="text-base sm:text-lg font-semibold mb-2 line-clamp-2 break-words">{listing.title}</h3>
-        <p className="text-muted-foreground text-xs sm:text-sm mb-2 line-clamp-2 flex-grow break-words">
+        <p className="text-muted-foreground text-sm sm:text-base mb-2 line-clamp-2 flex-grow break-words">
           {listing.description}
         </p>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1 sm:gap-0 mt-auto">
@@ -126,7 +126,7 @@ export default function ListingCard({ listing, priceChange24h, shouldFlash = fal
           </span>
         </div>
         {showPriceChange && (
-          <div className="mt-2 text-xs font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          <div className="mt-2 text-sm font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             <span
               className={
                 (priceChange24h ?? 0) >= 0
