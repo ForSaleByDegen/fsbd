@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
 
     // Use balance-check API (same as chat) for reliable tier detection with Bitquery fallback
     const base = request.nextUrl.origin || `https://${process.env.VERCEL_URL || 'fsbd.fun'}`
-    let tier: 'free' | 'bronze' | 'silver' | 'gold' = 'free'
+    let tier: 'free' | 'bronze' | 'silver' | 'gold' | 'platinum' = 'free'
     try {
       const res = await fetch(`${base}/api/config/balance-check?wallet=${encodeURIComponent(wallet)}`)
       const data = await res.json().catch(() => ({}))

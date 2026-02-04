@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get tier via balance-check API (same as limit-check/chat) for reliable $FSBD detection
-    let tier: 'free' | 'bronze' | 'silver' | 'gold' = 'free'
+    let tier: 'free' | 'bronze' | 'silver' | 'gold' | 'platinum' = 'free'
     try {
       const base = request.nextUrl?.origin || `https://${process.env.VERCEL_URL || 'fsbd.fun'}`
       const res = await fetch(`${base}/api/config/balance-check?wallet=${encodeURIComponent(wa)}`)
