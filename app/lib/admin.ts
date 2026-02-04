@@ -137,7 +137,7 @@ export async function upsertUserProfile(
   walletAddress: string,
   updates: {
     email?: string
-    tier?: 'free' | 'bronze' | 'silver' | 'gold'
+    tier?: 'free' | 'bronze' | 'silver' | 'gold' | 'platinum'
     listings_count?: number
     total_fees_paid?: number
   }

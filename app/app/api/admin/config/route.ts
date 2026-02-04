@@ -43,6 +43,9 @@ export async function PATCH(request: NextRequest) {
     if (typeof body.tier_gold === 'number' && body.tier_gold >= 0) {
       updates.tier_gold = Math.floor(body.tier_gold)
     }
+    if (typeof body.tier_platinum === 'number' && body.tier_platinum >= 0) {
+      updates.tier_platinum = Math.floor(body.tier_platinum)
+    }
     if (typeof body.fsbd_token_mint === 'string' && body.fsbd_token_mint.trim()) {
       updates.fsbd_token_mint = body.fsbd_token_mint.trim()
     }

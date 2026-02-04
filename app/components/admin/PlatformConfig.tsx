@@ -10,8 +10,9 @@ export default function PlatformConfig() {
   const [config, setConfig] = useState({
     auction_min_tokens: 10000000,
     tier_bronze: 100000,
-    tier_silver: 1000000,
-    tier_gold: 10000000,
+    tier_silver: 500000,
+    tier_gold: 2000000,
+    tier_platinum: 10000000,
     fsbd_token_mint: '',
   })
   const [loading, setLoading] = useState(true)
@@ -113,6 +114,18 @@ export default function PlatformConfig() {
               type="number"
               value={config.tier_gold}
               onChange={(e) => setConfig((c) => ({ ...c, tier_gold: parseInt(e.target.value, 10) || 0 }))}
+              className="bg-black border-2 border-[#660099] text-[#00ff00]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-pixel-alt text-[#00ff00] mb-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+              Tier Platinum ($FSBD)
+            </label>
+            <Input
+              type="number"
+              value={config.tier_platinum}
+              onChange={(e) => setConfig((c) => ({ ...c, tier_platinum: parseInt(e.target.value, 10) || 0 }))}
               className="bg-black border-2 border-[#660099] text-[#00ff00]"
             />
           </div>

@@ -8,7 +8,7 @@ import { Connection, PublicKey } from '@solana/web3.js'
 import { getAssociatedTokenAddress, getAccount, getMint, TOKEN_PROGRAM_ID } from '@solana/spl-token'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { supabase } from '@/lib/supabase'
-import { getFsbdMintAddress, getUserTier } from '@/lib/tier-check'
+import { getFsbdMintAddress, getUserTier, TIER_THRESHOLDS, type TierThresholds } from '@/lib/tier-check'
 import { getTokenBalanceViaBitquery } from '@/lib/bitquery-balance'
 
 const FSBD_PRODUCTION_MINT = 'A8sdJBY6UGErXW2gNVT6s13Qn4FJwGyRp63Y5mZBpump'
@@ -89,6 +89,21 @@ function extractMintFromConfig(data: { key: string; value_json: unknown }[]): st
   return null
 }
 
+function getTierThresholdsFromConfig(rows: { key: string; value_json: unknown }[]): TierThresholds {
+  const num = (k: string) => {
+    const r = rows?.find((x) => x.key === k)
+    if (!r) return undefined
+    const v = (r as { value_json: unknown }).value_json
+    return typeof v === 'number' ? v : parseInt(String(v), 10) || undefined
+  }
+  return {
+    bronze: num('tier_bronze') ?? TIER_THRESHOLDS.bronze,
+    silver: num('tier_silver') ?? TIER_THRESHOLDS.silver,
+    gold: num('tier_gold') ?? TIER_THRESHOLDS.gold,
+    platinum: num('tier_platinum') ?? TIER_THRESHOLDS.platinum,
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const wallet = request.nextUrl.searchParams.get('wallet')?.trim()
@@ -155,7 +170,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(errPayload)
     }
 
-    const tier = await getUserTier(wallet, connection, undefined, balance > 0 ? mintToUse : mintOverride || undefined)
+    const tier = await getUserTier(wallet, connection, tierThresholds, balance > 0 ? mintToUse : mintOverride || undefined)
 
     const payload: Record<string, unknown> = {
       balance,

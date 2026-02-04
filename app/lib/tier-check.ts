@@ -11,15 +11,15 @@ const FSBD_PRODUCTION_MINT = 'A8sdJBY6UGErXW2gNVT6s13Qn4FJwGyRp63Y5mZBpump'
 // Mock mint for devnet testing only
 const MOCK_FSBD_MINT = 'So11111111111111111111111111111111111111112' // Wrapped SOL
 
-// Tier thresholds (token amounts)
-// Updated: Start at 100k, top tier at 10M
+// Tier thresholds (token amounts) - 4 tiers: 2, 10, 30, 100 listings
 export const TIER_THRESHOLDS = {
-  bronze: 100000,      // 100,000 $FSBD - Lowest tier
-  silver: 1000000,     // 1,000,000 $FSBD - Mid tier
-  gold: 10000000       // 10,000,000 $FSBD - Top tier
+  bronze: 100000,      // 100k $FSBD -> 2 listings
+  silver: 500000,      // 500k $FSBD -> 10 listings
+  gold: 2000000,       // 2M $FSBD -> 30 listings
+  platinum: 10000000   // 10M $FSBD -> 100 listings
 } as const
 
-export type Tier = 'free' | 'bronze' | 'silver' | 'gold'
+export type Tier = 'free' | 'bronze' | 'silver' | 'gold' | 'platinum'
 
 /**
  * Extract fsbd_token_mint from platform_config rows.
@@ -108,7 +108,7 @@ export async function getUserTokenBalance(
   }
 }
 
-export type TierThresholds = { bronze: number; silver: number; gold: number }
+export type TierThresholds = { bronze: number; silver: number; gold: number; platinum?: number }
 
 /**
  * Get user's tier based on $FSBD token balance
@@ -146,10 +146,11 @@ export function calculateListingFee(tier: Tier): number {
   const BASE_FEE = 0.1 // 0.1 SOL base fee (only for token launches)
   
   const reductions = {
-    free: 0,       // No discount - need bronze tier for discount
-    bronze: 0.25,  // 25% off - bronze tier
-    silver: 0.5,   // 50% off - silver tier
-    gold: 0.75     // 75% off - gold tier
+    free: 0,
+    bronze: 0.2,
+    silver: 0.4,
+    gold: 0.6,
+    platinum: 0.75
   }
 
   const reduction = reductions[tier] || 0
@@ -168,9 +169,9 @@ export function getTierBenefits(tier: Tier): string[] {
 
   const benefits: Record<Tier, string[]> = {
     free: [
-      'Free listings (message signing only)',
+      '1 free listing (hold $FSBD or subscribe for more)',
       `Platform fee: ${feePercent}% on sales`,
-      `Up to ${maxListings} active listings`,
+      `Up to ${maxListings} active listing`,
       `${maxImages} image per listing`,
       `Token launch fee: ${listingFee} SOL (full price)`,
     ],
@@ -179,7 +180,7 @@ export function getTierBenefits(tier: Tier): string[] {
       `Platform fee: ${feePercent}% on sales`,
       `Up to ${maxListings} active listings (10k $FSBD per extra slot)`,
       `${maxImages} images per listing`,
-      `Token launch fee: ${listingFee} SOL (25% off)`,
+      `Token launch fee: ${listingFee} SOL (20% off)`,
       'Socials & banner in token metadata when launching',
     ],
     silver: [
@@ -187,11 +188,21 @@ export function getTierBenefits(tier: Tier): string[] {
       `Platform fee: ${feePercent}% on sales`,
       `Up to ${maxListings} active listings (10k $FSBD per extra slot)`,
       `${maxImages} images per listing`,
-      `Token launch fee: ${listingFee} SOL (50% off)`,
+      `Token launch fee: ${listingFee} SOL (40% off)`,
       'Socials & banner in token metadata when launching',
       'Priority visibility',
     ],
     gold: [
+      'Free listings (message signing only)',
+      `Platform fee: ${feePercent}% on sales`,
+      `Up to ${maxListings} active listings (10k $FSBD per extra slot)`,
+      `${maxImages} images per listing`,
+      `Token launch fee: ${listingFee} SOL (60% off)`,
+      'Socials & banner in token metadata when launching',
+      'Priority visibility',
+      'Auction creation',
+    ],
+    platinum: [
       'Free listings (message signing only)',
       `Platform fee: ${feePercent}% on sales`,
       `Up to ${maxListings} active listings (10k $FSBD per extra slot)`,
@@ -207,24 +218,44 @@ export function getTierBenefits(tier: Tier): string[] {
 }
 
 /**
- * Maximum active listings allowed per tier (free=3, bronze=2, silver=4, gold=10)
- * Users can purchase extra slots with 10,000 $FSBD each (see extra_paid_slots in profiles)
+ * Maximum active listings allowed per tier. Aligned with subscription: 2, 10, 30, 100
+ * free=1, bronze=2, silver=10, gold=30, platinum=100
+ * Early adopters get 99. Users can buy extra slots with 10k $FSBD each.
  */
 export function getMaxListingsForTier(tier: Tier): number {
   const limits: Record<Tier, number> = {
-    free: 3,
+    free: 1,
     bronze: 2,
-    silver: 4,
-    gold: 10,
+    silver: 10,
+    gold: 30,
+    platinum: 100,
   }
-  return limits[tier] ?? 3
+  return limits[tier] ?? 1
 }
+
+/** Subscription tier type (mirrors token tiers) */
+export type SubscriptionTier = 'basic' | 'bronze' | 'silver' | 'gold'
+
+/** Subscription tiers: 2, 10, 30, 100 listings. Same structure as token holder tiers. */
+export const SUBSCRIPTION_TIERS: Record<SubscriptionTier, { listings: number; priceUsd: number }> = {
+  basic: { listings: 2, priceUsd: 0.99 },
+  bronze: { listings: 10, priceUsd: 2.99 },
+  silver: { listings: 30, priceUsd: 5.99 },
+  gold: { listings: 100, priceUsd: 10.99 },
+}
+
+export function getSubscriptionListingLimit(tier: SubscriptionTier): number {
+  return SUBSCRIPTION_TIERS[tier]?.listings ?? 2
+}
+
+/** Early adopter listing limit (first 100 users) */
+export const EARLY_ADOPTER_LISTING_LIMIT = 99
 
 /** Cost in $FSBD to purchase one extra listing slot over tier limit */
 export const EXTRA_LISTING_SLOT_COST_FSBD = 10_000
 
 /**
- * Maximum listing images allowed per tier (Tier 1 = 1 image, Tier 2 = 2, etc.)
+ * Maximum listing images allowed per tier
  */
 export function getMaxImagesForTier(tier: Tier): number {
   const limits: Record<Tier, number> = {
@@ -232,6 +263,7 @@ export function getMaxImagesForTier(tier: Tier): number {
     bronze: 2,
     silver: 3,
     gold: 4,
+    platinum: 4,
   }
   return limits[tier] ?? 1
 }
@@ -248,7 +280,7 @@ export function canAddSocialsForTier(tier: Tier): boolean {
  * Use canCreateAuctionWithBalance(balance, auctionMinTokens) when config is available
  */
 export function canCreateAuction(tier: Tier): boolean {
-  return tier === 'gold'
+  return tier === 'gold' || tier === 'platinum'
 }
 
 /**
@@ -260,15 +292,15 @@ export function canCreateAuctionWithBalance(balance: number, auctionMinTokens: n
 
 /**
  * Calculate platform fee rate based on seller's tier
- * Gold tier gets the lowest fee (0.067%)
+ * Platinum gets the lowest fee
  */
 export function calculatePlatformFeeRate(tier: Tier): number {
-  const feeRates = {
-    free: 0.0042,   // 0.42% - base rate
-    bronze: 0.0035, // 0.35% - bronze discount
-    silver: 0.0021, // 0.21% - silver discount
-    gold: 0.00067   // 0.067% - gold discount (highest tier)
+  const feeRates: Record<Tier, number> = {
+    free: 0.0042,
+    bronze: 0.0035,
+    silver: 0.0025,
+    gold: 0.0015,
+    platinum: 0.00067,
   }
-  
-  return feeRates[tier] || feeRates.free
+  return feeRates[tier] ?? feeRates.free
 }

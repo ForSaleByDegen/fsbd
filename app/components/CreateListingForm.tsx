@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useWallet, useConnection } from '@solana/wallet-adapter-react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Transaction, SystemProgram, LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js'
 import { calculateListingFee, getMaxImagesForTier, canAddSocialsForTier } from '@/lib/tier-check'
 import { supabase, hashWalletAddress } from '@/lib/supabase'
@@ -113,10 +114,12 @@ export default function CreateListingForm() {
     canCreate: boolean
     tier?: string
     fsbd_token_mint?: string | null
+    isEarlyAdopter?: boolean
+    subscriptionActive?: boolean
   } | null>(null)
   // Use highest tier from both sources (TierProvider + limit-check) so we don't miss holdings
   const maxImages = isAdminUser ? 4 : Math.max(
-    getMaxImagesForTier((limitCheck?.tier ?? 'free') as 'free' | 'bronze' | 'silver' | 'gold'),
+    getMaxImagesForTier((limitCheck?.tier ?? 'free') as 'free' | 'bronze' | 'silver' | 'gold' | 'platinum'),
     getMaxImagesForTier(tierState.tier)
   )
 
@@ -141,13 +144,15 @@ export default function CreateListingForm() {
       .then((data) =>
         setLimitCheck({
           currentCount: data.currentCount ?? 0,
-          maxAllowed: data.maxAllowed ?? 3,
+          maxAllowed: data.maxAllowed ?? 1,
           canCreate: data.canCreate !== false,
           tier: data.tier ?? 'free',
           fsbd_token_mint: data.fsbd_token_mint ?? null,
+          isEarlyAdopter: data.isEarlyAdopter ?? false,
+          subscriptionActive: data.subscriptionActive ?? false,
         })
       )
-      .catch(() => setLimitCheck({ currentCount: 0, maxAllowed: 3, canCreate: true, tier: 'free' }))
+      .catch(() => setLimitCheck({ currentCount: 0, maxAllowed: 1, canCreate: true, tier: 'free' }))
   }, [publicKey?.toString()])
 
   const [formData, setFormData] = useState({
@@ -1183,7 +1188,7 @@ export default function CreateListingForm() {
                 </p>
               )}
             </div>
-            {(canAddSocialsForTier((limitCheck?.tier ?? tierState.tier) as 'free' | 'bronze' | 'silver' | 'gold') || isAdminUser) && (
+            {(canAddSocialsForTier((limitCheck?.tier ?? tierState.tier) as 'free' | 'bronze' | 'silver' | 'gold' | 'platinum') || isAdminUser) && (
               <div className="col-span-2 space-y-2 pt-2 border-t border-[#660099]/30">
                 <p className="text-xs text-[#aa77ee] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                   Optional socials for token metadata (100k+ $FSBD). Website = listing link (auto-filled after step 1) or your personal site.
@@ -1227,14 +1232,17 @@ export default function CreateListingForm() {
         <div className="mb-2">
           <p className="text-sm text-[#aa77ee] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             {limitCheck.currentCount} of {limitCheck.maxAllowed} listings used
-            {!limitCheck.canCreate && (
-              <span className="block text-amber-400 mt-1">
-                At limit. Purchase extra slots with 10,000 $FSBD each.
-                {limitCheck.tier === 'free' && ' If you hold $FSBD, try refreshing—your tier may need to update.'}
-              </span>
+          {!limitCheck.canCreate && (
+            <span className="block text-amber-400 mt-1">
+              {limitCheck.tier === 'free' && !limitCheck.subscriptionActive ? (
+                <>At limit (1 free listing). Hold $FSBD or <Link href="/subscribe" className="underline hover:text-[#00ff00]">subscribe</Link> for more.</>
+              ) : (
+                <>At limit. Purchase extra slots with 10,000 $FSBD each.{limitCheck.tier === 'free' && ' If you hold $FSBD, try refreshing.'}</>
+              )}
+            </span>
             )}
           </p>
-          {!limitCheck.canCreate && (
+          {!limitCheck.canCreate && (limitCheck.tier !== 'free' || limitCheck.subscriptionActive) && (
             <BuyListingSlotButton
               fsbdMint={limitCheck.fsbd_token_mint}
               onSuccess={() => {
@@ -1243,10 +1251,12 @@ export default function CreateListingForm() {
                   .then((data) =>
                     setLimitCheck({
                       currentCount: data.currentCount ?? 0,
-                      maxAllowed: data.maxAllowed ?? 3,
+                      maxAllowed: data.maxAllowed ?? 1,
                       canCreate: data.canCreate !== false,
                       tier: data.tier ?? 'free',
                       fsbd_token_mint: data.fsbd_token_mint ?? null,
+                      isEarlyAdopter: data.isEarlyAdopter ?? false,
+                      subscriptionActive: data.subscriptionActive ?? false,
                     })
                   )
               }}

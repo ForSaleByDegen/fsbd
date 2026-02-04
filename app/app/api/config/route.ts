@@ -39,8 +39,9 @@ export async function GET() {
     return NextResponse.json({
       auction_min_tokens: (config.auction_min_tokens as number) ?? 10000000,
       tier_bronze: (config.tier_bronze as number) ?? 100000,
-      tier_silver: (config.tier_silver as number) ?? 1000000,
-      tier_gold: (config.tier_gold as number) ?? 10000000,
+      tier_silver: (config.tier_silver as number) ?? 500000,
+      tier_gold: (config.tier_gold as number) ?? 2000000,
+      tier_platinum: (config.tier_platinum as number) ?? 10000000,
       fsbd_token_mint: (config.fsbd_token_mint as string) ?? process.env.NEXT_PUBLIC_FSBD_TOKEN_MINT ?? 'FSBD_TOKEN_MINT_PLACEHOLDER',
     })
   } catch (e) {

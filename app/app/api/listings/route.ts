@@ -2,7 +2,17 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Connection, PublicKey } from '@solana/web3.js'
 import { supabase, hashWalletAddress } from '@/lib/supabase'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { getUserTokenBalance, getUserTier, getMaxListingsForTier, getMaxImagesForTier, extractFsbdMintFromConfig, getFsbdMintAddress } from '@/lib/tier-check'
+import {
+  getUserTokenBalance,
+  getUserTier,
+  getMaxListingsForTier,
+  getMaxImagesForTier,
+  extractFsbdMintFromConfig,
+  getFsbdMintAddress,
+  getSubscriptionListingLimit,
+  EARLY_ADOPTER_LISTING_LIMIT,
+  type SubscriptionTier,
+} from '@/lib/tier-check'
 
 const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/
 
@@ -145,7 +155,7 @@ export async function POST(request: NextRequest) {
       const res = await fetch(`${base}/api/config/balance-check?wallet=${encodeURIComponent(wa)}`)
       const data = await res.json().catch(() => ({}))
       if (res.ok && typeof data.tier === 'string') {
-        tier = data.tier as 'free' | 'bronze' | 'silver' | 'gold'
+        tier = data.tier as 'free' | 'bronze' | 'silver' | 'gold' | 'platinum'
       } else {
         const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || 'https://api.mainnet-beta.solana.com'
         const connection = new Connection(rpcUrl)
@@ -168,7 +178,7 @@ export async function POST(request: NextRequest) {
     }
     listingData = { ...listingData, images: images.slice(0, maxImages) }
 
-    // Enforce listing cap (tier + extra paid slots) - admin bypass
+    // Enforce listing cap (early adopter / tier / subscription + extra paid slots) - admin bypass
     if (supabaseAdmin && !isAdmin) {
       const { count } = await supabaseAdmin
         .from('listings')
@@ -178,20 +188,41 @@ export async function POST(request: NextRequest) {
       const currentCount = count ?? 0
 
       let extraSlots = 0
+      let earlyAdopterRank: number | null = null
+      let subscriptionExpiresAt: string | null = null
+      let subscriptionTier: SubscriptionTier | null = null
       try {
         const { data: profile } = await supabaseAdmin
           .from('profiles')
-          .select('extra_paid_slots')
+          .select('extra_paid_slots, early_adopter_rank, subscription_expires_at, subscription_tier')
           .eq('wallet_address_hash', walletHash)
           .maybeSingle()
-        extraSlots = Number((profile as { extra_paid_slots?: number } | null)?.extra_paid_slots) || 0
+        const p = profile as { extra_paid_slots?: number; early_adopter_rank?: number | null; subscription_expires_at?: string | null; subscription_tier?: string | null } | null
+        extraSlots = Number(p?.extra_paid_slots) || 0
+        earlyAdopterRank = typeof p?.early_adopter_rank === 'number' && p.early_adopter_rank >= 1 && p.early_adopter_rank <= 100 ? p.early_adopter_rank : null
+        subscriptionExpiresAt = p?.subscription_expires_at ?? null
+        subscriptionTier = ['basic', 'bronze', 'silver', 'gold'].includes(p?.subscription_tier ?? '') ? (p!.subscription_tier as SubscriptionTier) : null
       } catch {}
 
-      const maxAllowed = getMaxListingsForTier(tier) + extraSlots
+      let baseLimit: number
+      if (earlyAdopterRank !== null) {
+        baseLimit = EARLY_ADOPTER_LISTING_LIMIT
+      } else {
+        const tierLimit = getMaxListingsForTier(tier)
+        const subActive = subscriptionExpiresAt ? new Date(subscriptionExpiresAt) > new Date() : false
+        const subLimit = subActive && subscriptionTier ? getSubscriptionListingLimit(subscriptionTier) : 0
+        baseLimit = Math.max(1, tierLimit, subLimit)
+      }
+
+      const maxAllowed = baseLimit + extraSlots
       if (currentCount >= maxAllowed) {
+        const subActive = subscriptionExpiresAt ? new Date(subscriptionExpiresAt) > new Date() : false
+        const hint = tier === 'free' && !subActive
+          ? ' Hold $FSBD or subscribe for more listings.'
+          : ' Purchase extra slots with 10,000 $FSBD each.'
         return NextResponse.json(
           {
-            error: `Listing limit reached (${maxAllowed} max for your tier). Purchase extra slots with 10,000 $FSBD each.`,
+            error: `Listing limit reached (${maxAllowed} max).${hint}`,
           },
           { status: 403 }
         )

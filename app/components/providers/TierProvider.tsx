@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useCallback, useState } from 'react'
 import { useWallet } from '@solana/wallet-adapter-react'
 
-export type Tier = 'free' | 'bronze' | 'silver' | 'gold'
+export type Tier = 'free' | 'bronze' | 'silver' | 'gold' | 'platinum'
 
 export interface TierState {
   balance: number

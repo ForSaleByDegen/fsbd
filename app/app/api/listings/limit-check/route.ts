@@ -6,7 +6,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { hashWalletAddress } from '@/lib/supabase'
-import { getMaxListingsForTier, extractFsbdMintFromConfig, getFsbdMintAddress, getUserTier } from '@/lib/tier-check'
+import {
+  getMaxListingsForTier,
+  extractFsbdMintFromConfig,
+  getFsbdMintAddress,
+  getUserTier,
+  getSubscriptionListingLimit,
+  EARLY_ADOPTER_LISTING_LIMIT,
+  type SubscriptionTier,
+} from '@/lib/tier-check'
 import { Connection } from '@solana/web3.js'
 
 export async function GET(request: NextRequest) {
@@ -56,7 +64,7 @@ export async function GET(request: NextRequest) {
       const res = await fetch(`${base}/api/config/balance-check?wallet=${encodeURIComponent(wallet)}`)
       const data = await res.json().catch(() => ({}))
       if (res.ok && typeof data.tier === 'string') {
-        tier = data.tier as 'free' | 'bronze' | 'silver' | 'gold'
+        tier = data.tier as 'free' | 'bronze' | 'silver' | 'gold' | 'platinum'
       } else {
         const { data: configRows } = await supabaseAdmin.from('platform_config').select('key, value_json')
         const fm = extractFsbdMintFromConfig((configRows as { key: string; value_json: unknown }[]) || null)
@@ -74,26 +82,44 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Get extra_paid_slots from profile (column added in migration_extra_listing_slots)
+    // Get profile: extra_paid_slots, early_adopter_rank, subscription_expires_at, subscription_tier
     let extraSlots = 0
+    let earlyAdopterRank: number | null = null
+    let subscriptionExpiresAt: string | null = null
+    let subscriptionTier: SubscriptionTier | null = null
     try {
       const { data: profile } = await supabaseAdmin
         .from('profiles')
-        .select('extra_paid_slots')
+        .select('extra_paid_slots, early_adopter_rank, subscription_expires_at, subscription_tier')
         .eq('wallet_address_hash', walletHash)
         .maybeSingle()
-      extraSlots = Number((profile as { extra_paid_slots?: number } | null)?.extra_paid_slots) || 0
+      const p = profile as { extra_paid_slots?: number; early_adopter_rank?: number | null; subscription_expires_at?: string | null; subscription_tier?: string | null } | null
+      extraSlots = Number(p?.extra_paid_slots) || 0
+      earlyAdopterRank = typeof p?.early_adopter_rank === 'number' && p.early_adopter_rank >= 1 && p.early_adopter_rank <= 100 ? p.early_adopter_rank : null
+      subscriptionExpiresAt = p?.subscription_expires_at ?? null
+      subscriptionTier = ['basic', 'bronze', 'silver', 'gold'].includes(p?.subscription_tier ?? '') ? (p!.subscription_tier as SubscriptionTier) : null
     } catch {
-      // Column may not exist yet
+      // Columns may not exist yet
     }
 
-    const tierLimit = getMaxListingsForTier(tier)
-    const maxAllowed = tierLimit + extraSlots
+    // Early adopter: first 100 users get 99 listings
+    let baseLimit: number
+    if (earlyAdopterRank !== null) {
+      baseLimit = EARLY_ADOPTER_LISTING_LIMIT
+    } else {
+      const tierLimit = getMaxListingsForTier(tier)
+      const subActive = subscriptionExpiresAt ? new Date(subscriptionExpiresAt) > new Date() : false
+      const subLimit = subActive && subscriptionTier ? getSubscriptionListingLimit(subscriptionTier) : 0
+      baseLimit = Math.max(1, tierLimit, subLimit)
+    }
+
+    const maxAllowed = baseLimit + extraSlots
     const canCreate = currentCount < maxAllowed
 
     const { data: configRows } = await supabaseAdmin.from('platform_config').select('key, value_json')
     const fsbdMint = extractFsbdMintFromConfig((configRows as { key: string; value_json: unknown }[]) || null)
 
+    const subscriptionActive = subscriptionExpiresAt ? new Date(subscriptionExpiresAt) > new Date() : false
     return NextResponse.json({
       currentCount,
       maxAllowed,
@@ -101,6 +127,8 @@ export async function GET(request: NextRequest) {
       tier,
       extraSlots,
       fsbd_token_mint: fsbdMint || getFsbdMintAddress(null),
+      isEarlyAdopter: earlyAdopterRank !== null,
+      subscriptionActive,
     })
   } catch (e) {
     console.error('[limit-check]', e)

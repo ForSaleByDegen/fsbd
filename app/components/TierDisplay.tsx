@@ -19,7 +19,12 @@ export default function TierDisplay() {
       .then((r) => r.json())
       .then((c) => {
         if (c.tier_bronze != null && c.tier_silver != null && c.tier_gold != null) {
-          setThresholds({ bronze: c.tier_bronze, silver: c.tier_silver, gold: c.tier_gold })
+          setThresholds({
+            bronze: c.tier_bronze,
+            silver: c.tier_silver,
+            gold: c.tier_gold,
+            platinum: c.tier_platinum ?? TIER_THRESHOLDS.platinum,
+          })
         }
         if (c.fsbd_token_mint && c.fsbd_token_mint !== 'FSBD_TOKEN_MINT_PLACEHOLDER') {
           setFsbdMint(c.fsbd_token_mint)
@@ -28,27 +33,13 @@ export default function TierDisplay() {
       .catch(() => {})
   }, [])
 
+  const plat = (thresholds as { platinum?: number }).platinum ?? TIER_THRESHOLDS.platinum
   const tiers = [
-    {
-      name: 'Free',
-      threshold: 0,
-      color: 'border-gray-300'
-    },
-    {
-      name: 'Bronze',
-      threshold: thresholds.bronze,
-      color: 'border-orange-400'
-    },
-    {
-      name: 'Silver',
-      threshold: thresholds.silver,
-      color: 'border-gray-400'
-    },
-    {
-      name: 'Gold',
-      threshold: thresholds.gold,
-      color: 'border-yellow-400'
-    }
+    { name: 'Free', threshold: 0, color: 'border-gray-300' },
+    { name: 'Bronze', threshold: thresholds.bronze, color: 'border-orange-400' },
+    { name: 'Silver', threshold: thresholds.silver, color: 'border-gray-400' },
+    { name: 'Gold', threshold: thresholds.gold, color: 'border-yellow-400' },
+    { name: 'Platinum', threshold: plat, color: 'border-cyan-400' },
   ]
 
   return (
@@ -119,7 +110,7 @@ export default function TierDisplay() {
         <h3 className="font-semibold mb-2">How to Upgrade</h3>
         <p className="text-sm text-muted-foreground">
           Hold $FSBD to unlock tiers. Your balance is checked on-chain—no registration, fully private.
-          More listings, more images per listing, lower fees, socials in token metadata, and auctions at Gold.
+          More listings, more images per listing, lower fees, socials in token metadata, and auctions at Gold+.
         </p>
         <div className="mt-3">
           <BuyFsbdSection variant="card" mint={fsbdMint ?? undefined} />
