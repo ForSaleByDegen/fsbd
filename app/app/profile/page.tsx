@@ -13,6 +13,7 @@ import LocalShippingAddressForm from '@/components/LocalShippingAddressForm'
 import ProfileAreaTag from '@/components/ProfileAreaTag'
 import ProfileSocialsBanner from '@/components/ProfileSocialsBanner'
 import NotificationsPanel from '@/components/NotificationsPanel'
+import NotificationPreferences from '@/components/NotificationPreferences'
 import { useTier } from '@/components/providers/TierProvider'
 import { formatPriceToken } from '@/lib/utils'
 
@@ -58,6 +59,9 @@ type ProfileData = {
     telegram_url?: string | null
     discord_url?: string | null
     website_url?: string | null
+    notify_email?: string | null
+    notify_phone?: string | null
+    notify_push_subscription?: unknown
   } | null
   listings: Array<{
     id: string
@@ -206,8 +210,13 @@ export default function ProfilePage() {
   const [error, setError] = useState<string | null>(null)
   const [deliverySectionOpen, setDeliverySectionOpen] = useState(false)
   const [socialsSectionOpen, setSocialsSectionOpen] = useState(false)
+  const [notificationsSectionOpen, setNotificationsSectionOpen] = useState(false)
   const [verifySectionOpen, setVerifySectionOpen] = useState(false)
+  const [notifySectionOpen, setNotifySectionOpen] = useState(false)
   const [verifications, setVerifications] = useState<{ verified: boolean; platforms: Array<{ platform: string; username?: string; storeUrl?: string }> } | null>(null)
+  const [manualCode, setManualCode] = useState<{ code: string; qrDataUrl: string } | null>(null)
+  const [manualUrl, setManualUrl] = useState('')
+  const [manualVerifying, setManualVerifying] = useState(false)
 
   const walletAddress = getWalletAddress(publicKey, wallets)
   const searchParams = useSearchParams()
@@ -461,9 +470,84 @@ export default function ProfilePage() {
                         Verify with Etsy
                       </a>
                     )}
-                    <span className="px-3 py-2 border-2 border-[#660099]/50 text-[#660099] font-pixel-alt text-xs opacity-70" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-                      Manual (code in image) — soon
-                    </span>
+                    {!verifications?.platforms?.some((p) => p.platform === 'manual') && (
+                      <div className="flex flex-col gap-2 pt-2 border-t border-[#660099]/30 mt-2">
+                        <span className="text-xs text-[#aa77ee] font-pixel-alt">Manual: add QR to listing image</span>
+                        {!manualCode ? (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (!walletAddress) return
+                              try {
+                                const r = await fetch('/api/verify/code/request', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ wallet: walletAddress }),
+                                })
+                                const d = await r.json()
+                                if (r.ok && d.code && d.qrDataUrl) setManualCode({ code: d.code, qrDataUrl: d.qrDataUrl })
+                              } catch {}
+                            }}
+                            className="px-3 py-2 border-2 border-[#660099] text-[#00ff00] hover:bg-[#660099]/30 font-pixel-alt text-xs w-fit"
+                            style={{ fontFamily: 'var(--font-pixel-alt)' }}
+                          >
+                            Request code
+                          </button>
+                        ) : (
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <img src={manualCode.qrDataUrl} alt="QR" className="w-24 h-24 border border-[#660099]" />
+                              <span className="text-[#00ff00] font-pixel-alt text-sm">{manualCode.code}</span>
+                            </div>
+                            <p className="text-xs text-[#aa77ee]">Add QR to listing photo, then paste listing URL:</p>
+                            <div className="flex gap-2">
+                              <input
+                                type="url"
+                                value={manualUrl}
+                                onChange={(e) => setManualUrl(e.target.value)}
+                                placeholder="https://ebay.com/itm/..."
+                                className="flex-1 bg-black border-2 border-[#660099] text-[#00ff00] font-pixel-alt text-xs p-2"
+                                style={{ fontFamily: 'var(--font-pixel-alt)' }}
+                              />
+                              <button
+                                type="button"
+                                disabled={manualVerifying || !manualUrl.trim()}
+                                onClick={async () => {
+                                  if (!walletAddress || !manualUrl.trim()) return
+                                  setManualVerifying(true)
+                                  try {
+                                    const r = await fetch('/api/verify/code/verify', {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ wallet: walletAddress, listingUrl: manualUrl.trim() }),
+                                    })
+                                    const d = await r.json()
+                                    if (r.ok) {
+                                      setManualCode(null)
+                                      setManualUrl('')
+                                      loadProfile()
+                                      fetch(`/api/seller/verifications?wallet=${encodeURIComponent(walletAddress)}`)
+                                        .then((x) => (x.ok ? x.json() : null))
+                                        .then((v) => v && setVerifications(v))
+                                    } else {
+                                      alert(d.error || 'Verification failed')
+                                    }
+                                  } catch {
+                                    alert('Verification failed')
+                                  } finally {
+                                    setManualVerifying(false)
+                                  }
+                                }}
+                                className="px-3 py-2 border-2 border-[#00ff00] text-[#00ff00] hover:bg-[#00ff00]/20 font-pixel-alt text-xs disabled:opacity-50"
+                                style={{ fontFamily: 'var(--font-pixel-alt)' }}
+                              >
+                                {manualVerifying ? 'Verifying...' : 'Verify'}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <p className="text-xs text-[#aa77ee] pt-2 font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                     See{' '}
@@ -472,6 +556,29 @@ export default function ProfilePage() {
                     </Link>
                     {' '}for details.
                   </p>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-[#660099]/30">
+              <button
+                type="button"
+                onClick={() => setNotifySectionOpen(!notifySectionOpen)}
+                className="w-full flex items-center justify-between text-left font-pixel-alt text-[#00ff00] hover:bg-[#660099]/20 transition-colors p-2 rounded"
+                style={{ fontFamily: 'var(--font-pixel-alt)' }}
+              >
+                <span>Notification preferences (email, phone, push)</span>
+                <span className="text-[#660099]">{notifySectionOpen ? '▼' : '▶'}</span>
+              </button>
+              {notifySectionOpen && (
+                <div className="pt-3">
+                  <NotificationPreferences
+                    walletAddress={walletAddress}
+                    initialEmail={profileData?.profile?.notify_email}
+                    initialPhone={profileData?.profile?.notify_phone}
+                    hasPushSubscription={!!profileData?.profile?.notify_push_subscription}
+                    onSaved={loadProfile}
+                  />
                 </div>
               )}
             </div>

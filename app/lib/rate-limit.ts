@@ -40,6 +40,7 @@ export const RATE_LIMITS = {
   adminVerifySeller: { max: 20, windowSec: 60 },
   sellerVerifications: { max: 30, windowSec: 60 },
   verifyOAuth: { max: 15, windowSec: 60 },
+  verifyCode: { max: 10, windowSec: 60 },
   general: { max: 60, windowSec: 60 },
 } as const
 

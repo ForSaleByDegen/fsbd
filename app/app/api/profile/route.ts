@@ -164,6 +164,17 @@ export async function PATCH(request: NextRequest) {
         updates[key] = v || null
       }
     }
+    if ('notify_email' in body) {
+      const v = typeof body.notify_email === 'string' ? body.notify_email.trim().slice(0, 255) : ''
+      updates.notify_email = v && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? v : null
+    }
+    if ('notify_phone' in body) {
+      const v = typeof body.notify_phone === 'string' ? body.notify_phone.trim().replace(/\D/g, '').slice(0, 20) : ''
+      updates.notify_phone = v || null
+    }
+    if (body.notify_push_subscription === null || (typeof body.notify_push_subscription === 'object' && body.notify_push_subscription !== null)) {
+      updates.notify_push_subscription = body.notify_push_subscription ?? null
+    }
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ ok: true })
