@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import ListingCard from '@/components/ListingCard'
 import BuyerOrderActions from '@/components/BuyerOrderActions'
 import ShippingAddressGuidance from '@/components/ShippingAddressGuidance'
@@ -205,8 +206,12 @@ export default function ProfilePage() {
   const [error, setError] = useState<string | null>(null)
   const [deliverySectionOpen, setDeliverySectionOpen] = useState(false)
   const [socialsSectionOpen, setSocialsSectionOpen] = useState(false)
+  const [verifySectionOpen, setVerifySectionOpen] = useState(false)
+  const [verifications, setVerifications] = useState<{ verified: boolean; platforms: Array<{ platform: string; username?: string; storeUrl?: string }> } | null>(null)
 
   const walletAddress = getWalletAddress(publicKey, wallets)
+  const searchParams = useSearchParams()
+  const verifyError = searchParams.get('error')
 
   useEffect(() => {
     if ((authenticated || connected) && walletAddress) {
@@ -232,6 +237,11 @@ export default function ProfilePage() {
       }
       const data = await apiRes.json()
       setProfileData(data)
+      // Load verification status
+      fetch(`/api/seller/verifications?wallet=${encodeURIComponent(walletAddress)}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((v) => v && setVerifications(v))
+        .catch(() => {})
     } catch (err: unknown) {
       console.error('Error loading profile:', err)
       setError(err instanceof Error ? err.message : 'Failed to load profile')
@@ -297,6 +307,12 @@ export default function ProfilePage() {
           <div className="mb-4 p-4 border-2 border-red-500 bg-red-500/10 text-red-400 font-pixel-alt text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             {error}
             <p className="mt-2 text-xs opacity-80">Ensure SUPABASE_SERVICE_ROLE_KEY is set in your deployment.</p>
+          </div>
+        )}
+
+        {verifyError && (
+          <div className="mb-4 p-4 border-2 border-amber-500/80 bg-amber-500/10 text-amber-400 font-pixel-alt text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+            Verification: {verifyError === 'ebay_not_configured' || verifyError === 'etsy_not_configured' ? 'Platform not configured yet.' : verifyError === 'invalid_state' ? 'Session expired. Try again.' : verifyError === 'ebay_denied' || verifyError === 'etsy_denied' ? 'You declined access.' : verifyError}
           </div>
         )}
 
@@ -384,6 +400,81 @@ export default function ProfilePage() {
               initialValue={profileData?.profile?.area_tag ?? null}
               onSaved={loadProfile}
             />
+
+            {/* Verified Seller section */}
+            <div className="mt-4 pt-4 border-t border-[#660099]/30">
+              <button
+                type="button"
+                onClick={() => setVerifySectionOpen(!verifySectionOpen)}
+                className="w-full flex items-center justify-between text-left font-pixel-alt text-[#00ff00] hover:bg-[#660099]/20 transition-colors p-2 rounded"
+                style={{ fontFamily: 'var(--font-pixel-alt)' }}
+              >
+                <span className="flex items-center gap-2">
+                  {verifications?.verified ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-[#00ff00] bg-[#00ff00]/10 text-[#00ff00] text-xs">
+                      ✓ Verified Seller
+                    </span>
+                  ) : (
+                    <span className="text-[#aa77ee]">Verify your seller profile</span>
+                  )}
+                </span>
+                <span className="text-[#660099]">{verifySectionOpen ? '▼' : '▶'}</span>
+              </button>
+              {verifySectionOpen && (
+                <div className="pt-3 space-y-3">
+                  {verifications?.verified && verifications.platforms.length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-sm text-[#aa77ee] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                        Verified platforms:
+                      </p>
+                      {verifications.platforms.map((p) => (
+                        <div key={p.platform} className="flex items-center gap-2 text-sm">
+                          <span className="capitalize text-[#00ff00]">{p.platform}</span>
+                          {p.storeUrl && (
+                            <a href={p.storeUrl} target="_blank" rel="noopener noreferrer" className="text-[#ff00ff] hover:text-[#00ff00] underline text-xs">
+                              View store →
+                            </a>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <p className="text-xs text-[#aa77ee] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                    The verified seller badge appears on your listings when you import from external sites (Amazon, eBay, Etsy). It proves you own or control those external listings.
+                  </p>
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    {!verifications?.platforms?.some((p) => p.platform === 'ebay') && (
+                      <a
+                        href={walletAddress ? `/api/verify/ebay/connect?wallet=${encodeURIComponent(walletAddress)}` : '#'}
+                        className="px-3 py-2 border-2 border-[#660099] text-[#00ff00] hover:bg-[#660099]/30 font-pixel-alt text-xs transition-colors"
+                        style={{ fontFamily: 'var(--font-pixel-alt)' }}
+                      >
+                        Verify with eBay
+                      </a>
+                    )}
+                    {!verifications?.platforms?.some((p) => p.platform === 'etsy') && (
+                      <a
+                        href={walletAddress ? `/api/verify/etsy/connect?wallet=${encodeURIComponent(walletAddress)}` : '#'}
+                        className="px-3 py-2 border-2 border-[#660099] text-[#00ff00] hover:bg-[#660099]/30 font-pixel-alt text-xs transition-colors"
+                        style={{ fontFamily: 'var(--font-pixel-alt)' }}
+                      >
+                        Verify with Etsy
+                      </a>
+                    )}
+                    <span className="px-3 py-2 border-2 border-[#660099]/50 text-[#660099] font-pixel-alt text-xs opacity-70" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                      Manual (code in image) — soon
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#aa77ee] pt-2 font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                    See{' '}
+                    <Link href="/docs/features" className="text-[#ff00ff] hover:text-[#00ff00] underline">
+                      Features &amp; Tiers
+                    </Link>
+                    {' '}for details.
+                  </p>
+                </div>
+              )}
+            </div>
 
             <div className="mt-4 pt-4 border-t border-[#660099]/30">
               <button

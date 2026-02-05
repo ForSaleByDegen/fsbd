@@ -14,9 +14,9 @@ function cleanup() {
   const now = Date.now()
   if (now - lastCleanup < CLEANUP_INTERVAL) return
   lastCleanup = now
-  for (const [key, w] of store.entries()) {
+  store.forEach((w, key) => {
     if (w.resetAt < now) store.delete(key)
-  }
+  })
 }
 
 export interface RateLimitConfig {
@@ -38,6 +38,8 @@ export const RATE_LIMITS = {
   balanceCheck: { max: 30, windowSec: 60 },
   verifyAssetOwnership: { max: 20, windowSec: 60 },
   adminVerifySeller: { max: 20, windowSec: 60 },
+  sellerVerifications: { max: 30, windowSec: 60 },
+  verifyOAuth: { max: 15, windowSec: 60 },
   general: { max: 60, windowSec: 60 },
 } as const
 

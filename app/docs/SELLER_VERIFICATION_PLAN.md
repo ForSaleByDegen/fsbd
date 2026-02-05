@@ -182,7 +182,7 @@ For successful manual verifications, reuse `seller_verifications` with `platform
 
 ## Part 3: Implementation Order
 
-### Phase 1 – OAuth (eBay + Etsy)
+### Phase 1 – OAuth (eBay + Etsy) ✅
 
 1. Create `seller_verifications` and `pending_verifications` migrations
 2. Implement eBay OAuth: connect + callback + token refresh
