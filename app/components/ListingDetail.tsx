@@ -555,15 +555,36 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
           </p>
         )}
         {listing.external_listing_url && (
-          <a
-            href={listing.external_listing_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block text-sm text-[#ff00ff] hover:text-[#00ff00] font-pixel-alt mt-2 underline"
-            style={{ fontFamily: 'var(--font-pixel-alt)' }}
-          >
-            Also listed elsewhere →
-          </a>
+          <div className="mt-3 p-3 rounded border border-amber-600/60 bg-amber-950/30">
+            <p className="text-sm text-amber-200 font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+              📎 Imported from{' '}
+              <a
+                href={listing.external_listing_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#ff00ff] hover:text-[#00ff00] underline"
+              >
+                {(() => {
+                  try {
+                    const h = new URL(listing.external_listing_url).hostname
+                    if (/amazon\./i.test(h)) return 'Amazon'
+                    if (/ebay\./i.test(h)) return 'eBay'
+                    if (/etsy\./i.test(h)) return 'Etsy'
+                    if (/mercari\./i.test(h)) return 'Mercari'
+                    return new URL(listing.external_listing_url).hostname.replace(/^www\./, '')
+                  } catch { return 'external site' }
+                })()}
+              </a>
+            </p>
+            <p className="text-xs text-amber-300/90 font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+              <strong>Disclaimer:</strong> Listing data was pulled from a third-party site. We cannot guarantee the seller owns or controls that listing. 
+              {listing.seller_verified ? (
+                <span className="text-[#00ff00]"> ✓ This seller has verified their profile via our verification process.</span>
+              ) : (
+                <> Verified sellers have a badge — they completed our unique verification process to prove ownership of their external listings.</>
+              )}
+            </p>
+          </div>
         )}
       </div>
 
@@ -598,6 +619,13 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
       {/* Seller stats (public) */}
       {listing.wallet_address && (
         <div className="mb-4 sm:mb-6">
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            {listing.seller_verified && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded border border-[#00ff00] bg-[#00ff00]/10 text-[#00ff00] text-xs font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                ✓ Verified Seller
+              </span>
+            )}
+          </div>
           <SellerStatsCard sellerWallet={listing.wallet_address} />
         </div>
       )}

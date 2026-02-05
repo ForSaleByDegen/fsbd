@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Connection, PublicKey } from '@solana/web3.js'
+import { checkRateLimit } from '@/lib/rate-limit'
 import { supabase, hashWalletAddress } from '@/lib/supabase'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import {
@@ -97,6 +98,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const rateLimited = checkRateLimit(request, 'createListing')
+  if (rateLimited) return rateLimited
+
   try {
     const body = await request.json()
     const wa = String(body.wallet_address ?? '').trim()

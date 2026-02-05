@@ -4,6 +4,7 @@
  * Helps debug tier issues when client shows 0.
  */
 import { NextRequest, NextResponse } from 'next/server'
+import { checkRateLimit } from '@/lib/rate-limit'
 import { Connection, PublicKey } from '@solana/web3.js'
 import { getAssociatedTokenAddress, getAccount, getMint, TOKEN_PROGRAM_ID } from '@solana/spl-token'
 import { supabaseAdmin } from '@/lib/supabase-admin'
@@ -105,6 +106,9 @@ function getTierThresholdsFromConfig(rows: { key: string; value_json: unknown }[
 }
 
 export async function GET(request: NextRequest) {
+  const rateLimited = checkRateLimit(request, 'balanceCheck')
+  if (rateLimited) return rateLimited
+
   try {
     const wallet = request.nextUrl.searchParams.get('wallet')?.trim()
     if (!wallet) {

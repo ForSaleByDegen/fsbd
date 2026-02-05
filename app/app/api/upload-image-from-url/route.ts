@@ -3,6 +3,7 @@
  * Used for "Import from product URL" when the user wants to use the imported image.
  */
 import { NextRequest, NextResponse } from 'next/server'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 const PINATA_JWT = process.env.NEXT_PUBLIC_PINATA_JWT || ''
 const PINATA_GATEWAY = process.env.NEXT_PUBLIC_PINATA_GATEWAY || 'gateway.pinata.cloud'
@@ -10,6 +11,9 @@ const MAX_SIZE = 4.5 * 1024 * 1024 // 4.5MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 
 export async function POST(request: NextRequest) {
+  const rateLimited = checkRateLimit(request, 'uploadImageFromUrl')
+  if (rateLimited) return rateLimited
+
   try {
     const body = await request.json().catch(() => ({}))
     const imageUrl = typeof body.imageUrl === 'string' ? body.imageUrl.trim() : ''

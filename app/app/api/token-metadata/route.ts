@@ -4,12 +4,16 @@
  * Returns a metadata URI suitable for pump.fun token creation.
  */
 import { NextRequest, NextResponse } from 'next/server'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 const PINATA_JWT = process.env.NEXT_PUBLIC_PINATA_JWT || process.env.PINATA_JWT || ''
 const GATEWAY = process.env.NEXT_PUBLIC_PINATA_GATEWAY || 'gateway.pinata.cloud'
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://fsbd.fun'
 
 export async function POST(request: NextRequest) {
+  const rateLimited = checkRateLimit(request, 'tokenMetadata')
+  if (rateLimited) return rateLimited
+
   try {
     if (!PINATA_JWT?.trim()) {
       return NextResponse.json({ error: 'Pinata not configured' }, { status: 503 })

@@ -4,6 +4,7 @@
  * Used when creating a listing from an external product URL (e.g. Amazon, eBay).
  */
 import { NextRequest, NextResponse } from 'next/server'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 function extractMeta(html: string, name: string): string | null {
   const patterns = [
@@ -254,6 +255,9 @@ function extractImage(html: string, hostname?: string): string | null {
 }
 
 export async function POST(request: NextRequest) {
+  const rateLimited = checkRateLimit(request, 'fetchProductInfo')
+  if (rateLimited) return rateLimited
+
   try {
     const body = await request.json().catch(() => ({}))
     const url = typeof body.url === 'string' ? body.url.trim() : ''

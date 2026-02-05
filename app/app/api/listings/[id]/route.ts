@@ -45,7 +45,23 @@ export async function GET(
       console.error('[Listings API] Invalid wallet_address for listing', id, ':', typeof wa, maskWallet(wa))
     }
 
-    return NextResponse.json(data)
+    // Check if seller has verified their profile (seller_verifications table)
+    let sellerVerified = false
+    const walletHash = data?.wallet_address_hash
+    if (walletHash) {
+      try {
+        const { data: verifications, error: verErr } = await supabaseAdmin
+          .from('seller_verifications')
+          .select('id')
+          .eq('wallet_address_hash', walletHash)
+          .limit(1)
+        if (!verErr && verifications && verifications.length > 0) sellerVerified = true
+      } catch {
+        // Table may not exist yet; ignore
+      }
+    }
+
+    return NextResponse.json({ ...data, seller_verified: sellerVerified })
   } catch (err) {
     console.error('Listing API error:', err)
     return NextResponse.json(

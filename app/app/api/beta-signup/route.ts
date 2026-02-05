@@ -5,12 +5,16 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { PublicKey } from '@solana/web3.js'
+import { checkRateLimit } from '@/lib/rate-limit'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { hashWalletAddress } from '@/lib/supabase'
 
 const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/
 
 export async function POST(request: NextRequest) {
+  const rateLimited = checkRateLimit(request, 'betaSignup')
+  if (rateLimited) return rateLimited
+
   try {
     const body = await request.json().catch(() => ({}))
     const wallet = String(body.wallet ?? '').trim()

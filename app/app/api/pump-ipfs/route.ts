@@ -7,6 +7,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import sharp from 'sharp'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 const PUMP_IPFS = 'https://pump.fun/api/ipfs'
 const MAX_SIZE_BYTES = 900 * 1024 // pump.fun ~1MB limit; stay under to be safe
@@ -56,6 +57,9 @@ async function resizeForPump(blob: Blob): Promise<{ buffer: Buffer; mime: string
 }
 
 export async function POST(request: NextRequest) {
+  const rateLimited = checkRateLimit(request, 'pumpIpfs')
+  if (rateLimited) return rateLimited
+
   try {
     const contentType = request.headers.get('content-type') || ''
     let file: Blob

@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select'
-import { CATEGORIES, getSubcategories } from '@/lib/categories'
+import { CATEGORIES, getSubcategories, getSubcategoryLabel } from '@/lib/categories'
 import BuyListingSlotButton from './BuyListingSlotButton'
 import TokenPreviewCard from './TokenPreviewCard'
 import { useTier } from './providers/TierProvider'
@@ -1449,6 +1449,55 @@ export default function CreateListingForm() {
           )}
         </div>
       )}
+      {/* Listing preview — how it will appear on the feed */}
+      <div className="p-4 rounded-lg border-2 border-[#660099]/50 bg-black/50">
+        <h3 className="text-sm font-medium text-[#00ff00] mb-3 font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          Preview — how your listing will appear
+        </h3>
+        <div
+          className="bg-black/80 border-2 border-[#660099] p-3 sm:p-4 rounded flex flex-col pixel-art min-h-[180px] pointer-events-none"
+          style={{ maxWidth: 400 }}
+        >
+          {(previewImageUrl || formData.importedImageUrls?.[0]) ? (
+            <div className="w-full h-32 sm:h-40 bg-black/50 border border-[#660099] rounded mb-2 sm:mb-3 overflow-hidden">
+              <img
+                src={previewImageUrl || formData.importedImageUrls?.[0] || ''}
+                alt="Preview"
+                className="w-full h-full object-cover"
+              />
+            </div>
+          ) : (
+            <div className="w-full h-32 sm:h-40 bg-black/50 border border-[#660099] rounded mb-2 sm:mb-3 flex items-center justify-center">
+              <span className="text-[#660099] text-xs">No image yet</span>
+            </div>
+          )}
+          <h3 className="text-base sm:text-lg font-semibold mb-2 line-clamp-2 break-words">
+            {formData.title?.trim() || 'Listing title'}
+          </h3>
+          <p className="text-muted-foreground text-sm sm:text-base mb-2 line-clamp-2 flex-grow break-words">
+            {formData.description?.trim() || 'Listing description'}
+          </p>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1 mt-auto">
+            <span className="text-primary font-bold text-sm sm:text-base">
+              {formData.price ? `${formData.price} ${formatPriceToken(formData.priceToken, formData.tokenSymbol)}` : '—'}
+            </span>
+            <span className="text-xs text-muted-foreground capitalize">
+              {formData.subcategory
+                ? getSubcategoryLabel(formData.category, formData.subcategory)
+                : formData.category?.replace('-', ' ')}
+              {(formData.locationCity || formData.locationRegion) && (
+                <> · {[formData.locationCity, formData.locationRegion].filter(Boolean).join(', ')}</>
+              )}
+            </span>
+          </div>
+          {formData.launchToken && (
+            <span className="inline-block text-xs bg-purple-900 text-purple-200 px-2 py-1 rounded mt-2 w-fit">
+              🪙 Has Token
+            </span>
+          )}
+        </div>
+      </div>
+
       <Button
         type="submit"
         disabled={

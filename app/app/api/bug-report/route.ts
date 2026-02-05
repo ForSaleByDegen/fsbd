@@ -5,6 +5,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { checkRateLimit } from '@/lib/rate-limit'
 import { hashWalletAddress } from '@/lib/supabase'
 
 const BUG_REPORT_EMAIL = 'forsalebydegen.proton.me'
@@ -43,6 +44,9 @@ async function sendBugReportEmail(subject: string, body: string, screenshotUrls?
 }
 
 export async function POST(request: NextRequest) {
+  const rateLimited = checkRateLimit(request, 'bugReport')
+  if (rateLimited) return rateLimited
+
   try {
     const contentType = request.headers.get('content-type') || ''
     let description = ''
