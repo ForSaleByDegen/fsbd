@@ -34,7 +34,6 @@ export async function POST(
     const sellerWalletHash = typeof body.sellerWalletHash === 'string' ? body.sellerWalletHash.trim() : ''
     const protectionFee = typeof body.protectionFee === 'number' && body.protectionFee > 0 ? body.protectionFee : 0
     const protectionToken = typeof body.protectionToken === 'string' ? body.protectionToken : 'SOL'
-    const protectionFee = typeof body.protectionFee === 'number' ? body.protectionFee : 0
     const token = typeof body.token === 'string' ? body.token : 'SOL'
 
     if (!buyer || !BASE58.test(buyer)) {
