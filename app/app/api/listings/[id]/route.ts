@@ -81,6 +81,8 @@ export async function PATCH(
     const wallet = typeof body.wallet === 'string' ? body.wallet.trim() : ''
     const action = body.action
     const tokenMint = typeof body.token_mint === 'string' ? body.token_mint.trim() : null
+    const tokenName = typeof body.token_name === 'string' ? body.token_name.trim() || null : null
+    const tokenSymbol = typeof body.token_symbol === 'string' ? body.token_symbol.trim() || null : null
     const chatTokenGated = body.chat_token_gated
     const chatMinTokens = typeof body.chat_min_tokens === 'number' ? Math.max(1, Math.floor(body.chat_min_tokens)) : body.chat_min_tokens === undefined ? undefined : Math.max(1, Math.floor(Number(body.chat_min_tokens) || 1))
     const priceToken = typeof body.price_token === 'string' ? body.price_token.trim() : null
@@ -120,11 +122,13 @@ export async function PATCH(
       return NextResponse.json({ error: 'You can only unlist/relist your own listings.' }, { status: 403 })
     }
 
-    // Build update object for token_mint, chat_token_gated, price_token
+    // Build update object for token_mint, token_name, token_symbol, chat_token_gated, price_token
     const updates: Record<string, unknown> = {}
     if (tokenMint && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(tokenMint)) {
       updates.token_mint = tokenMint
       updates.has_token = true
+      if (tokenName) updates.token_name = tokenName
+      if (tokenSymbol) updates.token_symbol = tokenSymbol
     }
     if (typeof chatTokenGated === 'boolean') updates.chat_token_gated = chatTokenGated
     if (chatMinTokens !== undefined) updates.chat_min_tokens = chatMinTokens

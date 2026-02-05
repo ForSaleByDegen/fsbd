@@ -17,6 +17,7 @@ import BuyerOrderActions from './BuyerOrderActions'
 import SellerStatsCard from './SellerStatsCard'
 import ListingTokenChart from './ListingTokenChart'
 import ShareListing from './ShareListing'
+import AddTokenToListing from './AddTokenToListing'
 import { getSubcategoryLabel } from '@/lib/categories'
 import { formatRelativeTime } from '@/lib/format-time'
 import { formatPriceToken } from '@/lib/utils'
@@ -648,6 +649,19 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
               <p className="text-[#660099] font-pixel-alt text-sm sm:text-base" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                 This is your listing
               </p>
+              {listing.status === 'active' && !listing.has_token && imageUrls.length > 0 && (
+                <AddTokenToListing
+                  listingId={listingId}
+                  listingUrl={typeof window !== 'undefined' ? `${window.location.origin}/listings/${listingId}` : `https://fsbd.fun/listings/${listingId}`}
+                  imageUrl={imageUrls[0]}
+                  title={listing.title}
+                  description={listing.description}
+                  price={listing.price}
+                  priceToken={listing.price_token || 'SOL'}
+                  tokenSymbol={listing.token_symbol}
+                  onSuccess={() => { fetchListing(); router.refresh(); }}
+                />
+              )}
               {listing.status === 'active' && (
                 <UnlistButton
                   listingId={listingId}
