@@ -174,9 +174,82 @@ function extractDescription(html: string): string | null {
   return null
 }
 
-function extractImage(html: string): string | null {
-  const img = extractMeta(html, 'image')
-  if (img && /^https?:\/\//i.test(img)) return img
+function extractImage(html: string, hostname?: string): string | null {
+  // 1. Open Graph og:image (most sites)
+  const og = extractMeta(html, 'image')
+  if (og && /^https?:\/\//i.test(og)) return og
+
+  // 2. JSON-LD Product schema image
+  const scriptRegex = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi
+  let m
+  while ((m = scriptRegex.exec(html)) !== null) {
+    try {
+      const raw = m[1].trim().replace(/\/\*[\s\S]*?\*\//g, '')
+      const parsed = JSON.parse(raw)
+      const arr = Array.isArray(parsed) ? parsed : [parsed]
+      for (const obj of arr) {
+        if (obj['@type'] === 'Product' && obj.image) {
+          const img = obj.image
+          const url = Array.isArray(img) ? img[0] : img
+          if (typeof url === 'string' && /^https?:\/\//i.test(url)) return url
+        }
+      }
+    } catch {
+      /* skip */
+    }
+  }
+
+  // 3. Amazon-specific: colorImages.hiRes, landingImage, imgBlkFront, data attributes
+  if (hostname && /amazon\./i.test(hostname)) {
+    // colorImages.initial[0].hiRes - embedded in script/JSON
+    const hiResMatch = html.match(/"hiRes"\s*:\s*"([^"]+)"/i) ?? html.match(/'hiRes'\s*:\s*'([^']+)'/i)
+    if (hiResMatch?.[1]) {
+      const url = hiResMatch[1].replace(/\\u0026/g, '&').replace(/\\\//g, '/').trim()
+      if (/^https?:\/\//i.test(url) || url.startsWith('//')) return url.startsWith('//') ? 'https:' + url : url
+    }
+    const largeMatch = html.match(/"large"\s*:\s*"([^"]+\.(?:jpg|jpeg|png|webp)[^"]*)"/i)
+    if (largeMatch?.[1]) {
+      const url = largeMatch[1].replace(/\\u0026/g, '&').trim()
+      if (/^https?:\/\//i.test(url)) return url
+    }
+    const patterns = [
+      /id=["']landingImage["'][^>]+data-old-hires=["']([^"']+)["']/i,
+      /id=["']landingImage["'][^>]+src=["']([^"']+)["']/i,
+      /id=["']imgBlkFront["'][^>]+src=["']([^"']+)["']/i,
+      /data-old-hires=["']([^"']+\.(?:jpg|jpeg|png|webp)[^"']*)["']/i,
+      /"mainUrl":"([^"]+)"/i,
+    ]
+    for (const re of patterns) {
+      const match = html.match(re)
+      if (match?.[1]) {
+        let url = match[1].replace(/\\u0026/g, '&').trim()
+        if (url.startsWith('//')) url = 'https:' + url
+        if (/^https?:\/\//i.test(url)) return url
+      }
+    }
+  }
+
+  // 4. eBay/Etsy: look for primary image in JSON or meta
+  if (hostname && /ebay\./i.test(hostname)) {
+    const ebayMatch = html.match(/"image":\s*\[?\s*"([^"]+\.(?:jpg|jpeg|png|webp)[^"]*)"\]?/i)
+    if (ebayMatch?.[1]) {
+      const url = ebayMatch[1].replace(/\\/g, '')
+      if (/^https?:\/\//i.test(url)) return url
+    }
+  }
+  if (hostname && /etsy\./i.test(hostname)) {
+    const etsyMatch = html.match(/"full_url":\s*"([^"]+\.(?:jpg|jpeg|png|webp)[^"]*)"/i)
+    if (etsyMatch?.[1]) {
+      const url = etsyMatch[1].replace(/\\u002F/g, '/').replace(/\\/g, '')
+      if (/^https?:\/\//i.test(url)) return url
+    }
+  }
+
+  // 5. product:image meta (Facebook/commerce)
+  const productImg = html.match(/<meta[^>]+property=["']product:image["'][^>]+content=["']([^"']+)["']/i)?.[1]
+    ?? html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']product:image["']/i)?.[1]
+  if (productImg && /^https?:\/\//i.test(productImg)) return productImg
+
   return null
 }
 
@@ -221,7 +294,7 @@ export async function POST(request: NextRequest) {
     const html = await res.text()
     const title = extractTitle(html)
     const description = extractDescription(html)
-    const imageUrl = extractImage(html)
+    const imageUrl = extractImage(html, parsed.hostname)
 
     let price: string | null = extractJsonLdPrice(html)
     if (!price && /amazon/i.test(parsed.hostname)) price = extractAmazonPrice(html)
