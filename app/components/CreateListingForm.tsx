@@ -163,6 +163,7 @@ export default function CreateListingForm() {
     priceToken: 'SOL',
     quantity: 1,
     images: [] as File[],
+    importedImageUrls: [] as string[],
     launchToken: false,
     tokenName: '',
     tokenSymbol: '',
@@ -193,6 +194,23 @@ export default function CreateListingForm() {
   } | null>(null)
   const [creatingListing, setCreatingListing] = useState(false)
   const [importingFromUrl, setImportingFromUrl] = useState(false)
+  const [importPreview, setImportPreview] = useState<{
+    title?: string
+    description?: string
+    price?: string
+    imageUrl?: string
+    category?: string
+    subcategory?: string
+  } | null>(null)
+  const [importToggles, setImportToggles] = useState({
+    title: true,
+    description: true,
+    price: true,
+    image: true,
+    category: true,
+    subcategory: true,
+  })
+  const [applyingImport, setApplyingImport] = useState(false)
   const [tokenLaunchRecovery, setTokenLaunchRecovery] = useState<{ listingId: string; listingUrl: string } | null>(null)
 
   const { keypair: vanityKeypair, generating: vanityGenerating, consume: consumeVanity } = useVanityGrind(
@@ -204,18 +222,22 @@ export default function CreateListingForm() {
   const [imageValidationError, setImageValidationError] = useState<string | null>(null)
   useEffect(() => {
     const file = formData.images[0]
-    if (!file) {
-      setPreviewImageUrl(null)
+    if (file) {
+      const url = URL.createObjectURL(file)
+      setPreviewImageUrl(url)
+      return () => URL.revokeObjectURL(url)
+    }
+    if (formData.importedImageUrls?.[0]) {
+      setPreviewImageUrl(formData.importedImageUrls[0])
       return
     }
-    const url = URL.createObjectURL(file)
-    setPreviewImageUrl(url)
-    return () => URL.revokeObjectURL(url)
-  }, [formData.images])
+    setPreviewImageUrl(null)
+  }, [formData.images, formData.importedImageUrls])
 
   const handleCreateListingFirst = async () => {
     if (!publicKey || !formData.launchToken) return
-    if (!formData.title?.trim() || !formData.description?.trim() || !formData.price || formData.images.length === 0) {
+    const hasImages = formData.images.length > 0 || (formData.importedImageUrls?.length ?? 0) > 0
+    if (!formData.title?.trim() || !formData.description?.trim() || !formData.price || !hasImages) {
       alert('Fill title, description, price, and add at least one image before creating the listing.')
       return
     }
@@ -235,10 +257,10 @@ export default function CreateListingForm() {
     try {
       setCreatingListing(true)
       const fresh = await refresh()
+      const imageUrls: string[] = [...(formData.importedImageUrls || [])]
       const allowedImages = Math.min(formData.images.length, isAdminUser ? 4 : getMaxImagesForTier(fresh.tier))
       const rawImages = formData.images.slice(0, allowedImages)
       const imagesToUpload = await stripImageMetadataBatch(rawImages)
-      const imageUrls: string[] = []
       if (imagesToUpload?.length) {
         const urls = await uploadMultipleImagesToIPFS(imagesToUpload)
         imageUrls.push(...urls)
@@ -334,6 +356,12 @@ export default function CreateListingForm() {
         alert('Verify ownership before creating. Click "Verify Ownership" and ensure it succeeds.')
         return
       }
+    } else {
+      const hasImages = formData.images.length > 0 || (formData.importedImageUrls?.length ?? 0) > 0
+      if (!hasImages) {
+        alert('Add at least one image (upload files or import from product URL).')
+        return
+      }
     }
 
     // Check if signMessage is available (required for non-token listings)
@@ -354,6 +382,7 @@ export default function CreateListingForm() {
       const skipImageUpload = formData.launchToken && !!createdListingForToken
       let imagesToUpload: File[] = []
       let imageUrls: string[] = []
+      imageUrls = [...(formData.importedImageUrls || [])]
       if (!skipImageUpload) {
         const allowedImages = Math.min(formData.images.length, isAdminUser ? 4 : getMaxImagesForTier(fresh.tier))
         const rawImages = formData.images.slice(0, allowedImages)
@@ -699,7 +728,10 @@ export default function CreateListingForm() {
             type="url"
             placeholder="https://amazon.com/dp/... or eBay, Etsy, etc."
             value={formData.externalListingUrl}
-            onChange={(e) => setFormData(prev => ({ ...prev, externalListingUrl: e.target.value }))}
+            onChange={(e) => {
+              setFormData(prev => ({ ...prev, externalListingUrl: e.target.value }))
+              setImportPreview(null)
+            }}
             className="flex-1"
           />
           <Button
@@ -710,6 +742,7 @@ export default function CreateListingForm() {
               const url = formData.externalListingUrl.trim()
               if (!url) return
               setImportingFromUrl(true)
+              setImportPreview(null)
               try {
                 const res = await fetch('/api/fetch-product-info', {
                   method: 'POST',
@@ -718,14 +751,26 @@ export default function CreateListingForm() {
                 })
                 const data = await res.json().catch(() => ({}))
                 if (!res.ok) throw new Error(data.error || 'Failed to fetch')
-                setFormData(prev => ({
-                  ...prev,
-                  title: data.title || prev.title,
-                  description: data.description || prev.description,
-                  price: data.price || prev.price,
-                }))
-                if (!data.title && !data.description && !data.price) {
+                const hasAny = !!(data.title || data.description || data.price || data.imageUrl || data.category || data.subcategory)
+                if (!hasAny) {
                   alert('Could not extract product details from this URL. Try another site or enter manually.')
+                } else {
+                  setImportPreview({
+                    title: data.title,
+                    description: data.description,
+                    price: data.price,
+                    imageUrl: data.imageUrl,
+                    category: data.category || 'for-sale',
+                    subcategory: data.subcategory,
+                  })
+                  setImportToggles({
+                    title: !!data.title,
+                    description: !!data.description,
+                    price: !!data.price,
+                    image: !!data.imageUrl,
+                    category: !!data.category,
+                    subcategory: !!data.subcategory,
+                  })
                 }
               } catch (e) {
                 alert('Import failed: ' + (e instanceof Error ? e.message : String(e)))
@@ -737,7 +782,143 @@ export default function CreateListingForm() {
             {importingFromUrl ? 'Importing…' : 'Import'}
           </Button>
         </div>
-        <p className="text-sm text-[#aa77ee] font-pixel-alt mt-1">Paste a product URL and click Import to fill title, description, and price below.</p>
+        <p className="text-sm text-[#aa77ee] font-pixel-alt mt-1">Paste a product URL and click Import. Review the preview and choose what to use before submitting.</p>
+
+        {importPreview && (
+          <div className="mt-4 p-4 rounded-lg border border-[#00ff00]/40 bg-[#00ff00]/5">
+            <p className="text-sm font-medium text-[#00ff00] mb-3">Review imported data — toggle what to apply</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  id="imp-title"
+                  checked={importToggles.title}
+                  onChange={(e) => setImportToggles(t => ({ ...t, title: e.target.checked }))}
+                  className="mt-1"
+                />
+                <label htmlFor="imp-title" className="flex-1 text-sm">
+                  <span className="text-muted-foreground">Title:</span>{' '}
+                  {importPreview.title ? (importPreview.title.length > 60 ? importPreview.title.slice(0, 60) + '…' : importPreview.title) : '—'}
+                </label>
+              </div>
+              <div className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  id="imp-price"
+                  checked={importToggles.price}
+                  onChange={(e) => setImportToggles(t => ({ ...t, price: e.target.checked }))}
+                  className="mt-1"
+                />
+                <label htmlFor="imp-price" className="flex-1 text-sm">
+                  <span className="text-muted-foreground">Price:</span> {importPreview.price || '—'}
+                </label>
+              </div>
+              <div className="flex items-start gap-2 sm:col-span-2">
+                <input
+                  type="checkbox"
+                  id="imp-desc"
+                  checked={importToggles.description}
+                  onChange={(e) => setImportToggles(t => ({ ...t, description: e.target.checked }))}
+                  className="mt-1"
+                />
+                <label htmlFor="imp-desc" className="flex-1 text-sm">
+                  <span className="text-muted-foreground">Description:</span>{' '}
+                  {importPreview.description ? (importPreview.description.length > 80 ? importPreview.description.slice(0, 80) + '…' : importPreview.description) : '—'}
+                </label>
+              </div>
+              <div className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  id="imp-img"
+                  checked={importToggles.image}
+                  onChange={(e) => setImportToggles(t => ({ ...t, image: e.target.checked }))}
+                  className="mt-1"
+                />
+                <label htmlFor="imp-img" className="flex-1 text-sm flex items-center gap-2">
+                  <span className="text-muted-foreground">Image:</span>
+                  {importPreview.imageUrl ? (
+                    <img src={importPreview.imageUrl} alt="Imported" className="h-12 w-12 object-cover rounded border" />
+                  ) : (
+                    '—'
+                  )}
+                </label>
+              </div>
+              <div className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  id="imp-cat"
+                  checked={importToggles.category}
+                  onChange={(e) => setImportToggles(t => ({ ...t, category: e.target.checked }))}
+                  className="mt-1"
+                />
+                <label htmlFor="imp-cat" className="flex-1 text-sm">
+                  <span className="text-muted-foreground">Category:</span> {importPreview.category || '—'}
+                </label>
+              </div>
+              <div className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  id="imp-sub"
+                  checked={importToggles.subcategory}
+                  onChange={(e) => setImportToggles(t => ({ ...t, subcategory: e.target.checked }))}
+                  className="mt-1"
+                />
+                <label htmlFor="imp-sub" className="flex-1 text-sm">
+                  <span className="text-muted-foreground">Subcategory:</span> {importPreview.subcategory || '—'}
+                </label>
+              </div>
+            </div>
+            <div className="mt-3 flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="border-[#00ff00] text-[#00ff00] hover:bg-[#00ff00]/20"
+                disabled={applyingImport}
+                onClick={async () => {
+                  setApplyingImport(true)
+                  const updates: Partial<typeof formData> = {}
+                  if (importToggles.title && importPreview.title) updates.title = importPreview.title
+                  if (importToggles.description && importPreview.description) updates.description = importPreview.description
+                  if (importToggles.price && importPreview.price) updates.price = importPreview.price
+                  if (importToggles.category && importPreview.category) updates.category = importPreview.category
+                  if (importToggles.subcategory && importPreview.subcategory) updates.subcategory = importPreview.subcategory
+                  let importedUrl: string | null = null
+                  if (importToggles.image && importPreview.imageUrl) {
+                    try {
+                      const res = await fetch('/api/upload-image-from-url', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ imageUrl: importPreview.imageUrl }),
+                      })
+                      const data = await res.json().catch(() => ({}))
+                      if (res.ok && data.url) importedUrl = data.url
+                    } catch {
+                      alert('Failed to upload imported image. You can add it manually.')
+                    }
+                  }
+                  setFormData(prev => ({
+                    ...prev,
+                    ...updates,
+                    ...(importedUrl ? { importedImageUrls: [...(prev.importedImageUrls || []), importedUrl] } : {}),
+                  }))
+                  setImportPreview(null)
+                  setApplyingImport(false)
+                }}
+              >
+                {applyingImport ? 'Applying…' : 'Apply selected'}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setImportPreview(null)}
+              >
+                Dismiss
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div>
@@ -1040,9 +1221,11 @@ export default function CreateListingForm() {
         {imageValidationError && (
           <p className="text-xs text-amber-400 mt-1 font-pixel-alt">{imageValidationError}</p>
         )}
-        {formData.images.length > 0 && (
+        {(formData.images.length > 0 || (formData.importedImageUrls?.length ?? 0) > 0) && (
           <p className="text-xs text-[#00ff00] mt-1">
-            {formData.images.length} file(s) selected (max {maxImages})
+            {formData.images.length > 0 && `${formData.images.length} file(s) selected (max ${maxImages})`}
+            {formData.images.length > 0 && (formData.importedImageUrls?.length ?? 0) > 0 && ' + '}
+            {(formData.importedImageUrls?.length ?? 0) > 0 && `${formData.importedImageUrls!.length} imported`}
           </p>
         )}
       </div>
@@ -1070,7 +1253,7 @@ export default function CreateListingForm() {
                 <Button
                   type="button"
                   onClick={handleCreateListingFirst}
-                  disabled={creatingListing || !formData.title?.trim() || !formData.description?.trim() || !formData.price || formData.images.length === 0 || !formData.tokenName?.trim() || !formData.tokenSymbol?.trim()}
+                  disabled={creatingListing || !formData.title?.trim() || !formData.description?.trim() || !formData.price || (formData.images.length === 0 && (formData.importedImageUrls?.length ?? 0) === 0) || !formData.tokenName?.trim() || !formData.tokenSymbol?.trim()}
                   variant="outline"
                   className="w-full border-[#660099] text-[#00ff00] hover:bg-[#660099]/20"
                 >

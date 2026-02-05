@@ -58,14 +58,108 @@ function extractAmazonPrice(html: string): string | null {
   const patterns = [
     /"priceAmount":\s*\{[^}]*"value":\s*([\d.]+)/i,
     /"displayAmount":\s*"[\$]?\s*([\d,]+\.?\d*)"/i,
+    /"buyingPrice"[^}]*"amount":\s*([\d.]+)/i,
+    /"formattedPrice":\s*"\$?([\d,]+\.?\d*)"/i,
     /data-a-color="price"[^>]*>[\s\$]*([\d,]+\.?\d*)/i,
     /["']price["'][^>]*>[\s\$]*([\d,]+\.?\d*)/i,
+    /class="[^"]*a-price[^"]*"[^>]*>[\s\S]*?[\$]?\s*([\d,]+\.?\d*)/i,
   ]
   for (const re of patterns) {
     const m = html.match(re)
     if (m?.[1]) return m[1].replace(/,/g, '')
   }
   return null
+}
+
+function extractEbayPrice(html: string): string | null {
+  const patterns = [
+    /"value":\s*"[\$]?([\d,]+\.?\d*)"[^}]*"itemId"/i,
+    /"currentPrice":\s*\{[^}]*"value":\s*"([\d.]+)"/i,
+    /"convertedCurrentPrice":\s*\{[^}]*"value":\s*"([\d.]+)"/i,
+    /itemprop="price"[^>]*content="([\d.]+)"/i,
+    /"price":\s*"[\$]?([\d,]+\.?\d*)"/i,
+    /class="[^"]*x-price-primary[^"]*"[^>]*>[\s\S]*?[\$]?\s*([\d,]+\.?\d*)/i,
+  ]
+  for (const re of patterns) {
+    const m = html.match(re)
+    if (m?.[1]) return m[1].replace(/,/g, '')
+  }
+  return null
+}
+
+function extractEtsyPrice(html: string): string | null {
+  const patterns = [
+    /"price":\s*\{[^}]*"amount":\s*"?([\d.]+)"?/i,
+    /"formatted_price":\s*"\$?([\d,]+\.?\d*)"/i,
+    /"listing_price":\s*"?([\d.]+)"?/i,
+    /itemprop="price"[^>]*content="([\d.]+)"/i,
+    /data-selector="price"[^>]*>[\s\S]*?[\$]?\s*([\d,]+\.?\d*)/i,
+  ]
+  for (const re of patterns) {
+    const m = html.match(re)
+    if (m?.[1]) return m[1].replace(/,/g, '')
+  }
+  return null
+}
+
+function extractGenericPrice(html: string): string | null {
+  // Fallback: look for common price patterns
+  const patterns = [
+    /"price":\s*([\d.]+)/i,
+    /itemprop="price"[^>]*content="([\d.]+)"/i,
+    /data-price="([\d.]+)"/i,
+    /class="[^"]*price[^"]*"[^>]*>[\s\S]{0,100}[\$]?\s*([\d,]+\.?\d*)/i,
+    /<meta[^>]+property=["']product:price:amount["'][^>]+content=["']([\d.]+)["']/i,
+    /<meta[^>]+content=["']([\d.]+)["'][^>]+property=["']product:price:amount["']/i,
+  ]
+  for (const re of patterns) {
+    const m = html.match(re)
+    if (m?.[1]) return m[1].replace(/,/g, '')
+  }
+  return null
+}
+
+/** Infer category and subcategory from URL and page content. */
+function inferCategoryAndSubcategory(
+  parsedUrl: URL,
+  title: string | null,
+  html: string
+): { category: string; subcategory: string } {
+  const host = parsedUrl.hostname.toLowerCase()
+  const path = parsedUrl.pathname.toLowerCase()
+  const combined = `${title || ''} ${path}`.toLowerCase()
+
+  // Most product URLs are "for-sale"
+  let category = 'for-sale'
+  let subcategory = 'other'
+
+  // Heuristic subcategory from title/path keywords
+  const subcategoryKeywords: Record<string, string[]> = {
+    electronics: ['electronic', 'phone', 'laptop', 'tablet', 'computer', 'tv', 'monitor', 'headphone', 'camera', 'kindle', 'ipad', 'iphone', 'samsung', 'nintendo', 'playstation', 'xbox', 'gaming'],
+    furniture: ['furniture', 'sofa', 'chair', 'table', 'desk', 'bed', 'couch'],
+    vehicles: ['car', 'truck', 'motorcycle', 'vehicle', 'auto', 'bike', 'bicycle'],
+    collectibles: ['collectible', 'vintage', 'antique', 'trading card', 'comic', 'figurine', 'toy', 'lego'],
+    clothing: ['shirt', 'dress', 'jacket', 'pants', 'shoes', 'sneaker', 'hoodie', 'clothing', 'apparel'],
+    sports: ['sports', 'fitness', 'gym', 'outdoor', 'hiking', 'camping', 'golf', 'tennis'],
+    books: ['book', 'kindle', 'paperback', 'hardcover', 'dvd', 'blu-ray', 'media', 'movie', 'cd'],
+  }
+
+  for (const [sub, keywords] of Object.entries(subcategoryKeywords)) {
+    if (keywords.some((k) => combined.includes(k))) {
+      subcategory = sub
+      break
+    }
+  }
+
+  // Amazon path hints
+  if (/amazon\./i.test(host)) {
+    if (/\/electronics\//i.test(path)) subcategory = 'electronics'
+    else if (/\/books\//i.test(path) || /\/kindle\//i.test(path)) subcategory = 'books'
+    else if (/\/furniture\//i.test(path)) subcategory = 'furniture'
+    else if (/\/clothing\//i.test(path) || /\/fashion\//i.test(path)) subcategory = 'clothing'
+  }
+
+  return { category, subcategory }
 }
 
 function extractTitle(html: string): string | null {
@@ -130,15 +224,20 @@ export async function POST(request: NextRequest) {
     const imageUrl = extractImage(html)
 
     let price: string | null = extractJsonLdPrice(html)
-    if (!price && /amazon/i.test(parsed.hostname)) {
-      price = extractAmazonPrice(html)
-    }
+    if (!price && /amazon/i.test(parsed.hostname)) price = extractAmazonPrice(html)
+    if (!price && /ebay\./i.test(parsed.hostname)) price = extractEbayPrice(html)
+    if (!price && /etsy\./i.test(parsed.hostname)) price = extractEtsyPrice(html)
+    if (!price) price = extractGenericPrice(html)
+
+    const { category, subcategory } = inferCategoryAndSubcategory(parsed, title, html)
 
     return NextResponse.json({
       title: title || undefined,
       description: description || undefined,
       price: price || undefined,
       imageUrl: imageUrl || undefined,
+      category,
+      subcategory,
     })
   } catch (e) {
     console.error('Fetch product info error:', e)
