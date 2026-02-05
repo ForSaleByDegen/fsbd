@@ -21,6 +21,7 @@ import AddTokenToListing from './AddTokenToListing'
 import { getSubcategoryLabel } from '@/lib/categories'
 import { formatRelativeTime } from '@/lib/format-time'
 import { formatPriceToken } from '@/lib/utils'
+import { wrapWithAffiliate, hasAffiliateConfig } from '@/lib/affiliate-links'
 
 /** Solana Pay link - alternative when in-app transaction fails */
 function SolanaPayLink({ listingId }: { listingId: string }) {
@@ -165,6 +166,7 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
   const [listing, setListing] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState(false)
+  const [protectionOptIn, setProtectionOptIn] = useState(false)
 
   useEffect(() => {
     fetchListing()
@@ -225,12 +227,15 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
     }
     const confirmAmount = listing.price
     const confirmToken = formatPriceToken(listing.price_token, listing.token_symbol)
+    const protectionNote = protectionOptIn
+      ? `\n\n➕ Optional buyer protection (2%) will be added: ${(confirmAmount * 0.02).toFixed(4)} ${confirmToken} to protection pool. Eligible for reimbursement if item not received or not as described.`
+      : ''
     const confirmMsg =
       `⚠️ DEGEN PAYMENT — DIRECT TO SELLER\n\n` +
-      `You are about to send ${confirmAmount} ${confirmToken} DIRECTLY to the seller's wallet. No protections.\n\n` +
+      `You are about to send ${confirmAmount} ${confirmToken} DIRECTLY to the seller's wallet.${protectionNote}\n\n` +
       `• No seller is affiliated with this platform.\n` +
       `• We do NOT stand by any item's authenticity or condition.\n\n` +
-      `Proceed with direct (Degen) payment anyway?`
+      `Proceed with payment?`
     if (!confirm(confirmMsg)) {
       return
     }
@@ -242,7 +247,7 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
       const prepRes = await fetch(`/api/listings/${listingId}/prepare-transfer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ buyer: publicKey.toString() }),
+        body: JSON.stringify({ buyer: publicKey.toString(), protectionOptIn }),
       })
       if (!prepRes.ok) {
         const err = await prepRes.json().catch(() => ({}))
@@ -256,6 +261,8 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
         amount: number
         token: string
         sellerWalletHash: string
+        protectionFee?: number
+        protectionOptIn?: boolean
       }
       const totalAmount = prep.amount
 
@@ -336,7 +343,7 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
             const prepRes2 = await fetch(`/api/listings/${listingId}/prepare-transfer`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ buyer: publicKey.toString() }),
+              body: JSON.stringify({ buyer: publicKey.toString(), protectionOptIn }),
             })
             if (!prepRes2.ok) throw new Error('Could not prepare fresh transaction')
             const prep2 = await prepRes2.json()
@@ -385,6 +392,8 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
           buyer: publicKey.toString(),
           signature,
           sellerWalletHash: prep.sellerWalletHash,
+          protectionFee: prep.protectionFee ?? 0,
+          protectionToken: prep.token,
         }),
       })
 
@@ -402,10 +411,13 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
         }
       } else {
         setListing((prev: Record<string, unknown> | null) => (prev ? { ...prev, status: 'sold' } : prev))
+        const protectionNote = prep.protectionFee
+          ? `\n\n✓ Buyer protection (${prep.protectionFee} ${prep.token}) added. You may file a claim from your profile if the item is not received or not as described.`
+          : ''
         alert(
-          `Purchase successful! ${totalAmount} ${prep.token} sent directly to seller.\n\n` +
+          `Purchase successful! ${totalAmount} ${prep.token} sent to seller.${protectionNote}\n\n` +
           `Transaction: ${signature}\n\n` +
-          `Coordinate with the seller for shipping. This platform does not handle payments or shipping.`
+          `Coordinate with the seller for shipping.`
         )
       }
 
@@ -559,7 +571,7 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
             <p className="text-sm text-amber-200 font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
               📎 Imported from{' '}
               <a
-                href={listing.external_listing_url}
+                href={wrapWithAffiliate(listing.external_listing_url)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-[#ff00ff] hover:text-[#00ff00] underline"
@@ -577,12 +589,16 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
               </a>
             </p>
             <p className="text-xs text-amber-300/90 font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-              <strong>Disclaimer:</strong> Listing data was pulled from a third-party site. We cannot guarantee the seller owns or controls that listing. 
+              <strong>Disclaimer:</strong> Listing data was pulled from a third-party site. We cannot guarantee the seller owns or controls that listing, nor the accuracy of the imported data.{' '}
               {listing.seller_verified ? (
-                <span className="text-[#00ff00]"> ✓ This seller has verified their profile via our verification process.</span>
+                <span className="text-[#00ff00]">✓ This seller has verified their profile via our verification process.</span>
               ) : (
-                <> Verified sellers have a badge — they completed our unique verification process to prove ownership of their external listings.</>
+                <>Verified sellers have a badge — they completed our unique verification process to prove ownership of their external listings.</>
               )}
+              {hasAffiliateConfig() && (
+                <span className="block mt-1 text-amber-400/80">We may earn from qualifying purchases through affiliate links.</span>
+              )}
+              <Link href="/docs/guides" className="inline-block mt-1 text-[#ff00ff] hover:text-[#00ff00] underline text-xs">Buyer & Seller guides →</Link>
             </p>
           </div>
         )}
@@ -651,8 +667,19 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
                   🎲 DEGEN — Direct Payment
                 </h4>
                 <p className="text-sm text-[#aa77ee] font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-                  This sends {listing.price} {formatPriceToken(listing.price_token, listing.token_symbol)} <strong>directly to the seller</strong>. No buyer protection.
+                  This sends {listing.price} {formatPriceToken(listing.price_token, listing.token_symbol)} <strong>directly to the seller</strong>.
+                  {protectionOptIn && ` + 2% (${(listing.price * 0.02).toFixed(4)} ${formatPriceToken(listing.price_token, listing.token_symbol)}) for optional buyer protection.`}
+                  {!protectionOptIn && ' No buyer protection.'}
                 </p>
+                <label className="flex items-center gap-2 text-sm text-[#aa77ee] font-pixel-alt mb-2 cursor-pointer" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                  <input
+                    type="checkbox"
+                    checked={protectionOptIn}
+                    onChange={(e) => setProtectionOptIn(e.target.checked)}
+                    className="w-4 h-4 border-2 border-[#660099] bg-black text-[#00ff00]"
+                  />
+                  Add buyer protection (2%) — reimbursed if item not received or not as described
+                </label>
                 <p className="text-sm text-[#aa77ee] font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                   No seller is affiliated with this platform. We do NOT stand by any item&apos;s authenticity or condition.
                 </p>

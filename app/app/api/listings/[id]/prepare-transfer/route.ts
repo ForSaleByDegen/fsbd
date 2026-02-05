@@ -67,9 +67,13 @@ export async function POST(
 
     const body = await request.json().catch(() => ({}))
     const buyer = typeof body.buyer === 'string' ? body.buyer.trim() : ''
+    const protectionOptIn = body.protectionOptIn === true
     if (!buyer || !BASE58.test(buyer)) {
       return NextResponse.json({ error: 'Invalid buyer address' }, { status: 400 })
     }
+
+    const poolWallet = process.env.PROTECTION_POOL_WALLET?.trim()
+    const canAddProtection = protectionOptIn && poolWallet && BASE58.test(poolWallet)
 
     if (!supabaseAdmin) {
       return NextResponse.json(
@@ -136,6 +140,7 @@ export async function POST(
     }
 
     const { token, mint } = resolveTokenMint(data.price_token, data.token_mint)
+    const protectionFee = canAddProtection ? price * 0.02 : 0
     const transaction = new Transaction()
 
     if (token === 'SOL') {
@@ -146,6 +151,16 @@ export async function POST(
           lamports: Math.floor(price * LAMPORTS_PER_SOL),
         })
       )
+      if (protectionFee > 0) {
+        const poolPubkey = new PublicKey(poolWallet!)
+        transaction.add(
+          SystemProgram.transfer({
+            fromPubkey: buyerPubkey,
+            toPubkey: poolPubkey,
+            lamports: Math.floor(protectionFee * LAMPORTS_PER_SOL),
+          })
+        )
+      }
     } else if (mint) {
       const mintPubkey = new PublicKey(mint)
       const buyerAta = await getAssociatedTokenAddress(mintPubkey, buyerPubkey)
@@ -170,6 +185,26 @@ export async function POST(
       transaction.add(
         createTransferInstruction(buyerAta, sellerAta, buyerPubkey, amountBigInt)
       )
+      if (protectionFee > 0 && poolWallet) {
+        const poolPubkey = new PublicKey(poolWallet)
+        const poolAta = await getAssociatedTokenAddress(mintPubkey, poolPubkey)
+        try {
+          await getAccount(connection, poolAta)
+        } catch {
+          transaction.add(
+            createAssociatedTokenAccountIdempotentInstruction(
+              buyerPubkey,
+              poolAta,
+              poolPubkey,
+              mintPubkey
+            )
+          )
+        }
+        const feeBigInt = BigInt(Math.floor(protectionFee * 10 ** decimals))
+        transaction.add(
+          createTransferInstruction(buyerAta, poolAta, buyerPubkey, feeBigInt)
+        )
+      }
     } else {
       return NextResponse.json(
         { error: 'Unsupported payment token.' },
@@ -196,6 +231,8 @@ export async function POST(
         token,
         listingId: data.id,
         sellerWalletHash: hashWalletAddress(wa),
+        protectionFee: canAddProtection ? protectionFee : 0,
+        protectionOptIn: canAddProtection,
       },
       { headers: { 'Cache-Control': 'no-store' } }
     )

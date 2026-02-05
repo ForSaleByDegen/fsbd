@@ -3,7 +3,7 @@
  * Marks a listing as sold after successful purchase.
  * Uses service role to bypass RLS (buyer can't update seller's listing via anon client).
  *
- * Body: { buyer: string, signature: string, sellerWalletHash: string }
+ * Body: { buyer: string, signature: string, sellerWalletHash: string, protectionFee?: number, token?: string }
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
@@ -32,6 +32,10 @@ export async function POST(
     const buyer = typeof body.buyer === 'string' ? body.buyer.trim() : ''
     const signature = typeof body.signature === 'string' ? body.signature.trim() : ''
     const sellerWalletHash = typeof body.sellerWalletHash === 'string' ? body.sellerWalletHash.trim() : ''
+    const protectionFee = typeof body.protectionFee === 'number' && body.protectionFee > 0 ? body.protectionFee : 0
+    const protectionToken = typeof body.protectionToken === 'string' ? body.protectionToken : 'SOL'
+    const protectionFee = typeof body.protectionFee === 'number' ? body.protectionFee : 0
+    const token = typeof body.token === 'string' ? body.token : 'SOL'
 
     if (!buyer || !BASE58.test(buyer)) {
       return NextResponse.json({ error: 'Invalid buyer address' }, { status: 400 })
@@ -92,6 +96,26 @@ export async function POST(
       return NextResponse.json({ error: updateError?.message || 'Update failed' }, { status: 500 })
     }
 
+    if (protectionFee > 0) {
+      await supabaseAdmin.from('protection_fees').insert({
+        listing_id: id,
+        buyer_wallet_hash: buyerHash,
+        amount: protectionFee,
+        token,
+        tx_signature: signature,
+      })
+    }
+
+    if (protectionFee > 0) {
+      await supabaseAdmin.from('protection_fees').insert({
+        listing_id: id,
+        buyer_wallet_hash: buyerHash,
+        amount: protectionFee,
+        token,
+        tx_signature: signature,
+      })
+    }
+
     if (isLastOne) {
       const { data: sellerProfile } = await supabaseAdmin
         .from('profiles')
@@ -106,6 +130,16 @@ export async function POST(
             total_listings_sold: (sellerProfile.total_listings_sold || 0) + 1,
           })
           .eq('wallet_address_hash', sellerWalletHash)
+      }
+
+      if (protectionFee > 0) {
+        await supabaseAdmin.from('protection_fees').insert({
+          listing_id: id,
+          buyer_wallet_hash: buyerHash,
+          amount: protectionFee,
+          token: protectionToken,
+          tx_signature: signature,
+        })
       }
     }
 

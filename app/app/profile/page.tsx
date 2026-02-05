@@ -90,6 +90,8 @@ type ProfileData = {
     shipping_carrier?: string
     buyer_confirmed_received_at?: string | null
     wallet_address?: string
+    has_protection?: boolean
+    claim_status?: string
   }>
 }
 
@@ -670,6 +672,8 @@ export default function ProfilePage() {
                       buyerConfirmedReceivedAt={p.buyer_confirmed_received_at}
                       onUpdated={loadProfile}
                       compact
+                      hasProtection={p.has_protection}
+                      claimStatus={p.claim_status}
                     />
                   )}
                 </div>

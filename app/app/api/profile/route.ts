@@ -111,18 +111,47 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
 
     // Also get listings where user is buyer (purchases) - include shipping/tracking and confirm status
-    const { data: purchases = [] } = await supabaseAdmin
+    const { data: purchasesRaw = [] } = await supabaseAdmin
       .from('listings')
       .select('id, title, price, price_token, status, escrow_status, images, category, created_at, tracking_number, shipping_carrier, buyer_confirmed_received_at, wallet_address')
       .eq('buyer_wallet_hash', walletHash)
       .order('created_at', { ascending: false })
+
+    // Enrich purchases with has_protection and claim_status from protection_fees / protection_claims
+    const purchaseIds = (purchasesRaw || []).map((p: { id: string }) => p.id)
+    let hasProtectionMap: Record<string, boolean> = {}
+    let claimStatusMap: Record<string, string> = {}
+    if (purchaseIds.length > 0) {
+      const { data: fees = [] } = await supabaseAdmin
+        .from('protection_fees')
+        .select('listing_id')
+        .in('listing_id', purchaseIds)
+        .eq('buyer_wallet_hash', walletHash)
+      for (const f of fees as { listing_id: string }[]) {
+        hasProtectionMap[f.listing_id] = true
+      }
+      const { data: claims = [] } = await supabaseAdmin
+        .from('protection_claims')
+        .select('listing_id, status')
+        .in('listing_id', purchaseIds)
+        .eq('buyer_wallet_hash', walletHash)
+      for (const c of claims as { listing_id: string; status: string }[]) {
+        claimStatusMap[c.listing_id] = c.status
+      }
+    }
+
+    const purchases = (purchasesRaw || []).map((p: Record<string, unknown>) => ({
+      ...p,
+      has_protection: !!hasProtectionMap[p.id as string],
+      claim_status: claimStatusMap[p.id as string] ?? (hasProtectionMap[p.id as string] ? 'none' : undefined),
+    }))
 
     return NextResponse.json({
       profile: profileData,
       listings: listings || [],
       escrows: escrows || [],
       bids: bids || [],
-      purchases: purchases || [],
+      purchases,
     })
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error'
