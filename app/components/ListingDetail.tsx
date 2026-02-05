@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useWallet, useConnection } from '@solana/wallet-adapter-react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Transaction, LAMPORTS_PER_SOL } from '@solana/web3.js'
 import { supabase } from '@/lib/supabase'
 import { sendTransactionWithRebate, shouldUseRebate } from '@/lib/helius-rebate'
