@@ -883,6 +883,8 @@ export default function CreateListingForm() {
                   if (importToggles.price && importPreview.price) updates.price = importPreview.price
                   if (importToggles.category && importPreview.category) updates.category = importPreview.category
                   if (importToggles.subcategory && importPreview.subcategory) updates.subcategory = importPreview.subcategory
+                  // Preset USDC for imported listings (external prices are usually USD); user can change to any crypto
+                  updates.priceToken = 'USDC'
                   let importedUrl: string | null = null
                   if (importToggles.image && importPreview.imageUrl) {
                     try {
