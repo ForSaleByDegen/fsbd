@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Enrich with listing titles and protection fee amount
-    const listingIds = [...new Set((claims ?? []).map((c: { listing_id: string }) => c.listing_id))]
+    const listingIds = Array.from(new Set((claims ?? []).map((c: { listing_id: string }) => c.listing_id)))
     const { data: listings } = listingIds.length > 0
       ? await supabaseAdmin.from('listings').select('id, title, price, price_token').in('id', listingIds)
       : { data: [] }
