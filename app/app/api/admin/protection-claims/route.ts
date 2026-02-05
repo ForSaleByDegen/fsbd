@@ -65,7 +65,9 @@ export async function GET(request: NextRequest) {
     const { data: listings } = listingIds.length > 0
       ? await supabaseAdmin.from('listings').select('id, title, price, price_token').in('id', listingIds)
       : { data: [] }
-    const listingMap = Object.fromEntries((listings ?? []).map((l: { id: string }) => [l.id, l]))
+    const listingMap = Object.fromEntries(
+      (listings ?? []).map((l: { id: string; title?: string; price?: number; price_token?: string }) => [l.id, l])
+    )
     const { data: fees } = listingIds.length > 0
       ? await supabaseAdmin.from('protection_fees').select('listing_id, amount, token').in('listing_id', listingIds)
       : { data: [] }
