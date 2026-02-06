@@ -1,0 +1,43 @@
+# Build FSBD Escrow Program
+# Run on push to main (programs/), manual dispatch, or PR
+# Artifact: fsbd_escrow.so - download from Actions, deploy: solana program deploy --program-id <keypair> fsbd_escrow.so
+name: Build Escrow Program
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'programs/**'
+      - 'Anchor.toml'
+      - 'Cargo.toml'
+      - '.github/workflows/build-escrow.yml'
+  pull_request:
+    paths:
+      - 'programs/**'
+      - 'Anchor.toml'
+      - 'Cargo.toml'
+      - '.github/workflows/build-escrow.yml'
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: heyAyushh/setup-anchor@v0.31
+        with:
+          anchor-version: '0.30.1'
+          solana-cli-version: 'stable'
+
+      - name: Build
+        run: anchor build
+
+      - name: Upload program binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: fsbd-escrow-so
+          path: target/deploy/fsbd_escrow.so
+
+      - name: Output program ID
+        run: anchor keys list
