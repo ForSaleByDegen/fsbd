@@ -11,6 +11,8 @@ import { formatPriceToken } from '@/lib/utils'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 
+const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/
+
 /** Build formatted token description — does not include token name */
 function buildTokenDescription(opts: {
   description: string
@@ -287,6 +289,7 @@ export default function AddTokenToListing({
         </div>
       )}
       {!showLinkExisting && (
+      <>
       <div className="grid gap-2 sm:grid-cols-2">
         <div>
           <label className="block text-xs text-[#aa77ee] mb-1">Token name</label>
@@ -329,6 +332,7 @@ export default function AddTokenToListing({
       >
         {loading ? 'Creating token...' : 'Create token for listing'}
       </Button>
+      </>
       )}
     </div>
   )
