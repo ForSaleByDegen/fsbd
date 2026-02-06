@@ -1,4 +1,5 @@
 import { Connection, PublicKey } from '@solana/web3.js'
+import { formatPrice } from './utils'
 import { getAssociatedTokenAddress, getAccount, getMint, TOKEN_PROGRAM_ID } from '@solana/spl-token'
 import { getTokenBalanceViaBitquery } from './bitquery-balance'
 
@@ -159,9 +160,9 @@ export function calculateListingFee(tier: Tier): number {
  */
 export function getTierBenefits(tier: Tier): string[] {
   const platformFeeRate = calculatePlatformFeeRate(tier)
-  const feePercent = (platformFeeRate * 100).toFixed(3)
+  const feePercent = formatPrice(platformFeeRate * 100, 4)
   const listingFee = calculateListingFee(tier)
-  const listingFeeFormatted = Number(listingFee.toFixed(4)) // avoid 0.04000000000000001
+  const listingFeeStr = formatPrice(listingFee, 4)
   const maxListings = getMaxListingsForTier(tier)
   const maxImages = getMaxImagesForTier(tier)
 
@@ -171,14 +172,14 @@ export function getTierBenefits(tier: Tier): string[] {
       `Platform fee: ${feePercent}% on sales`,
       `Up to ${maxListings} active listing`,
       `${maxImages} images per listing`,
-      `Token launch fee: ${listingFee} SOL (full price)`,
+      `Token launch fee: ${listingFeeStr} SOL (full price)`,
     ],
     bronze: [
       'Free listings (message signing only)',
       `Platform fee: ${feePercent}% on sales`,
       `Up to ${maxListings} active listings (10k $FSBD per extra slot)`,
       `${maxImages} images per listing`,
-      `Token launch fee: ${listingFee} SOL (20% off)`,
+      `Token launch fee: ${listingFeeStr} SOL (20% off)`,
       'Socials & banner in token metadata when launching',
     ],
     silver: [
@@ -186,7 +187,7 @@ export function getTierBenefits(tier: Tier): string[] {
       `Platform fee: ${feePercent}% on sales`,
       `Up to ${maxListings} active listings (10k $FSBD per extra slot)`,
       `${maxImages} images per listing`,
-      `Token launch fee: ${listingFee} SOL (40% off)`,
+      `Token launch fee: ${listingFeeStr} SOL (40% off)`,
       'Socials & banner in token metadata when launching',
       'Priority visibility',
     ],
@@ -195,7 +196,7 @@ export function getTierBenefits(tier: Tier): string[] {
       `Platform fee: ${feePercent}% on sales`,
       `Up to ${maxListings} active listings (10k $FSBD per extra slot)`,
       `${maxImages} images per listing`,
-      `Token launch fee: ${listingFee} SOL (60% off)`,
+      `Token launch fee: ${listingFeeStr} SOL (60% off)`,
       'Socials & banner in token metadata when launching',
       'Priority visibility',
       'Auction creation',
@@ -205,7 +206,7 @@ export function getTierBenefits(tier: Tier): string[] {
       `Platform fee: ${feePercent}% on sales`,
       `Up to ${maxListings} active listings (10k $FSBD per extra slot)`,
       `${maxImages} images per listing`,
-      `Token launch fee: ${listingFee} SOL (75% off)`,
+      `Token launch fee: ${listingFeeStr} SOL (75% off)`,
       'Socials & banner in token metadata when launching',
       'Priority visibility',
       'Auction creation',

@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { getIPFSGatewayURL } from '@/lib/pinata'
 import { getSubcategoryLabel } from '@/lib/categories'
 import { formatRelativeTime } from '@/lib/format-time'
-import { formatPriceToken } from '@/lib/utils'
+import { formatPrice, formatPriceToken } from '@/lib/utils'
 
 interface ListingCardProps {
   listing: {
@@ -41,8 +41,8 @@ export default function ListingCard({ listing, priceChange24h, shouldFlash = fal
       return () => clearTimeout(t)
     }
   }, [shouldFlash])
-  const formatPrice = () => {
-    return `${listing.price} ${formatPriceToken(listing.price_token, listing.token_symbol)}`
+  const formatPriceDisplay = () => {
+    return `${formatPrice(Number(listing.price))} ${formatPriceToken(listing.price_token, listing.token_symbol)}`
   }
 
   // Get image URL - handle both full URLs and CIDs
@@ -115,7 +115,7 @@ export default function ListingCard({ listing, priceChange24h, shouldFlash = fal
           {listing.description}
         </p>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1 sm:gap-0 mt-auto">
-          <span className="text-primary font-bold text-sm sm:text-base">{formatPrice()}</span>
+          <span className="text-primary font-bold text-sm sm:text-base">{formatPriceDisplay()}</span>
           <span className="text-xs text-muted-foreground capitalize">
             {listing.subcategory
               ? getSubcategoryLabel(listing.category, listing.subcategory)

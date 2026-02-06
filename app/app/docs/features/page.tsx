@@ -11,6 +11,7 @@ import {
   getMaxImagesForTier,
   calculateListingFee,
 } from '@/lib/tier-check'
+import { formatPrice } from '@/lib/utils'
 
 const FORMAT_TOKEN = (n: number) => n >= 1_000_000 ? `${n / 1_000_000}M` : n >= 1_000 ? `${n / 1_000}k` : String(n)
 
@@ -44,11 +45,11 @@ export default function FeaturesDocsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr><td className="border border-[#660099] p-2">Free</td><td className="border border-[#660099] p-2">—</td><td className="border border-[#660099] p-2">1</td><td className="border border-[#660099] p-2">{getMaxImagesForTier('free')}</td><td className="border border-[#660099] p-2">{calculateListingFee('free')} SOL</td></tr>
-                  <tr><td className="border border-[#660099] p-2">Bronze</td><td className="border border-[#660099] p-2">{FORMAT_TOKEN(TIER_THRESHOLDS.bronze)}</td><td className="border border-[#660099] p-2">{getMaxListingsForTier('bronze')}</td><td className="border border-[#660099] p-2">{getMaxImagesForTier('bronze')}</td><td className="border border-[#660099] p-2">{calculateListingFee('bronze')} SOL</td></tr>
-                  <tr><td className="border border-[#660099] p-2">Silver</td><td className="border border-[#660099] p-2">{FORMAT_TOKEN(TIER_THRESHOLDS.silver)}</td><td className="border border-[#660099] p-2">{getMaxListingsForTier('silver')}</td><td className="border border-[#660099] p-2">{getMaxImagesForTier('silver')}</td><td className="border border-[#660099] p-2">{calculateListingFee('silver')} SOL</td></tr>
-                  <tr><td className="border border-[#660099] p-2">Gold</td><td className="border border-[#660099] p-2">{FORMAT_TOKEN(TIER_THRESHOLDS.gold)}</td><td className="border border-[#660099] p-2">{getMaxListingsForTier('gold')}</td><td className="border border-[#660099] p-2">{getMaxImagesForTier('gold')}</td><td className="border border-[#660099] p-2">{calculateListingFee('gold')} SOL</td></tr>
-                  <tr><td className="border border-[#660099] p-2">Platinum</td><td className="border border-[#660099] p-2">{FORMAT_TOKEN(TIER_THRESHOLDS.platinum)}</td><td className="border border-[#660099] p-2">{getMaxListingsForTier('platinum')}</td><td className="border border-[#660099] p-2">{getMaxImagesForTier('platinum')}</td><td className="border border-[#660099] p-2">{calculateListingFee('platinum')} SOL</td></tr>
+                  <tr><td className="border border-[#660099] p-2">Free</td><td className="border border-[#660099] p-2">—</td><td className="border border-[#660099] p-2">1</td><td className="border border-[#660099] p-2">{getMaxImagesForTier('free')}</td><td className="border border-[#660099] p-2">{formatPrice(calculateListingFee('free'))} SOL</td></tr>
+                  <tr><td className="border border-[#660099] p-2">Bronze</td><td className="border border-[#660099] p-2">{FORMAT_TOKEN(TIER_THRESHOLDS.bronze)}</td><td className="border border-[#660099] p-2">{getMaxListingsForTier('bronze')}</td><td className="border border-[#660099] p-2">{getMaxImagesForTier('bronze')}</td><td className="border border-[#660099] p-2">{formatPrice(calculateListingFee('bronze'))} SOL</td></tr>
+                  <tr><td className="border border-[#660099] p-2">Silver</td><td className="border border-[#660099] p-2">{FORMAT_TOKEN(TIER_THRESHOLDS.silver)}</td><td className="border border-[#660099] p-2">{getMaxListingsForTier('silver')}</td><td className="border border-[#660099] p-2">{getMaxImagesForTier('silver')}</td><td className="border border-[#660099] p-2">{formatPrice(calculateListingFee('silver'))} SOL</td></tr>
+                  <tr><td className="border border-[#660099] p-2">Gold</td><td className="border border-[#660099] p-2">{FORMAT_TOKEN(TIER_THRESHOLDS.gold)}</td><td className="border border-[#660099] p-2">{getMaxListingsForTier('gold')}</td><td className="border border-[#660099] p-2">{getMaxImagesForTier('gold')}</td><td className="border border-[#660099] p-2">{formatPrice(calculateListingFee('gold'))} SOL</td></tr>
+                  <tr><td className="border border-[#660099] p-2">Platinum</td><td className="border border-[#660099] p-2">{FORMAT_TOKEN(TIER_THRESHOLDS.platinum)}</td><td className="border border-[#660099] p-2">{getMaxListingsForTier('platinum')}</td><td className="border border-[#660099] p-2">{getMaxImagesForTier('platinum')}</td><td className="border border-[#660099] p-2">{formatPrice(calculateListingFee('platinum'))} SOL</td></tr>
                 </tbody>
               </table>
             </div>

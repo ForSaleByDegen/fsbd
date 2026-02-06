@@ -21,7 +21,7 @@ import ShareListing from './ShareListing'
 import AddTokenToListing from './AddTokenToListing'
 import { getSubcategoryLabel } from '@/lib/categories'
 import { formatRelativeTime } from '@/lib/format-time'
-import { formatPriceToken } from '@/lib/utils'
+import { formatPrice, formatPriceToken } from '@/lib/utils'
 import { wrapWithAffiliate, hasAffiliateConfig } from '@/lib/affiliate-links'
 import OptionalEscrowSection from './OptionalEscrowSection'
 
