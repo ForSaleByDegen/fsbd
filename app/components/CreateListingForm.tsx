@@ -295,12 +295,16 @@ export default function CreateListingForm() {
         price_token: formData.priceToken === 'LISTING_TOKEN' ? 'LISTING_TOKEN' : formData.priceToken,
       }
       if (isDigitalAsset) {
-        listingDataForCreate.asset_type = formData.subcategory === 'nft' ? 'nft' : 'meme_coin'
+        listingDataForCreate.asset_type = ['nft','token','whole_token','wallet','meme_coin'].includes(formData.subcategory) ? formData.subcategory : (formData.subcategory === 'nft' ? 'nft' : 'meme_coin')
         listingDataForCreate.asset_chain = 'solana'
         listingDataForCreate.asset_mint = formData.assetMint.trim()
-        listingDataForCreate.meme_coin_min_percent = formData.subcategory === 'meme_coin' ? formData.memeCoinMinPercent : null
+        listingDataForCreate.meme_coin_min_percent = (formData.subcategory === 'meme_coin' || formData.subcategory === 'whole_token') ? (formData.memeCoinMinPercent ?? 0) : null
         listingDataForCreate.asset_collection_name = formData.assetCollectionName.trim() || null
         listingDataForCreate.asset_verified_at = new Date().toISOString()
+        if (['token', 'whole_token'].includes(formData.subcategory)) {
+          listingDataForCreate.has_token = true
+          listingDataForCreate.token_mint = formData.assetMint.trim()
+        }
       }
       const createRes = await fetch('/api/listings', {
         method: 'POST',
@@ -349,7 +353,7 @@ export default function CreateListingForm() {
     
     if (formData.category === 'digital-assets') {
       if (!formData.subcategory || !formData.assetMint) {
-        alert('Select a subcategory (NFT or Meme Coin) and enter the mint address.')
+        alert('Select a subcategory and enter the token/wallet address.')
         return
       }
       if (!assetVerified?.verified) {
@@ -463,12 +467,16 @@ export default function CreateListingForm() {
             chat_min_tokens: Math.max(1, Math.floor(Number(formData.chatMinTokens) || 1)),
           }
           if (isDigitalAsset) {
-            listingDataForCreate.asset_type = formData.subcategory === 'nft' ? 'nft' : 'meme_coin'
+            listingDataForCreate.asset_type = ['nft','token','whole_token','wallet','meme_coin'].includes(formData.subcategory) ? formData.subcategory : 'meme_coin'
             listingDataForCreate.asset_chain = 'solana'
             listingDataForCreate.asset_mint = formData.assetMint.trim()
-            listingDataForCreate.meme_coin_min_percent = formData.subcategory === 'meme_coin' ? formData.memeCoinMinPercent : null
+            listingDataForCreate.meme_coin_min_percent = (formData.subcategory === 'meme_coin' || formData.subcategory === 'whole_token') ? (formData.memeCoinMinPercent ?? (formData.subcategory === 'whole_token' ? 50 : 1)) : null
             listingDataForCreate.asset_collection_name = formData.assetCollectionName.trim() || null
             listingDataForCreate.asset_verified_at = new Date().toISOString()
+            if (['token', 'whole_token'].includes(formData.subcategory)) {
+              listingDataForCreate.has_token = true
+              listingDataForCreate.token_mint = formData.assetMint.trim()
+            }
           }
           const createRes = await fetch('/api/listings', {
             method: 'POST',
@@ -676,12 +684,16 @@ export default function CreateListingForm() {
         chat_min_tokens: Math.max(1, Math.floor(Number(formData.chatMinTokens) || 1)),
       }
       if (isDigitalAsset) {
-        listingData.asset_type = formData.subcategory === 'nft' ? 'nft' : 'meme_coin'
+        listingData.asset_type = ['nft','token','whole_token','wallet','meme_coin'].includes(formData.subcategory) ? formData.subcategory : 'meme_coin'
         listingData.asset_chain = 'solana'
         listingData.asset_mint = formData.assetMint.trim()
-        listingData.meme_coin_min_percent = formData.subcategory === 'meme_coin' ? formData.memeCoinMinPercent : null
+        listingData.meme_coin_min_percent = (formData.subcategory === 'meme_coin' || formData.subcategory === 'whole_token') ? (formData.memeCoinMinPercent ?? (formData.subcategory === 'whole_token' ? 50 : 1)) : null
         listingData.asset_collection_name = formData.assetCollectionName.trim() || null
-        listingData.asset_verified_at = new Date().toISOString() // Set on insert; API will verify
+        listingData.asset_verified_at = new Date().toISOString()
+        if (['token', 'whole_token'].includes(formData.subcategory)) {
+          listingData.has_token = true
+          listingData.token_mint = formData.assetMint.trim()
+        }
       }
       
       console.log('Creating listing with images:', imageUrls)
@@ -1007,8 +1019,10 @@ export default function CreateListingForm() {
               <SelectContent>
                 <SelectItem value="SOL">SOL</SelectItem>
                 <SelectItem value="USDC">USDC</SelectItem>
-                {formData.launchToken && (
-                  <SelectItem value="LISTING_TOKEN">My token{formData.tokenSymbol ? ` (${formData.tokenSymbol})` : ''}</SelectItem>
+                {(formData.launchToken || (formData.category === 'digital-assets' && ['token','whole_token'].includes(formData.subcategory))) && (
+                  <SelectItem value="LISTING_TOKEN">
+                    {formData.launchToken ? `My token${formData.tokenSymbol ? ` (${formData.tokenSymbol})` : ''}` : 'This token'}
+                  </SelectItem>
                 )}
               </SelectContent>
             </Select>
@@ -1029,15 +1043,18 @@ export default function CreateListingForm() {
 
       {formData.category === 'digital-assets' && (
         <div className="p-4 border-2 border-[#660099] rounded-lg space-y-4 bg-[#660099]/10">
-          <p className="text-sm text-[#00ff00] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-            Prove ownership to list as verified collection. Solana supported.
+          <h3 className="font-pixel text-[#00ff00] text-base" style={{ fontFamily: 'var(--font-pixel)' }}>
+            Digital Asset
+          </h3>
+          <p className="text-sm text-[#aa77ee] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+            List a token, whole token (project sale), NFT, wallet, or meme coin. Verify ownership below.
           </p>
           <div>
             <label className="block text-sm font-medium mb-2">
-              {formData.subcategory === 'nft' ? 'NFT Mint Address *' : 'Token Mint Address *'}
+              {formData.subcategory === 'wallet' ? 'Wallet Address *' : formData.subcategory === 'nft' ? 'NFT Mint Address *' : 'Token Mint Address *'}
             </label>
             <Input
-              placeholder="e.g. 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"
+              placeholder={formData.subcategory === 'wallet' ? 'Solana wallet you are selling' : 'e.g. 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU'}
               value={formData.assetMint}
               onChange={(e) => {
                 setFormData(prev => ({ ...prev, assetMint: e.target.value.trim() }))
@@ -1045,16 +1062,18 @@ export default function CreateListingForm() {
               }}
             />
           </div>
-          {formData.subcategory === 'meme_coin' && (
+          {(formData.subcategory === 'meme_coin' || formData.subcategory === 'whole_token') && (
             <div>
-              <label className="block text-sm font-medium mb-2">Min % of supply you hold *</label>
+              <label className="block text-sm font-medium mb-2">
+                Min % of supply you hold * {formData.subcategory === 'whole_token' && '(e.g. 50 for project sale)'}
+              </label>
               <Input
                 type="number"
                 min={0.01}
                 max={100}
                 step={0.01}
-                placeholder="1"
-                value={formData.memeCoinMinPercent || ''}
+                placeholder={formData.subcategory === 'whole_token' ? '50' : '1'}
+                value={formData.memeCoinMinPercent ?? (formData.subcategory === 'whole_token' ? 50 : '')}
                 onChange={(e) => {
                   setFormData(prev => ({ ...prev, memeCoinMinPercent: parseFloat(e.target.value) || 0 }))
                   setAssetVerified(null)
@@ -1075,20 +1094,38 @@ export default function CreateListingForm() {
           )}
           <button
             type="button"
-            disabled={!formData.assetMint || loading}
+            disabled={!formData.assetMint || loading || (formData.subcategory === 'wallet' && !signMessage)}
             onClick={async () => {
               if (!publicKey || !formData.assetMint) return
+              if (formData.subcategory === 'wallet') {
+                if (publicKey.toString() !== formData.assetMint) {
+                  setAssetVerified({ verified: false, error: 'Connect the wallet you are listing to verify ownership.' })
+                  return
+                }
+                if (!signMessage) {
+                  setAssetVerified({ verified: false, error: 'Your wallet does not support message signing.' })
+                  return
+                }
+              }
               setAssetVerified(null)
               try {
+                let body: Record<string, unknown> = {
+                  wallet: publicKey.toString(),
+                  assetType: formData.subcategory || 'token',
+                  mint: formData.assetMint,
+                  minPercent: (formData.subcategory === 'meme_coin' || formData.subcategory === 'whole_token') ? (formData.memeCoinMinPercent ?? (formData.subcategory === 'whole_token' ? 50 : 1)) : 0,
+                }
+                if (formData.subcategory === 'wallet') {
+                  const msg = `FSBD verify wallet ${Date.now()}`
+                  const sig = await signMessage!(new TextEncoder().encode(msg))
+                  const sigBytes = new Uint8Array(sig)
+                  const signature = btoa(String.fromCharCode.apply(null, Array.from(sigBytes)))
+                  body = { ...body, message: msg, signature }
+                }
                 const res = await fetch('/api/verify-asset-ownership', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    wallet: publicKey.toString(),
-                    assetType: formData.subcategory === 'nft' ? 'nft' : 'meme_coin',
-                    mint: formData.assetMint,
-                    minPercent: formData.subcategory === 'meme_coin' ? formData.memeCoinMinPercent : 0,
-                  }),
+                  body: JSON.stringify(body),
                 })
                 const data = await res.json()
                 if (data.verified) {

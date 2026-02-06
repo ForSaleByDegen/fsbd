@@ -19,7 +19,16 @@ This creates `lister_airdrop_snapshots` and `lister_airdrop_recipients` tables.
 
 You need a dedicated wallet that holds the 30% rewards supply and will send $FSBD.
 
-**Option A: Use a new wallet (recommended)**
+**Option A: Use Node.js script (no Solana CLI needed)**
+
+```bash
+cd app
+npx tsx scripts/generate-airdrop-keypair.ts
+```
+
+This creates `airdrop-rewards.json` and prints the public key.
+
+**Option B: Use Solana CLI** (if installed)
 
 ```bash
 solana-keygen new -o airdrop-rewards.json
@@ -30,7 +39,7 @@ solana-keygen new -o airdrop-rewards.json
   - **$FSBD**: at least `4200.69 × (number of listers)` tokens
   - **SOL**: ~0.01 SOL per recipient for tx fees (e.g. 100 listers = ~1 SOL)
 
-**Option B: Use an existing rewards wallet**
+**Option C: Use an existing rewards wallet**
 
 Export the keypair to a JSON file or base64 for the env var.
 
@@ -38,7 +47,7 @@ Export the keypair to a JSON file or base64 for the env var.
 
 ## Step 3: Transfer $FSBD into the airdrop wallet
 
-1. Get the airdrop wallet address: `solana-keygen pubkey airdrop-rewards.json`
+1. Get the airdrop wallet address: the keypair script prints it when run; or use Solana CLI if available: `solana-keygen pubkey airdrop-rewards.json`
 2. Send $FSBD from your treasury/30% allocation to that address
 3. Verify balance in Phantom or Solscan
 

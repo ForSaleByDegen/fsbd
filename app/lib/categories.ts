@@ -15,8 +15,11 @@ export const CATEGORIES = [
 /** Subcategories per category - add more over time */
 export const SUBCATEGORIES: Record<string, { value: string; label: string }[]> = {
   'digital-assets': [
-    { value: 'nft', label: 'NFT (Verified Collection)' },
-    { value: 'meme_coin', label: 'Meme Coin (Large % Holder)' },
+    { value: 'nft', label: 'NFT' },
+    { value: 'token', label: 'Token (existing token)' },
+    { value: 'whole_token', label: 'Whole Token (project sale)' },
+    { value: 'meme_coin', label: 'Meme Coin (large % holder)' },
+    { value: 'wallet', label: 'Wallet (sell a wallet)' },
   ],
   'for-sale': [
     { value: 'electronics', label: 'Electronics' },

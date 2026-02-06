@@ -54,6 +54,10 @@ export default function AddTokenToListing({
   const [devBuySol, setDevBuySol] = useState(0.01)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showLinkExisting, setShowLinkExisting] = useState(false)
+  const [existingMint, setExistingMint] = useState('')
+  const [existingName, setExistingName] = useState('')
+  const [existingSymbol, setExistingSymbol] = useState('')
 
   const handleLaunch = async () => {
     if (!publicKey || !signTransaction) {
@@ -184,14 +188,105 @@ export default function AddTokenToListing({
     }
   }
 
+  const handleLinkExisting = async () => {
+    if (!publicKey) {
+      alert('Connect your wallet')
+      return
+    }
+    const mint = existingMint.trim()
+    if (!mint || !BASE58.test(mint)) {
+      alert('Enter a valid Solana mint address (base58, 32-44 chars)')
+      return
+    }
+    setLoading(true)
+    setError(null)
+    try {
+      const body: { wallet: string; token_mint: string; token_name?: string; token_symbol?: string } = {
+        wallet: publicKey.toString(),
+        token_mint: mint,
+      }
+      if (existingName.trim()) body.token_name = existingName.trim()
+      if (existingSymbol.trim()) body.token_symbol = existingSymbol.trim().toUpperCase().slice(0, 10)
+      const res = await fetch(`/api/listings/${listingId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Failed to link token')
+      alert('Token linked to your listing!')
+      onSuccess()
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setError(msg)
+      alert('Failed to link: ' + msg)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="p-4 rounded-lg border-2 border-[#660099] bg-[#660099]/10 space-y-3">
       <h4 className="font-pixel text-[#00ff00] text-sm sm:text-base" style={{ fontFamily: 'var(--font-pixel)' }}>
         Create a token for this listing
       </h4>
       <p className="text-xs text-[#aa77ee] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-        Launch a fun token for your listing on pump.fun. Only you (the creator) can add a token.
+        Launch a fun token for your listing on pump.fun, or link an existing token (e.g. $FSBD). Only you (the creator) can add a token.
       </p>
+      {!showLinkExisting ? (
+        <button
+          type="button"
+          onClick={() => setShowLinkExisting(true)}
+          className="text-xs text-[#ff00ff] hover:text-[#00ff00] underline font-pixel-alt"
+          style={{ fontFamily: 'var(--font-pixel-alt)' }}
+        >
+          Link existing token instead
+        </button>
+      ) : (
+        <div className="space-y-2 p-3 border border-[#660099]/50 rounded">
+          <p className="text-xs text-[#00ff00] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+            Link existing token (e.g. $FSBD)
+          </p>
+          <Input
+            placeholder="Mint address (from pump.fun or wallet)"
+            value={existingMint}
+            onChange={(e) => setExistingMint(e.target.value)}
+            className="font-mono text-sm border-[#660099] bg-black/50"
+          />
+          <div className="grid grid-cols-2 gap-2">
+            <Input
+              placeholder="Token name (optional)"
+              value={existingName}
+              onChange={(e) => setExistingName(e.target.value)}
+              className="border-[#660099] bg-black/50"
+            />
+            <Input
+              placeholder="Token symbol (optional)"
+              value={existingSymbol}
+              onChange={(e) => setExistingSymbol(e.target.value.toUpperCase().slice(0, 10))}
+              className="border-[#660099] bg-black/50"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button
+              onClick={handleLinkExisting}
+              disabled={loading}
+              className="border-2 border-[#00ff00] text-[#00ff00] hover:bg-[#00ff00]/20"
+            >
+              {loading ? 'Linking...' : 'Link token'}
+            </Button>
+            <button
+              type="button"
+              onClick={() => setShowLinkExisting(false)}
+              className="text-xs text-[#aa77ee] hover:text-[#00ff00] font-pixel-alt"
+              style={{ fontFamily: 'var(--font-pixel-alt)' }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+      {!showLinkExisting && (
       <div className="grid gap-2 sm:grid-cols-2">
         <div>
           <label className="block text-xs text-[#aa77ee] mb-1">Token name</label>
@@ -234,6 +329,7 @@ export default function AddTokenToListing({
       >
         {loading ? 'Creating token...' : 'Create token for listing'}
       </Button>
+      )}
     </div>
   )
 }

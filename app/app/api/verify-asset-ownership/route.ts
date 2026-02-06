@@ -1,7 +1,7 @@
 /**
  * POST /api/verify-asset-ownership
- * Verifies wallet owns an NFT or holds min % of a meme coin on Solana.
- * Returns { verified, assetType, balance?, percent?, collectionName?, imageUri? }
+ * Verifies wallet owns an NFT, holds token %, or controls a wallet on Solana.
+ * Returns { verified, assetType, balance?, percent?, ... }
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { checkRateLimit } from '@/lib/rate-limit'
@@ -10,10 +10,11 @@ import {
   getAssociatedTokenAddress,
   getAccount,
   getMint,
-  TOKEN_PROGRAM_ID,
 } from '@solana/spl-token'
+import nacl from 'tweetnacl'
 
 const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/
+const VALID_ASSET_TYPES = ['nft', 'meme_coin', 'token', 'whole_token', 'wallet'] as const
 
 export async function POST(request: NextRequest) {
   const rateLimited = checkRateLimit(request, 'verifyAssetOwnership')
@@ -22,9 +23,11 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}))
     const wallet = String(body.wallet || '').trim()
-    const assetType = body.assetType // 'nft' | 'meme_coin'
+    const assetType = body.assetType
     const mint = String(body.mint || '').trim()
     const minPercent = typeof body.minPercent === 'number' ? body.minPercent : parseFloat(String(body.minPercent || 0))
+    const message = typeof body.message === 'string' ? body.message : ''
+    const signature = typeof body.signature === 'string' ? body.signature : ''
 
     if (!wallet || !assetType || !mint) {
       return NextResponse.json(
@@ -35,8 +38,34 @@ export async function POST(request: NextRequest) {
     if (!BASE58.test(wallet) || !BASE58.test(mint)) {
       return NextResponse.json({ error: 'Invalid wallet or mint address' }, { status: 400 })
     }
-    if (assetType !== 'nft' && assetType !== 'meme_coin') {
-      return NextResponse.json({ error: 'assetType must be nft or meme_coin' }, { status: 400 })
+    if (!VALID_ASSET_TYPES.includes(assetType)) {
+      return NextResponse.json({ error: 'assetType must be nft, meme_coin, token, whole_token, or wallet' }, { status: 400 })
+    }
+
+    // Wallet: verify by signature (user proves they control the wallet they're selling)
+    if (assetType === 'wallet') {
+      if (!message || !signature) {
+        return NextResponse.json({ error: 'message and signature required for wallet verification' }, { status: 400 })
+      }
+      try {
+        const pubkey = new PublicKey(mint).toBytes()
+        const msgBytes = new TextEncoder().encode(message)
+        const sigBytes = Buffer.from(signature, 'base64')
+        if (sigBytes.length !== 64) {
+          return NextResponse.json({ verified: false, error: 'Invalid signature length' })
+        }
+        const ok = nacl.sign.detached.verify(msgBytes, sigBytes, pubkey)
+        if (ok) {
+          return NextResponse.json({ verified: true, assetType: 'wallet' })
+        }
+      } catch {
+        /* invalid */
+      }
+      return NextResponse.json({
+        verified: false,
+        assetType: 'wallet',
+        error: 'Invalid signature. Sign the message with the wallet you are listing.',
+      })
     }
 
     const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || 'https://api.mainnet-beta.solana.com'
@@ -71,7 +100,10 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // assetType === 'meme_coin': verify % of supply
+    // token, whole_token, meme_coin: verify balance / % of supply
+    const needsPercentCheck = ['meme_coin', 'whole_token'].includes(assetType)
+    const effectiveMinPercent = assetType === 'token' ? 0 : minPercent
+
     try {
       const ata = await getAssociatedTokenAddress(mintPubkey, walletPubkey)
       const account = await getAccount(connection, ata)
@@ -83,20 +115,20 @@ export async function POST(request: NextRequest) {
       const balanceNorm = balance / Math.pow(10, decimals)
       const percent = supplyNorm > 0 ? (balanceNorm / supplyNorm) * 100 : 0
 
-      if (minPercent > 0 && percent < minPercent) {
+      if (effectiveMinPercent > 0 && percent < effectiveMinPercent) {
         return NextResponse.json({
           verified: false,
-          assetType: 'meme_coin',
+          assetType,
           balance: balanceNorm,
           percent,
-          minPercent,
-          error: `You hold ${percent.toFixed(2)}% but need at least ${minPercent}% to list.`,
+          minPercent: effectiveMinPercent,
+          error: `You hold ${percent.toFixed(2)}% but need at least ${effectiveMinPercent}% to list.`,
         })
       }
 
       return NextResponse.json({
         verified: true,
-        assetType: 'meme_coin',
+        assetType,
         balance: balanceNorm,
         percent,
         supply: supplyNorm,
@@ -104,7 +136,7 @@ export async function POST(request: NextRequest) {
     } catch {
       return NextResponse.json({
         verified: false,
-        assetType: 'meme_coin',
+        assetType,
         error: 'You do not hold this token. Connect the wallet that holds it.',
       })
     }

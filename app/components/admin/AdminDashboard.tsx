@@ -8,13 +8,14 @@ import AdminAnalytics from './AdminAnalytics'
 import PlatformConfig from './PlatformConfig'
 import ProtectionClaimsAdmin from './ProtectionClaimsAdmin'
 import EscrowAdmin from './EscrowAdmin'
+import ListerAirdropAdmin from './ListerAirdropAdmin'
 
 interface AdminDashboardProps {
   adminUser: AdminUser
 }
 
 export default function AdminDashboard({ adminUser }: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<'analytics' | 'listings' | 'users' | 'config' | 'claims' | 'escrow'>('analytics')
+  const [activeTab, setActiveTab] = useState<'analytics' | 'listings' | 'users' | 'config' | 'claims' | 'escrow' | 'airdrop'>('analytics')
 
   const tabs = [
     { id: 'analytics' as const, label: 'Analytics', permission: 'view_analytics' as const },
@@ -22,6 +23,7 @@ export default function AdminDashboard({ adminUser }: AdminDashboardProps) {
     { id: 'users' as const, label: 'Users', permission: 'manage_users' as const },
     { id: 'escrow' as const, label: 'Escrow', permission: 'manage_listings' as const },
     { id: 'claims' as const, label: 'Protection Claims', permission: 'view_analytics' as const },
+    { id: 'airdrop' as const, label: 'Lister Airdrop', permission: 'view_analytics' as const },
     { id: 'config' as const, label: 'Platform Config', permission: 'view_analytics' as const },
   ]
 
@@ -56,6 +58,7 @@ export default function AdminDashboard({ adminUser }: AdminDashboardProps) {
         {activeTab === 'users' && <UserManagement />}
         {activeTab === 'claims' && <ProtectionClaimsAdmin adminWallet={adminUser.wallet_address} />}
         {activeTab === 'escrow' && <EscrowAdmin adminWallet={adminUser.wallet_address} />}
+        {activeTab === 'airdrop' && <ListerAirdropAdmin adminWallet={adminUser.wallet_address} />}
         {activeTab === 'config' && <PlatformConfig />}
       </div>
     </div>
