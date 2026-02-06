@@ -67,7 +67,8 @@ export async function POST(
 
     const body = await request.json().catch(() => ({}))
     const buyer = typeof body.buyer === 'string' ? body.buyer.trim() : ''
-    const protectionOptIn = body.protectionOptIn === true
+    // Buyer protection is escrow-only; direct (Degen) payments never include protection
+    const protectionOptIn = false
     if (!buyer || !BASE58.test(buyer)) {
       return NextResponse.json({ error: 'Invalid buyer address' }, { status: 400 })
     }

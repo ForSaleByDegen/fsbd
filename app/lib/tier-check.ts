@@ -141,20 +141,17 @@ export async function getUserTier(
  * NOTE: Regular listings are FREE (just require message signing)
  * This fee only applies when launching a token/NFT for the listing
  * Base fee: 0.1 SOL, reduced by tier
+ * Uses lookup table to avoid floating-point artifacts (0.04 not 0.04000000000000001)
  */
 export function calculateListingFee(tier: Tier): number {
-  const BASE_FEE = 0.1 // 0.1 SOL base fee (only for token launches)
-  
-  const reductions = {
-    free: 0,
-    bronze: 0.2,
-    silver: 0.4,
-    gold: 0.6,
-    platinum: 0.75
+  const fees: Record<Tier, number> = {
+    free: 0.1,       // full price
+    bronze: 0.08,    // 20% off
+    silver: 0.06,    // 40% off
+    gold: 0.04,      // 60% off
+    platinum: 0.025, // 75% off
   }
-
-  const reduction = reductions[tier] || 0
-  return BASE_FEE * (1 - reduction)
+  return fees[tier] ?? 0.1
 }
 
 /**
@@ -164,6 +161,7 @@ export function getTierBenefits(tier: Tier): string[] {
   const platformFeeRate = calculatePlatformFeeRate(tier)
   const feePercent = (platformFeeRate * 100).toFixed(3)
   const listingFee = calculateListingFee(tier)
+  const listingFeeFormatted = Number(listingFee.toFixed(4)) // avoid 0.04000000000000001
   const maxListings = getMaxListingsForTier(tier)
   const maxImages = getMaxImagesForTier(tier)
 

@@ -168,7 +168,7 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
   const [listing, setListing] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState(false)
-  const [protectionOptIn, setProtectionOptIn] = useState(false)
+  // Buyer protection is escrow-only; direct (Degen) payments have no protection option
   const [threadId, setThreadId] = useState<string | null>(null)
   const [escrowAgreed, setEscrowAgreed] = useState(false)
   const [escrowStatus, setEscrowStatus] = useState<string | null>(null)
@@ -232,12 +232,9 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
     }
     const confirmAmount = listing.price
     const confirmToken = formatPriceToken(listing.price_token, listing.token_symbol)
-    const protectionNote = protectionOptIn
-      ? `\n\n➕ Optional buyer protection (2%) will be added: ${(confirmAmount * 0.02).toFixed(4)} ${confirmToken} to protection pool. Eligible for reimbursement if item not received or not as described.`
-      : ''
     const confirmMsg =
       `⚠️ DEGEN PAYMENT — DIRECT TO SELLER\n\n` +
-      `You are about to send ${confirmAmount} ${confirmToken} DIRECTLY to the seller's wallet.${protectionNote}\n\n` +
+      `You are about to send ${confirmAmount} ${confirmToken} DIRECTLY to the seller's wallet. No buyer protection.\n\n` +
       `• No seller is affiliated with this platform.\n` +
       `• We do NOT stand by any item's authenticity or condition.\n\n` +
       `Proceed with payment?`
@@ -252,7 +249,7 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
       const prepRes = await fetch(`/api/listings/${listingId}/prepare-transfer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ buyer: publicKey.toString(), protectionOptIn }),
+        body: JSON.stringify({ buyer: publicKey.toString(), protectionOptIn: false }),
       })
       if (!prepRes.ok) {
         const err = await prepRes.json().catch(() => ({}))
@@ -348,7 +345,7 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
             const prepRes2 = await fetch(`/api/listings/${listingId}/prepare-transfer`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ buyer: publicKey.toString(), protectionOptIn }),
+              body: JSON.stringify({ buyer: publicKey.toString(), protectionOptIn: false }),
             })
             if (!prepRes2.ok) throw new Error('Could not prepare fresh transaction')
             const prep2 = await prepRes2.json()
@@ -696,19 +693,8 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
                   🎲 DEGEN — Direct Payment
                 </h4>
                 <p className="text-sm text-[#aa77ee] font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-                  This sends {listing.price} {formatPriceToken(listing.price_token, listing.token_symbol)} <strong>directly to the seller</strong>.
-                  {protectionOptIn && ` + 2% (${(listing.price * 0.02).toFixed(4)} ${formatPriceToken(listing.price_token, listing.token_symbol)}) for optional buyer protection.`}
-                  {!protectionOptIn && ' No buyer protection.'}
+                  This sends {listing.price} {formatPriceToken(listing.price_token, listing.token_symbol)} <strong>directly to the seller</strong>. No buyer protection.
                 </p>
-                <label className="flex items-center gap-2 text-sm text-[#aa77ee] font-pixel-alt mb-2 cursor-pointer" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-                  <input
-                    type="checkbox"
-                    checked={protectionOptIn}
-                    onChange={(e) => setProtectionOptIn(e.target.checked)}
-                    className="w-4 h-4 border-2 border-[#660099] bg-black text-[#00ff00]"
-                  />
-                  Add buyer protection (2%) — reimbursed if item not received or not as described
-                </label>
                 <p className="text-sm text-[#aa77ee] font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                   No seller is affiliated with this platform. We do NOT stand by any item&apos;s authenticity or condition.
                 </p>
