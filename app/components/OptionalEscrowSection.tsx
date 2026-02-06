@@ -1,13 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useWallet, useConnection } from '@solana/wallet-adapter-react'
 import { LAMPORTS_PER_SOL } from '@solana/web3.js'
-import { getAssociatedTokenAddress, getAccount, createAssociatedTokenAccountIdempotentInstruction, getMint } from '@solana/spl-token'
-import { supabase, hashWalletAddress } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import { transferToUserEscrowTx } from '@/lib/user-pda-wallet'
 import { sendTransactionWithRebate, shouldUseRebate } from '@/lib/helius-rebate'
 import { updateThreadEscrow } from '@/lib/chat'
+import { getInsuranceCost } from '@/lib/insurance-cost'
 import { Button } from './ui/button'
 import ManualTrackingForm from './ManualTrackingForm'
 
@@ -20,6 +20,7 @@ interface OptionalEscrowSectionProps {
     wallet_address: string
     escrow_pda?: string
     escrow_status?: string
+    escrow_deposited_at?: string | null
     tracking_number?: string
     shipping_carrier?: string
   }
@@ -42,6 +43,21 @@ export default function OptionalEscrowSection({
   const { connection } = useConnection()
   const [processing, setProcessing] = useState(false)
   const [showTrackingForm, setShowTrackingForm] = useState(false)
+  const [showInsurancePrompt, setShowInsurancePrompt] = useState(true)
+  const [insuranceOptIn, setInsuranceOptIn] = useState(false)
+  const [config, setConfig] = useState<{ protection_coverage_cap_usd: number; sol_usd_rate: number } | null>(null)
+
+  useEffect(() => {
+    if (!listing.escrow_pda && userRole === 'buyer') {
+      fetch('/api/config')
+        .then((r) => r.json())
+        .then((data) => setConfig({
+          protection_coverage_cap_usd: data.protection_coverage_cap_usd ?? 100,
+          sol_usd_rate: data.sol_usd_rate ?? 200,
+        }))
+        .catch(() => setConfig({ protection_coverage_cap_usd: 100, sol_usd_rate: 200 }))
+    }
+  }, [listing.escrow_pda, userRole])
 
   const handleDepositToEscrow = async () => {
     if (!publicKey || !signTransaction || !connection) {
@@ -49,11 +65,33 @@ export default function OptionalEscrowSection({
       return
     }
     if (userRole !== 'buyer') return
-    const totalAmount = listing.price
     const token = listing.price_token || 'SOL'
 
     try {
       setProcessing(true)
+
+      const paramsRes = await fetch(`/api/listings/${listing.id}/prepare-escrow-deposit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ buyer: publicKey.toString(), insuranceOptIn }),
+        cache: 'no-store',
+      })
+      if (!paramsRes.ok) {
+        const err = await paramsRes.json().catch(() => ({}))
+        alert(err.error || 'Could not load purchase details. The seller may need to re-list.')
+        setProcessing(false)
+        return
+      }
+      const params = await paramsRes.json() as {
+        seller: string
+        saleAmount: number
+        insuranceFee: number
+        totalAmount: number
+        insuranceWallet: string | null
+        token: string
+        mint?: string
+      }
+      const { saleAmount, insuranceFee, totalAmount, insuranceWallet } = params
 
       // Balance check (Solana: "Attempt to debit" = source account has no funds)
       if (token === 'SOL') {
@@ -84,28 +122,34 @@ export default function OptionalEscrowSection({
         }
       }
 
-      // Server-validated params - avoids base58/corruption from raw listing
-      const paramsRes = await fetch(`/api/listings/${listing.id}/purchase-params`, { cache: 'no-store' })
-      if (!paramsRes.ok) {
-        const err = await paramsRes.json().catch(() => ({}))
-        alert(err.error || 'Could not load purchase details. The seller may need to re-list.')
-        setProcessing(false)
-        return
-      }
-      const params = await paramsRes.json() as { recipient: string; amount: number; token: string; mint?: string }
       if (params.token !== 'SOL' && !params.mint) {
         alert('Token payment not configured for this listing.')
         setProcessing(false)
         return
       }
       const tokenParam = params.token === 'SOL' ? 'SOL' : params.mint!
-      const { transaction, escrowPda } = await transferToUserEscrowTx(
+      const { Transaction, SystemProgram } = await import('@solana/web3.js')
+      const transaction = new Transaction()
+
+      // Insurance transfer: SOL only (5% fee goes to platform multisig)
+      if (insuranceFee > 0 && insuranceWallet && params.token === 'SOL') {
+        transaction.add(
+          SystemProgram.transfer({
+            fromPubkey: publicKey,
+            toPubkey: new (await import('@solana/web3.js')).PublicKey(insuranceWallet),
+            lamports: Math.floor(insuranceFee * LAMPORTS_PER_SOL),
+          })
+        )
+      }
+
+      const { transaction: escrowTx, escrowPda } = await transferToUserEscrowTx(
         publicKey,
-        params.recipient,
-        params.amount,
+        params.seller,
+        saleAmount,
         tokenParam,
         connection
       )
+      transaction.add(...escrowTx.instructions)
       transaction.feePayer = publicKey
 
       const doSignAndSend = async (skipPreflight = false): Promise<{ signature: string; blockhash: string; lastValidBlockHeight: number }> => {
@@ -177,14 +221,18 @@ export default function OptionalEscrowSection({
           .update({
             status: 'in_escrow',
             escrow_pda: escrowPda.toString(),
-            escrow_amount: totalAmount,
+            escrow_amount: saleAmount,
             escrow_status: 'pending',
             buyer_wallet_address: publicKey.toString(),
+            escrow_deposited_at: new Date().toISOString(),
           })
           .eq('id', listing.id)
       }
       await updateThreadEscrow(threadId, true, 'funded')
-      alert(`Deposited ${totalAmount} ${token} to escrow.\n\nTx: ${signature}`)
+      const msg = insuranceOptIn
+        ? `Deposited ${saleAmount} ${token} to escrow + ${insuranceFee.toFixed(4)} insurance.\n\nTx: ${signature}`
+        : `Deposited ${saleAmount} ${token} to escrow.\n\nTx: ${signature}`
+      alert(msg)
       onUpdate()
     } catch (err: any) {
       console.error(err)
@@ -235,7 +283,29 @@ export default function OptionalEscrowSection({
         })
         .eq('id', listing.id)
       await updateThreadEscrow(threadId, true, 'completed')
-      alert('Receipt confirmed. Funds will be released to seller (requires escrow program deployment).')
+      alert('Receipt confirmed. Funds will be released to seller (admin approval required).')
+      onUpdate()
+    } catch (err: any) {
+      alert('Failed: ' + err.message)
+    } finally {
+      setProcessing(false)
+    }
+  }
+
+  const handleReportNotReceived = async () => {
+    if (!publicKey || userRole !== 'buyer' || !supabase) return
+    if (!confirm('Report item as not received? This will open a dispute for admin review.')) return
+    try {
+      setProcessing(true)
+      await supabase
+        .from('listings')
+        .update({
+          escrow_status: 'disputed',
+          status: 'disputed',
+        })
+        .eq('id', listing.id)
+      await updateThreadEscrow(threadId, true, 'disputed')
+      alert('Dispute opened. An admin will review and approve release or refund.')
       onUpdate()
     } catch (err: any) {
       alert('Failed: ' + err.message)
@@ -246,6 +316,19 @@ export default function OptionalEscrowSection({
 
   if (!escrowAgreed && escrowStatus !== 'pending') return null
 
+  const insuranceCost = config && (listing.price_token === 'SOL' || !listing.price_token)
+    ? getInsuranceCost(listing.price, listing.price_token || 'SOL', config)
+    : null
+
+  // 7-day seller tracking deadline
+  const depositedAt = listing.escrow_deposited_at ? new Date(listing.escrow_deposited_at) : null
+  const deadline = depositedAt ? new Date(depositedAt.getTime() + 7 * 24 * 60 * 60 * 1000) : null
+  const now = new Date()
+  const daysLeft = deadline && now < deadline
+    ? Math.max(0, Math.ceil((deadline.getTime() - now.getTime()) / (24 * 60 * 60 * 1000)))
+    : null
+  const isOverdue = deadline && now >= deadline
+
   return (
     <div className="mb-4 p-4 bg-[#660099]/20 border-2 border-[#660099] rounded">
       <h3 className="font-pixel text-[#ff00ff] mb-2" style={{ fontFamily: 'var(--font-pixel)' }}>
@@ -253,26 +336,63 @@ export default function OptionalEscrowSection({
       </h3>
       <p className="text-xs text-[#00ff00] font-pixel-alt mb-3" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
         Both parties agreed to use escrow. Funds held until shipment and receipt are confirmed.
+        Seller has 7 days to add tracking.
       </p>
 
       {!listing.escrow_pda && userRole === 'buyer' && (
-        <Button
-          onClick={handleDepositToEscrow}
-          disabled={processing}
-          className="border-2 border-[#00ff00] text-[#00ff00] hover:bg-[#00ff00] hover:text-black"
-        >
-          {processing ? 'Depositing...' : `Deposit ${listing.price} ${listing.price_token || 'SOL'} to Escrow`}
-        </Button>
+        <div className="space-y-3">
+          {showInsurancePrompt && (
+            <div className="p-3 bg-black/40 border border-[#660099] rounded">
+              <p className="text-sm font-pixel-alt text-[#aa77ee] mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                Add buyer protection? 5% of sale. Coverage up to ${config?.protection_coverage_cap_usd ?? 100} per claim (increases as we grow).
+              </p>
+              {insuranceCost && (
+                <p className="text-xs text-[#00ff00] mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                  Cost: {insuranceCost.feeSol.toFixed(4)} SOL (${insuranceCost.feeUsd.toFixed(2)})
+                </p>
+              )}
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={insuranceOptIn}
+                  onChange={(e) => setInsuranceOptIn(e.target.checked)}
+                  className="w-4 h-4 border-2 border-[#660099] bg-black text-[#00ff00]"
+                />
+                <span className="text-sm font-pixel-alt text-[#aa77ee]" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                  Add buyer protection (5%)
+                </span>
+              </label>
+            </div>
+          )}
+          <Button
+            onClick={handleDepositToEscrow}
+            disabled={processing}
+            className="border-2 border-[#00ff00] text-[#00ff00] hover:bg-[#00ff00] hover:text-black"
+          >
+            {processing ? 'Depositing...' : `Deposit ${(listing.price + (insuranceOptIn ? listing.price * 0.05 : 0)).toFixed(4)} ${listing.price_token || 'SOL'} to Escrow`}
+          </Button>
+        </div>
       )}
 
       {listing.escrow_status === 'pending' && userRole === 'seller' && (
         <>
+          {daysLeft !== null && !showTrackingForm && (
+            <p className="text-sm font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+              {isOverdue ? (
+                <span className="text-red-500">⚠️ Deadline passed. Add tracking immediately to avoid dispute.</span>
+              ) : daysLeft <= 2 ? (
+                <span className="text-amber-400">{daysLeft} day{daysLeft !== 1 ? 's' : ''} left to add tracking</span>
+              ) : (
+                <span className="text-[#00ff00]">{daysLeft} days left to add tracking</span>
+              )}
+            </p>
+          )}
           {!showTrackingForm ? (
             <Button
               onClick={handleMarkShipped}
               className="border-2 border-[#00ff00] text-[#00ff00] hover:bg-[#00ff00] hover:text-black"
             >
-              Mark as Shipped (optional tracking)
+              Mark as Shipped (add tracking)
             </Button>
           ) : (
             <ManualTrackingForm listingId={listing.id} onTrackingAdded={handleTrackingAdded} />
@@ -287,14 +407,30 @@ export default function OptionalEscrowSection({
               📦 Tracking: {listing.tracking_number} ({listing.shipping_carrier})
             </p>
           )}
-          <Button
-            onClick={handleConfirmReceipt}
-            disabled={processing}
-            className="border-2 border-[#00ff00] text-[#00ff00] hover:bg-[#00ff00] hover:text-black"
-          >
-            {processing ? 'Confirming...' : 'Confirm Receipt'}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              onClick={handleConfirmReceipt}
+              disabled={processing}
+              className="border-2 border-[#00ff00] text-[#00ff00] hover:bg-[#00ff00] hover:text-black"
+            >
+              {processing ? 'Confirming...' : 'Confirm Receipt'}
+            </Button>
+            <Button
+              onClick={handleReportNotReceived}
+              disabled={processing}
+              variant="outline"
+              className="border-2 border-amber-400 text-amber-400 hover:bg-amber-400/20"
+            >
+              Item not received
+            </Button>
+          </div>
         </>
+      )}
+
+      {listing.escrow_status === 'disputed' && (
+        <p className="text-sm text-amber-400">
+          ⚠️ Dispute opened. Admin will review and approve release or refund.
+        </p>
       )}
 
       {listing.escrow_status === 'completed' && (

@@ -32,7 +32,12 @@ export async function GET() {
       } else if (typeof val === 'number') {
         config[key] = val
       } else if (typeof val === 'string') {
-        config[key] = parseInt(val, 10) || 0
+        if (key === 'protection_coverage_cap_usd' || key === 'sol_usd_rate') {
+          const parsed = parseFloat(val)
+          config[key] = !isNaN(parsed) ? parsed : (key === 'protection_coverage_cap_usd' ? 100 : 200)
+        } else {
+          config[key] = parseInt(val, 10) || 0
+        }
       }
     }
 
@@ -43,6 +48,8 @@ export async function GET() {
       tier_gold: (config.tier_gold as number) ?? 2000000,
       tier_platinum: (config.tier_platinum as number) ?? 10000000,
       fsbd_token_mint: (config.fsbd_token_mint as string) ?? process.env.NEXT_PUBLIC_FSBD_TOKEN_MINT ?? 'FSBD_TOKEN_MINT_PLACEHOLDER',
+      protection_coverage_cap_usd: (config.protection_coverage_cap_usd as number) ?? 100,
+      sol_usd_rate: (config.sol_usd_rate as number) ?? 200,
     })
   } catch (e) {
     console.error('Config error:', e)
@@ -57,5 +64,7 @@ function getDefaults() {
     tier_silver: 1000000,
     tier_gold: 10000000,
     fsbd_token_mint: process.env.NEXT_PUBLIC_FSBD_TOKEN_MINT ?? 'FSBD_TOKEN_MINT_PLACEHOLDER',
+    protection_coverage_cap_usd: 100,
+    sol_usd_rate: 200,
   }
 }

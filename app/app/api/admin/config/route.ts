@@ -49,6 +49,12 @@ export async function PATCH(request: NextRequest) {
     if (typeof body.fsbd_token_mint === 'string' && body.fsbd_token_mint.trim()) {
       updates.fsbd_token_mint = body.fsbd_token_mint.trim()
     }
+    if (typeof body.protection_coverage_cap_usd === 'number' && body.protection_coverage_cap_usd >= 0) {
+      updates.protection_coverage_cap_usd = body.protection_coverage_cap_usd
+    }
+    if (typeof body.sol_usd_rate === 'number' && body.sol_usd_rate > 0) {
+      updates.sol_usd_rate = body.sol_usd_rate
+    }
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: 'No valid config updates' }, { status: 400 })

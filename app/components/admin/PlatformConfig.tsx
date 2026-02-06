@@ -14,6 +14,8 @@ export default function PlatformConfig() {
     tier_gold: 2000000,
     tier_platinum: 10000000,
     fsbd_token_mint: '',
+    protection_coverage_cap_usd: 100,
+    sol_usd_rate: 200,
   })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -42,6 +44,8 @@ export default function PlatformConfig() {
           tier_silver: parseInt(String(config.tier_silver), 10),
           tier_gold: parseInt(String(config.tier_gold), 10),
           fsbd_token_mint: String(config.fsbd_token_mint || '').trim(),
+          protection_coverage_cap_usd: parseFloat(String(config.protection_coverage_cap_usd)) || 100,
+          sol_usd_rate: parseFloat(String(config.sol_usd_rate)) || 200,
         }),
       })
       const data = await res.json().catch(() => ({}))
@@ -128,6 +132,33 @@ export default function PlatformConfig() {
               onChange={(e) => setConfig((c) => ({ ...c, tier_platinum: parseInt(e.target.value, 10) || 0 }))}
               className="bg-black border-2 border-[#660099] text-[#00ff00]"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-pixel-alt text-[#00ff00] mb-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+              Protection coverage cap (USD)
+            </label>
+            <Input
+              type="number"
+              value={config.protection_coverage_cap_usd}
+              onChange={(e) => setConfig((c) => ({ ...c, protection_coverage_cap_usd: parseFloat(e.target.value) || 100 }))}
+              className="bg-black border-2 border-[#660099] text-[#00ff00]"
+            />
+            <p className="text-xs text-[#aa77ee] mt-1">Max reimbursement per claim. Increase as treasury grows.</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-pixel-alt text-[#00ff00] mb-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+              SOL/USD rate
+            </label>
+            <Input
+              type="number"
+              step="0.01"
+              value={config.sol_usd_rate}
+              onChange={(e) => setConfig((c) => ({ ...c, sol_usd_rate: parseFloat(e.target.value) || 200 }))}
+              className="bg-black border-2 border-[#660099] text-[#00ff00]"
+            />
+            <p className="text-xs text-[#aa77ee] mt-1">For insurance cost display and claim payouts.</p>
           </div>
 
           <div className="sm:col-span-2">

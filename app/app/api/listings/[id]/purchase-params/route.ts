@@ -25,10 +25,13 @@ function resolveTokenMint(priceToken: string | null, tokenMint: string | null): 
   return { token: 'SOL', mint: null }
 }
 
+const ESCROW_INSURANCE_PERCENT = 0.05 // 5% insurance fee for escrow
+
 /**
  * GET /api/listings/[id]/purchase-params
  * Returns server-validated transaction parameters.
  * Use this instead of raw listing data to avoid base58/corruption issues.
+ * Query: ?escrow=1 for escrow flow. ?insurance=1 adds 5% buyer protection fee (only when escrow=1).
  */
 export async function GET(
   request: NextRequest,
@@ -36,6 +39,9 @@ export async function GET(
 ) {
   try {
     const { id } = await params
+    const { searchParams } = new URL(request.url)
+    const forEscrow = searchParams.get('escrow') === '1'
+    const insuranceOptIn = searchParams.get('insurance') !== '0' // default true when escrow
     if (!id) {
       return NextResponse.json({ error: 'Missing listing ID' }, { status: 400 })
     }
@@ -90,6 +96,8 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid listing price.' }, { status: 400 })
     }
 
+    const amount = forEscrow && insuranceOptIn ? price * (1 + ESCROW_INSURANCE_PERCENT) : price
+
     const { token, mint } = resolveTokenMint(
       data.price_token,
       data.token_mint
@@ -97,7 +105,7 @@ export async function GET(
 
     return NextResponse.json({
       recipient: wa,
-      amount: price,
+      amount,
       token,
       mint: mint || undefined,
       listingId: data.id

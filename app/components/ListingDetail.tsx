@@ -23,6 +23,7 @@ import { getSubcategoryLabel } from '@/lib/categories'
 import { formatRelativeTime } from '@/lib/format-time'
 import { formatPriceToken } from '@/lib/utils'
 import { wrapWithAffiliate, hasAffiliateConfig } from '@/lib/affiliate-links'
+import OptionalEscrowSection from './OptionalEscrowSection'
 
 /** Solana Pay link - alternative when in-app transaction fails */
 function SolanaPayLink({ listingId }: { listingId: string }) {
@@ -168,6 +169,9 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState(false)
   const [protectionOptIn, setProtectionOptIn] = useState(false)
+  const [threadId, setThreadId] = useState<string | null>(null)
+  const [escrowAgreed, setEscrowAgreed] = useState(false)
+  const [escrowStatus, setEscrowStatus] = useState<string | null>(null)
 
   useEffect(() => {
     fetchListing()
@@ -627,11 +631,35 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
               chat_min_tokens: listing.chat_min_tokens ?? 1,
             }}
             currentUserWallet={publicKey.toString()}
+            onThreadLoaded={(tid, agreed, status) => {
+              setThreadId(tid)
+              setEscrowAgreed(agreed)
+              setEscrowStatus(status)
+            }}
           />
+          {escrowAgreed && threadId && (
+            <OptionalEscrowSection
+              listing={{
+                id: listing.id,
+                title: listing.title,
+                price: listing.price,
+                price_token: listing.price_token,
+                wallet_address: listing.wallet_address,
+                escrow_pda: listing.escrow_pda,
+                escrow_status: listing.escrow_status,
+                escrow_deposited_at: listing.escrow_deposited_at,
+                tracking_number: listing.tracking_number,
+                shipping_carrier: listing.shipping_carrier,
+              }}
+              threadId={threadId}
+              escrowAgreed={escrowAgreed}
+              escrowStatus={escrowStatus}
+              userRole={publicKey.toString() === listing.wallet_address ? 'seller' : 'buyer'}
+              onUpdate={() => { fetchListing(); router.refresh(); }}
+            />
+          )}
         </div>
       )}
-
-      {/* Escrow hidden until program launch */}
 
       {/* Seller stats (public) */}
       {listing.wallet_address && (

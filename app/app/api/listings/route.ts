@@ -132,6 +132,22 @@ export async function POST(request: NextRequest) {
     const walletHash = hashWalletAddress(wa)
     let listingData = { ...body, wallet_address: wa, wallet_address_hash: walletHash }
 
+    // Block banned sellers (e.g. failed to add tracking within 7 days)
+    if (supabaseAdmin) {
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('banned_at, banned_reason')
+        .eq('wallet_address_hash', walletHash)
+        .maybeSingle()
+      const p = profile as { banned_at?: string | null; banned_reason?: string | null } | null
+      if (p?.banned_at) {
+        return NextResponse.json(
+          { error: p.banned_reason || 'Your account has been suspended. Contact support.' },
+          { status: 403 }
+        )
+      }
+    }
+
     // Resolve fsbd mint for tier checks - robust parsing (string or { value } object)
     let fsbdMint: string | null = null
     if (supabaseAdmin) {
