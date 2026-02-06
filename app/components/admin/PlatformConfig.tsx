@@ -190,6 +190,36 @@ export default function PlatformConfig() {
           {saving ? 'Saving...' : 'Save Config'}
         </Button>
       </div>
+
+      {/* Telegram bot test */}
+      <div className="p-4 bg-black/50 border-2 border-[#660099] rounded">
+        <h3 className="font-pixel text-[#ff00ff] mb-2" style={{ fontFamily: 'var(--font-pixel)' }}>
+          Telegram Bot
+        </h3>
+        <p className="text-[#aa77ee] font-pixel-alt text-sm mb-3" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          New listings are posted to your Telegram channel. Add <code className="text-[#00ff00]">TELEGRAM_BOT_TOKEN</code> and <code className="text-[#00ff00]">TELEGRAM_CHANNEL_ID</code> in Vercel env vars, add the bot as channel admin, then test:
+        </p>
+        <Button
+          onClick={async () => {
+            if (!publicKey) return
+            try {
+              const res = await fetch('/api/admin/telegram-test', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ wallet: publicKey.toString() }),
+              })
+              const data = await res.json().catch(() => ({}))
+              if (data.ok) setMessage({ type: 'ok', text: 'Test message sent! Check your Telegram channel.' })
+              else setMessage({ type: 'err', text: data.error + (data.details?.hint ? ` ${data.details.hint}` : '') })
+            } catch (e) {
+              setMessage({ type: 'err', text: e instanceof Error ? e.message : 'Test failed' })
+            }
+          }}
+          className="border-2 border-[#660099] text-[#660099] hover:border-[#00ff00] hover:text-[#00ff00] font-pixel-alt"
+        >
+          Send test message to channel
+        </Button>
+      </div>
     </div>
   )
 }

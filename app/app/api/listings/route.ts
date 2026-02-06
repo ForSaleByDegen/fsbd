@@ -14,6 +14,7 @@ import {
   EARLY_ADOPTER_LISTING_LIMIT,
   type SubscriptionTier,
 } from '@/lib/tier-check'
+import { postListingToTelegram } from '@/lib/telegram-bot'
 
 const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/
 
@@ -314,6 +315,8 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (error) throw error
+      const baseUrl = request.nextUrl?.origin || `https://${process.env.VERCEL_URL || 'fsbd.fun'}`
+      postListingToTelegram(data, baseUrl).catch(() => {})
       return NextResponse.json(data)
     }
 
