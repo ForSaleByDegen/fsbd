@@ -562,7 +562,7 @@ export default function CreateListingForm() {
           SystemProgram.transfer({
             fromPubkey: publicKey,
             toPubkey: appWallet,
-            lamports: fee * LAMPORTS_PER_SOL,
+            lamports: Math.floor(fee * LAMPORTS_PER_SOL),
           })
         )
 

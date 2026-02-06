@@ -50,7 +50,7 @@ export async function createListingWithPayment(
       SystemProgram.transfer({
         fromPubkey: wallet,
         toPubkey: appWallet,
-        lamports: fee * LAMPORTS_PER_SOL,
+        lamports: Math.floor(fee * LAMPORTS_PER_SOL),
       })
     )
 
@@ -184,7 +184,7 @@ export async function createPaymentTransaction(
       SystemProgram.transfer({
         fromPubkey: buyerWallet,
         toPubkey: sellerWallet,
-        lamports: amount * LAMPORTS_PER_SOL,
+        lamports: Math.floor(amount * LAMPORTS_PER_SOL),
       })
     )
   } else {
