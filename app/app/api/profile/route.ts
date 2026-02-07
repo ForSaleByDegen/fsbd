@@ -64,23 +64,25 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch user's listings (as seller) - include tracking for sold listings
-    const { data: listings = [] } = await supabaseAdmin
+    const { data: listingsRaw } = await supabaseAdmin
       .from('listings')
       .select('id, title, price, price_token, token_symbol, status, escrow_status, images, category, created_at, tracking_number, shipping_carrier, buyer_wallet_hash')
       .eq('wallet_address_hash', walletHash)
       .order('created_at', { ascending: false })
+    const listings = Array.isArray(listingsRaw) ? listingsRaw : []
 
     // Fetch escrow threads (buyer or seller) - table may not exist if migration_chat not run
     let escrows: Array<{ id: string; listing_id: string; escrow_status: string; listing_title?: string; listing_price?: number; listing_price_token?: string; listing_token_symbol?: string | null }> = []
-    const { data: escrowsRaw = [], error: escrowsErr } = await supabaseAdmin
+    const { data: escrowsRaw, error: escrowsErr } = await supabaseAdmin
       .from('chat_threads')
       .select('id, listing_id, escrow_agreed, escrow_status, seller_wallet_hash, buyer_wallet_hash, updated_at')
       .or(`seller_wallet_hash.eq.${walletHash},buyer_wallet_hash.eq.${walletHash}`)
       .eq('escrow_agreed', true)
       .order('updated_at', { ascending: false })
 
-    if (!escrowsErr && escrowsRaw?.length) {
-      const listingIds = Array.from(new Set((escrowsRaw as { listing_id: string }[]).map((e) => e.listing_id).filter(Boolean)))
+    const escrowsArr = Array.isArray(escrowsRaw) ? escrowsRaw : []
+    if (!escrowsErr && escrowsArr.length) {
+      const listingIds = Array.from(new Set((escrowsArr as { listing_id: string }[]).map((e) => e.listing_id).filter(Boolean)))
       let listingMap: Record<string, { title: string; price: number; price_token: string; token_symbol?: string | null }> = {}
       if (listingIds.length > 0) {
         const { data: listingsForEscrows } = await supabaseAdmin
@@ -91,7 +93,7 @@ export async function GET(request: NextRequest) {
           listingMap[l.id] = { title: l.title, price: l.price, price_token: l.price_token, token_symbol: l.token_symbol }
         }
       }
-      escrows = (escrowsRaw as { id: string; listing_id: string; escrow_status: string }[]).map((e) => ({
+      escrows = (escrowsArr as { id: string; listing_id: string; escrow_status: string }[]).map((e) => ({
         id: e.id,
         listing_id: e.listing_id,
         escrow_status: e.escrow_status || 'pending',
@@ -103,44 +105,48 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch bids (auction listings where user is highest bidder - stored as raw wallet address)
-    const { data: bids = [] } = await supabaseAdmin
+    const { data: bidsRaw } = await supabaseAdmin
       .from('listings')
       .select('id, title, price, highest_bid, highest_bidder, is_auction, status, images, category, created_at')
       .eq('is_auction', true)
       .eq('highest_bidder', wallet)
       .order('created_at', { ascending: false })
+    const bids = Array.isArray(bidsRaw) ? bidsRaw : []
 
     // Also get listings where user is buyer (purchases) - include shipping/tracking and confirm status
-    const { data: purchasesRaw = [] } = await supabaseAdmin
+    const { data: purchasesRaw } = await supabaseAdmin
       .from('listings')
       .select('id, title, price, price_token, status, escrow_status, images, category, created_at, tracking_number, shipping_carrier, buyer_confirmed_received_at, wallet_address')
       .eq('buyer_wallet_hash', walletHash)
       .order('created_at', { ascending: false })
 
     // Enrich purchases with has_protection and claim_status from protection_fees / protection_claims
-    const purchaseIds = (purchasesRaw || []).map((p: { id: string }) => p.id)
+    const purchasesArr = Array.isArray(purchasesRaw) ? purchasesRaw : []
+    const purchaseIds = purchasesArr.map((p: { id: string }) => p.id)
     let hasProtectionMap: Record<string, boolean> = {}
     let claimStatusMap: Record<string, string> = {}
     if (purchaseIds.length > 0) {
-      const { data: fees = [] } = await supabaseAdmin
+      const { data: feesRaw } = await supabaseAdmin
         .from('protection_fees')
         .select('listing_id')
         .in('listing_id', purchaseIds)
         .eq('buyer_wallet_hash', walletHash)
+      const fees = Array.isArray(feesRaw) ? feesRaw : []
       for (const f of fees as { listing_id: string }[]) {
         hasProtectionMap[f.listing_id] = true
       }
-      const { data: claims = [] } = await supabaseAdmin
+      const { data: claimsRaw } = await supabaseAdmin
         .from('protection_claims')
         .select('listing_id, status')
         .in('listing_id', purchaseIds)
         .eq('buyer_wallet_hash', walletHash)
+      const claims = Array.isArray(claimsRaw) ? claimsRaw : []
       for (const c of claims as { listing_id: string; status: string }[]) {
         claimStatusMap[c.listing_id] = c.status
       }
     }
 
-    const purchases = (purchasesRaw || []).map((p: Record<string, unknown>) => ({
+    const purchases = purchasesArr.map((p: Record<string, unknown>) => ({
       ...p,
       has_protection: !!hasProtectionMap[p.id as string],
       claim_status: claimStatusMap[p.id as string] ?? (hasProtectionMap[p.id as string] ? 'none' : undefined),
