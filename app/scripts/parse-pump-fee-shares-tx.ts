@@ -16,7 +16,7 @@ function getAccountKeys(msg: { accountKeys: unknown[] }): string[] {
 
 function collectInstructions(parsed: {
   transaction: { message: { accountKeys: unknown[]; instructions: unknown[] } }
-  meta?: { innerInstructions?: Array<{ index: number; instructions: unknown[] }> }
+  meta?: { innerInstructions?: Array<{ index: number; instructions: unknown[] }> } | null
 }): Array<{ programId: string; data?: string; accountIndices?: number[]; accounts?: string[] }> {
   const accountKeys = getAccountKeys(parsed.transaction.message)
   const out: Array<{ programId: string; data?: string; accountIndices?: number[]; accounts?: string[] }> = []
