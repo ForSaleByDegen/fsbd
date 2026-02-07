@@ -25,7 +25,7 @@ export default function ListingChatSection({
     `px-3 py-2 text-sm font-pixel-alt border-2 transition-colors touch-manipulation ${
       activeTab === tab
         ? 'bg-[#660099] text-black border-[#660099]'
-        : 'bg-transparent text-[#660099] border-[#660099] hover:bg-[#660099]/20 hover:text-[#00ff00]'
+        : 'bg-transparent text-purple-readable border-[#660099] hover:bg-[#660099]/20 hover:text-[#00ff00]'
     }`
 
   return (
@@ -63,7 +63,7 @@ export default function ListingChatSection({
       )}
       {activeTab === 'private' && (
         <div>
-          <p className="text-xs text-[#aa77ee] font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          <p className="text-xs text-purple-muted font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             P2P encrypted — only you and the other party can read these messages. Each buyer has a separate thread.
           </p>
           <ListingChat

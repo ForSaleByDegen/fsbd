@@ -20,7 +20,7 @@ function getMintFromConfig(): string | null {
   return null
 }
 
-const LINK_STYLE = 'inline-flex items-center px-2 sm:px-3 py-1.5 border-2 border-[#660099] text-[#aa77ee] hover:border-[#00ff00] hover:text-[#00ff00] hover:bg-[#660099]/20 font-pixel-alt text-xs sm:text-sm transition-colors rounded'
+const LINK_STYLE = 'inline-flex items-center px-2 sm:px-3 py-1.5 border-2 border-[#660099] text-purple-muted hover:border-[#00ff00] hover:text-[#00ff00] hover:bg-[#660099]/20 font-pixel-alt text-xs sm:text-sm transition-colors rounded'
 const LINK_STYLE_PRIMARY = 'inline-flex items-center px-2 sm:px-3 py-1.5 border-2 border-[#00ff00] text-[#00ff00] hover:bg-[#00ff00] hover:text-black font-pixel-alt text-xs sm:text-sm transition-colors rounded'
 
 export default function AsciiLogo() {
@@ -74,7 +74,7 @@ export default function AsciiLogo() {
             <div className="text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-pixel text-[#00ff00] mb-1 sm:mb-2 break-words" style={{ fontFamily: 'var(--font-pixel)' }}>
               $FSBD
             </div>
-            <div className="text-sm sm:text-base md:text-lg text-[#660099] font-pixel-alt break-words" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+            <div className="text-sm sm:text-base md:text-lg text-purple-readable font-pixel-alt break-words" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
               Decentralized Solana marketplace — buy, sell, launch tokens, pay in crypto.
             </div>
           </div>
@@ -84,7 +84,7 @@ export default function AsciiLogo() {
             <div className="space-y-4">
               {/* CA - copyable */}
               <div>
-                <p className="text-[10px] sm:text-xs text-[#aa77ee] font-pixel-alt mb-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                <p className="text-[10px] sm:text-xs text-purple-muted font-pixel-alt mb-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                   Contract Address
                 </p>
                 <div className="flex flex-wrap items-center justify-center gap-2">
@@ -94,7 +94,7 @@ export default function AsciiLogo() {
                   <button
                     type="button"
                     onClick={copyCa}
-                    className={`px-2 py-1 border-2 font-pixel-alt text-xs transition-colors rounded ${copied ? 'border-[#00ff00] text-[#00ff00]' : 'border-[#660099] text-[#aa77ee] hover:border-[#00ff00] hover:text-[#00ff00]'}`}
+                    className={`px-2 py-1 border-2 font-pixel-alt text-xs transition-colors rounded ${copied ? 'border-[#00ff00] text-[#00ff00]' : 'border-[#660099] text-purple-muted hover:border-[#00ff00] hover:text-[#00ff00]'}`}
                     style={{ fontFamily: 'var(--font-pixel-alt)' }}
                   >
                     {copied ? 'Copied!' : 'Copy'}
@@ -104,7 +104,7 @@ export default function AsciiLogo() {
 
               {/* DEX links */}
               <div>
-                <p className="text-[10px] sm:text-xs text-[#aa77ee] font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                <p className="text-[10px] sm:text-xs text-purple-muted font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                   DEX & Charts
                 </p>
                 <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2">
@@ -128,7 +128,7 @@ export default function AsciiLogo() {
 
               {/* Verify / List */}
               <div>
-                <p className="text-[10px] sm:text-xs text-[#aa77ee] font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                <p className="text-[10px] sm:text-xs text-purple-muted font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                   Verify & List
                 </p>
                 <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2">
@@ -144,7 +144,7 @@ export default function AsciiLogo() {
               {/* Socials */}
               {(twitterUrl || discordUrl || telegramUrl) && (
                 <div>
-                  <p className="text-[10px] sm:text-xs text-[#aa77ee] font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                  <p className="text-[10px] sm:text-xs text-purple-muted font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                     Socials
                   </p>
                   <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2">
@@ -173,7 +173,7 @@ export default function AsciiLogo() {
                   href={HACKATHON_TWEET_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs text-[#00ff00] hover:text-[#660099] font-pixel-alt underline transition-colors"
+                  className="text-xs text-[#00ff00] hover:text-purple-readable font-pixel-alt underline transition-colors"
                   style={{ fontFamily: 'var(--font-pixel-alt)' }}
                 >
                   pump.fun Hackathon →
@@ -181,7 +181,7 @@ export default function AsciiLogo() {
               </div>
             </div>
           ) : (
-            <div className="text-sm text-[#660099] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+            <div className="text-sm text-purple-readable font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
               <p className="mb-2">Add token CA in Admin → Platform Config for instant display (no redeploy).</p>
               <Link href="/why" className="text-[#00ff00] hover:underline">
                 Why $FSBD

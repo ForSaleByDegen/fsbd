@@ -283,7 +283,7 @@ export default function ListingFeed() {
       />
 
       {tab === 'activity' && (
-        <p className="text-sm text-[#aa77ee] font-pixel-alt mb-4" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+        <p className="text-sm text-purple-muted font-pixel-alt mb-4" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
           Recently sold items
         </p>
       )}

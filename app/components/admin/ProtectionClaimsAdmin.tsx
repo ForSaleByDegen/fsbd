@@ -98,7 +98,7 @@ export default function ProtectionClaimsAdmin({ adminWallet }: ProtectionClaimsA
     return (
       <div className="text-center py-8">
         <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#00ff00]"></div>
-        <p className="text-[#660099] font-pixel-alt mt-2 text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+        <p className="text-purple-readable font-pixel-alt mt-2 text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
           Loading claims...
         </p>
       </div>
@@ -108,7 +108,7 @@ export default function ProtectionClaimsAdmin({ adminWallet }: ProtectionClaimsA
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[#660099] font-pixel-alt text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+        <span className="text-purple-readable font-pixel-alt text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
           Filter:
         </span>
         {['pending', 'approved', 'rejected', 'all'].map((s) => (
@@ -118,7 +118,7 @@ export default function ProtectionClaimsAdmin({ adminWallet }: ProtectionClaimsA
             className={`px-3 py-1 border-2 font-pixel-alt text-sm ${
               statusFilter === s
                 ? 'border-[#00ff00] text-[#00ff00] bg-black/50'
-                : 'border-[#660099] text-[#660099] hover:border-[#00ff00] hover:text-[#00ff00]'
+                : 'border-[#660099] text-purple-readable hover:border-[#00ff00] hover:text-[#00ff00]'
             }`}
             style={{ fontFamily: 'var(--font-pixel-alt)' }}
           >
@@ -134,7 +134,7 @@ export default function ProtectionClaimsAdmin({ adminWallet }: ProtectionClaimsA
       )}
 
       {claims.length === 0 ? (
-        <p className="text-[#660099] font-pixel-alt text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+        <p className="text-purple-readable font-pixel-alt text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
           No protection claims found.
         </p>
       ) : (
@@ -153,7 +153,7 @@ export default function ProtectionClaimsAdmin({ adminWallet }: ProtectionClaimsA
                   >
                     {c.listing_title || c.listing_id}
                   </Link>
-                  <p className="text-[#660099] font-pixel-alt text-xs mt-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                  <p className="text-purple-readable font-pixel-alt text-xs mt-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                     Reason: {REASON_LABELS[c.reason] ?? c.reason} • Amount: {c.protection_amount ?? '—'} {c.protection_token ?? 'SOL'}
                   </p>
                   {c.description && (
@@ -161,7 +161,7 @@ export default function ProtectionClaimsAdmin({ adminWallet }: ProtectionClaimsA
                       {c.description}
                     </p>
                   )}
-                  <p className="text-[#660099] font-pixel-alt text-xs" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                  <p className="text-purple-readable font-pixel-alt text-xs" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                     Filed {new Date(c.created_at).toLocaleString()}
                   </p>
                 </div>
@@ -211,7 +211,7 @@ export default function ProtectionClaimsAdmin({ adminWallet }: ProtectionClaimsA
               )}
 
               {(c.status === 'approved' || c.status === 'rejected') && c.reviewed_at && (
-                <p className="text-[#660099] font-pixel-alt text-xs" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                <p className="text-purple-readable font-pixel-alt text-xs" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                   Reviewed {new Date(c.reviewed_at).toLocaleString()}
                   {c.payout_tx && (
                     <span> • Payout: <code className="text-[#00ff00]">{c.payout_tx}</code></span>

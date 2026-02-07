@@ -16,7 +16,7 @@ export default function TermsPage() {
           </h1>
           
           <div className="text-[#00ff00] text-sm sm:text-base space-y-4 sm:space-y-6 font-pixel-alt">
-            <p className="text-xs text-[#660099] mb-4">
+            <p className="text-xs text-purple-readable mb-4">
               Last Updated: {new Date().toLocaleDateString()}
             </p>
 

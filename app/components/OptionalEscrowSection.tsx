@@ -343,7 +343,7 @@ export default function OptionalEscrowSection({
         <div className="space-y-3">
           {showInsurancePrompt && (
             <div className="p-3 bg-black/40 border border-[#660099] rounded">
-              <p className="text-sm font-pixel-alt text-[#aa77ee] mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+              <p className="text-sm font-pixel-alt text-purple-muted mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                 Add buyer protection? 5% of sale. Coverage up to ${config?.protection_coverage_cap_usd ?? 100} per claim (increases as we grow).
               </p>
               {insuranceCost && (
@@ -358,7 +358,7 @@ export default function OptionalEscrowSection({
                   onChange={(e) => setInsuranceOptIn(e.target.checked)}
                   className="w-4 h-4 border-2 border-[#660099] bg-black text-[#00ff00]"
                 />
-                <span className="text-sm font-pixel-alt text-[#aa77ee]" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                <span className="text-sm font-pixel-alt text-purple-muted" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                   Add buyer protection (5%)
                 </span>
               </label>

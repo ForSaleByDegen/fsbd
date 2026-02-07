@@ -232,7 +232,7 @@ export default function AddTokenToListing({
       <h4 className="font-pixel text-[#00ff00] text-sm sm:text-base" style={{ fontFamily: 'var(--font-pixel)' }}>
         Create a token for this listing
       </h4>
-      <p className="text-xs text-[#aa77ee] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+      <p className="text-xs text-purple-muted font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
         Launch a fun token for your listing on pump.fun, or link an existing token (e.g. $FSBD). Only you (the creator) can add a token.
       </p>
       {!showLinkExisting ? (
@@ -280,7 +280,7 @@ export default function AddTokenToListing({
             <button
               type="button"
               onClick={() => setShowLinkExisting(false)}
-              className="text-xs text-[#aa77ee] hover:text-[#00ff00] font-pixel-alt"
+              className="text-xs text-purple-muted hover:text-[#00ff00] font-pixel-alt"
               style={{ fontFamily: 'var(--font-pixel-alt)' }}
             >
               Cancel
@@ -292,7 +292,7 @@ export default function AddTokenToListing({
       <>
       <div className="grid gap-2 sm:grid-cols-2">
         <div>
-          <label className="block text-xs text-[#aa77ee] mb-1">Token name</label>
+          <label className="block text-xs text-purple-muted mb-1">Token name</label>
           <Input
             placeholder={title?.slice(0, 20) || 'My Token'}
             value={tokenName}
@@ -301,7 +301,7 @@ export default function AddTokenToListing({
           />
         </div>
         <div>
-          <label className="block text-xs text-[#aa77ee] mb-1">Token symbol</label>
+          <label className="block text-xs text-purple-muted mb-1">Token symbol</label>
           <Input
             placeholder={tokenSymbol || 'MT'}
             value={tokenSymbolInput}
@@ -312,7 +312,7 @@ export default function AddTokenToListing({
         </div>
       </div>
       <div>
-        <label className="block text-xs text-[#aa77ee] mb-1">Dev buy (SOL) — optional</label>
+        <label className="block text-xs text-purple-muted mb-1">Dev buy (SOL) — optional</label>
         <Input
           type="number"
           step="0.01"

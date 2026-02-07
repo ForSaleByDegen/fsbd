@@ -52,12 +52,12 @@ export default function VerifySellerForm({ adminWallet }: VerifySellerFormProps)
       <h3 className="font-pixel text-[#00ff00] mb-3" style={{ fontFamily: 'var(--font-pixel)' }}>
         Verify seller
       </h3>
-      <p className="text-sm text-[#aa77ee] mb-4 font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+      <p className="text-sm text-purple-muted mb-4 font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
         Add a seller verification so they get the verified badge on listings with external URLs.
       </p>
       <form onSubmit={handleSubmit} className="space-y-3 max-w-md">
         <div>
-          <label className="block text-xs text-[#aa77ee] mb-1">Wallet address *</label>
+          <label className="block text-xs text-purple-muted mb-1">Wallet address *</label>
           <Input
             value={wallet}
             onChange={(e) => setWallet(e.target.value)}
@@ -67,7 +67,7 @@ export default function VerifySellerForm({ adminWallet }: VerifySellerFormProps)
           />
         </div>
         <div>
-          <label className="block text-xs text-[#aa77ee] mb-1">Platform</label>
+          <label className="block text-xs text-purple-muted mb-1">Platform</label>
           <select
             value={platform}
             onChange={(e) => setPlatform(e.target.value as typeof platform)}
@@ -80,7 +80,7 @@ export default function VerifySellerForm({ adminWallet }: VerifySellerFormProps)
           </select>
         </div>
         <div>
-          <label className="block text-xs text-[#aa77ee] mb-1">Platform username (optional)</label>
+          <label className="block text-xs text-purple-muted mb-1">Platform username (optional)</label>
           <Input
             value={platformUsername}
             onChange={(e) => setPlatformUsername(e.target.value)}
@@ -89,7 +89,7 @@ export default function VerifySellerForm({ adminWallet }: VerifySellerFormProps)
           />
         </div>
         <div>
-          <label className="block text-xs text-[#aa77ee] mb-1">Store URL (optional)</label>
+          <label className="block text-xs text-purple-muted mb-1">Store URL (optional)</label>
           <Input
             value={storeUrl}
             onChange={(e) => setStoreUrl(e.target.value)}

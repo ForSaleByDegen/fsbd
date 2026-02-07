@@ -16,7 +16,7 @@ export default function PrivacyPage() {
           </h1>
           
           <div className="text-[#00ff00] text-sm sm:text-base space-y-4 sm:space-y-6 font-pixel-alt">
-            <p className="text-xs text-[#660099] mb-4">
+            <p className="text-xs text-purple-readable mb-4">
               Last Updated: {new Date().toLocaleDateString()}
             </p>
 
@@ -153,7 +153,7 @@ export default function PrivacyPage() {
                 We protect your data at every step. All listing images are stripped of embedded metadata 
                 (EXIF, GPS, camera info, timestamps) before upload—no location or device data is ever stored. 
                 Chat is end-to-end encrypted. Shipping addresses are never stored. For full technical details, 
-                see <code className="text-[#aa77ee]">PRIVACY_DATA_PROTECTION.md</code> in our documentation.
+                see <code className="text-purple-muted">PRIVACY_DATA_PROTECTION.md</code> in our documentation.
               </p>
             </section>
 

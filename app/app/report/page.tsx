@@ -67,7 +67,7 @@ export default function ReportPage() {
           <h1 className="text-2xl sm:text-3xl font-pixel text-[#00ff00] mb-2" style={{ fontFamily: 'var(--font-pixel)' }}>
             Bug Report
           </h1>
-          <p className="text-[#aa77ee] font-pixel-alt text-sm mb-6" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          <p className="text-purple-muted font-pixel-alt text-sm mb-6" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             Report errors, failed transactions, or issues. Include screenshots or tx signatures when helpful.
           </p>
 
@@ -118,9 +118,9 @@ export default function ReportPage() {
                   accept="image/*"
                   multiple
                   onChange={(e) => setScreenshots(Array.from(e.target.files || []))}
-                  className="bg-black border-2 border-[#660099] text-[#aa77ee]"
+                  className="bg-black border-2 border-[#660099] text-purple-muted"
                 />
-                <p className="text-xs text-[#aa77ee] mt-1">Upload screenshots of the error or failed transaction</p>
+                <p className="text-xs text-purple-muted mt-1">Upload screenshots of the error or failed transaction</p>
               </div>
 
               {error && <p className="text-red-400 text-sm">{error}</p>}

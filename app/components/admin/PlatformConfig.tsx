@@ -59,7 +59,7 @@ export default function PlatformConfig() {
   }
 
   if (loading) {
-    return <p className="text-[#660099] font-pixel-alt text-sm">Loading config...</p>
+    return <p className="text-purple-readable font-pixel-alt text-sm">Loading config...</p>
   }
 
   return (
@@ -68,7 +68,7 @@ export default function PlatformConfig() {
         <h3 className="font-pixel text-[#ff00ff] mb-4" style={{ fontFamily: 'var(--font-pixel)' }}>
           Platform Config
         </h3>
-        <p className="text-[#aa77ee] font-pixel-alt text-sm mb-4" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+        <p className="text-purple-muted font-pixel-alt text-sm mb-4" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
           Adjust thresholds as market cap changes. Lower auction_min_tokens when $FSBD price rises so more users can create auctions. Tier thresholds control fee discounts.
         </p>
 
@@ -83,7 +83,7 @@ export default function PlatformConfig() {
               onChange={(e) => setConfig((c) => ({ ...c, auction_min_tokens: parseInt(e.target.value, 10) || 0 }))}
               className="bg-black border-2 border-[#660099] text-[#00ff00]"
             />
-            <p className="text-xs text-[#aa77ee] mt-1">Min $FSBD to create auctions. Lower when market cap rises.</p>
+            <p className="text-xs text-purple-muted mt-1">Min $FSBD to create auctions. Lower when market cap rises.</p>
           </div>
 
           <div>
@@ -144,7 +144,7 @@ export default function PlatformConfig() {
               onChange={(e) => setConfig((c) => ({ ...c, protection_coverage_cap_usd: parseFloat(e.target.value) || 100 }))}
               className="bg-black border-2 border-[#660099] text-[#00ff00]"
             />
-            <p className="text-xs text-[#aa77ee] mt-1">Max reimbursement per claim. Increase as treasury grows.</p>
+            <p className="text-xs text-purple-muted mt-1">Max reimbursement per claim. Increase as treasury grows.</p>
           </div>
 
           <div>
@@ -158,7 +158,7 @@ export default function PlatformConfig() {
               onChange={(e) => setConfig((c) => ({ ...c, sol_usd_rate: parseFloat(e.target.value) || 200 }))}
               className="bg-black border-2 border-[#660099] text-[#00ff00]"
             />
-            <p className="text-xs text-[#aa77ee] mt-1">For insurance cost display and claim payouts.</p>
+            <p className="text-xs text-purple-muted mt-1">For insurance cost display and claim payouts.</p>
           </div>
 
           <div className="sm:col-span-2">
@@ -172,7 +172,7 @@ export default function PlatformConfig() {
               onChange={(e) => setConfig((c) => ({ ...c, fsbd_token_mint: e.target.value }))}
               className="bg-black border-2 border-[#660099] text-[#00ff00] font-mono text-sm"
             />
-            <p className="text-xs text-[#aa77ee] mt-1">Set your $FSBD mint address after launch. Tiers use this for balance checks.</p>
+            <p className="text-xs text-purple-muted mt-1">Set your $FSBD mint address after launch. Tiers use this for balance checks.</p>
           </div>
         </div>
 
@@ -196,7 +196,7 @@ export default function PlatformConfig() {
         <h3 className="font-pixel text-[#ff00ff] mb-2" style={{ fontFamily: 'var(--font-pixel)' }}>
           Telegram Bot
         </h3>
-        <p className="text-[#aa77ee] font-pixel-alt text-sm mb-3" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+        <p className="text-purple-muted font-pixel-alt text-sm mb-3" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
           New listings are posted to your Telegram channel. Add <code className="text-[#00ff00]">TELEGRAM_BOT_TOKEN</code> and <code className="text-[#00ff00]">TELEGRAM_CHANNEL_ID</code> in Vercel env vars, add the bot as channel admin, then test:
         </p>
         <Button
@@ -215,7 +215,7 @@ export default function PlatformConfig() {
               setMessage({ type: 'err', text: e instanceof Error ? e.message : 'Test failed' })
             }
           }}
-          className="border-2 border-[#660099] text-[#660099] hover:border-[#00ff00] hover:text-[#00ff00] font-pixel-alt"
+          className="border-2 border-[#660099] text-purple-readable hover:border-[#00ff00] hover:text-[#00ff00] font-pixel-alt"
         >
           Send test message to channel
         </Button>

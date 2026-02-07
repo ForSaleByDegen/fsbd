@@ -118,7 +118,7 @@ export default function EmailSignupModal({ isOpen, onClose, onComplete }: EmailS
             <Button
               type="button"
               onClick={onClose}
-              className="flex-1 border-2 border-[#660099] text-[#660099] hover:bg-[#660099] hover:text-black font-pixel-alt"
+              className="flex-1 border-2 border-[#660099] text-purple-readable hover:bg-[#660099] hover:text-black font-pixel-alt"
               style={{ fontFamily: 'var(--font-pixel-alt)' }}
             >
               Cancel
@@ -134,7 +134,7 @@ export default function EmailSignupModal({ isOpen, onClose, onComplete }: EmailS
           </div>
         </form>
 
-        <p className="text-xs text-[#660099] font-pixel-alt mt-4" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+        <p className="text-xs text-purple-readable font-pixel-alt mt-4" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
           Your email will be used only for shipping labels and transaction notifications. 
           We respect your privacy and will never spam you.
         </p>

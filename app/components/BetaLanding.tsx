@@ -49,7 +49,7 @@ export default function BetaLanding() {
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-pixel text-[#00ff00] mb-2" style={{ fontFamily: 'var(--font-pixel)' }}>
             $FSBD
           </h1>
-          <p className="text-xl sm:text-2xl text-[#660099] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          <p className="text-xl sm:text-2xl text-purple-readable font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             For Sale By Degen
           </p>
         </div>
@@ -60,7 +60,7 @@ export default function BetaLanding() {
               Platform is locked for beta. Sign up below to get notified when we launch with tier-based access.
             </p>
           )}
-          <p className="text-[#aa77ee] font-pixel-alt text-base sm:text-lg mb-6" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          <p className="text-purple-muted font-pixel-alt text-base sm:text-lg mb-6" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             Degen Craigslist on Solana — crypto payments, token-gated tiers, auctions. Launching soon.
           </p>
 
@@ -100,13 +100,13 @@ export default function BetaLanding() {
         </div>
 
         <div className="flex flex-wrap justify-center gap-4 text-sm mt-8">
-          <Link href="/why" className="text-[#660099] hover:text-[#00ff00] font-pixel-alt transition-colors" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          <Link href="/why" className="text-purple-readable hover:text-[#00ff00] font-pixel-alt transition-colors" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             Why $FSBD
           </Link>
-          <Link href="/terms" className="text-[#660099] hover:text-[#00ff00] font-pixel-alt transition-colors" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          <Link href="/terms" className="text-purple-readable hover:text-[#00ff00] font-pixel-alt transition-colors" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             Terms
           </Link>
-          <Link href="/privacy" className="text-[#660099] hover:text-[#00ff00] font-pixel-alt transition-colors" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          <Link href="/privacy" className="text-purple-readable hover:text-[#00ff00] font-pixel-alt transition-colors" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             Privacy
           </Link>
         </div>

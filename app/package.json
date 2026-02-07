@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "create-cnft-tree": "tsx scripts/create-cnft-tree.ts",
+    "mint-logo-nft": "tsx scripts/mint-logo-nft.ts",
     "launch-fsbd-token": "tsx scripts/launch-fsbd-token.ts",
     "vanity": "tsx scripts/vanity-grind.ts",
     "vanity:bg": "tsx scripts/vanity-grind.ts pump -- --background"

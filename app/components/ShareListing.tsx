@@ -89,7 +89,7 @@ export default function ShareListing({ listingId, title, price, priceToken }: Sh
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="inline-flex items-center gap-2 px-3 py-1.5 border-2 border-[#660099] text-[#aa77ee] hover:border-[#00ff00] hover:text-[#00ff00] font-pixel-alt text-sm transition-colors"
+        className="inline-flex items-center gap-2 px-3 py-1.5 border-2 border-[#660099] text-purple-muted hover:border-[#00ff00] hover:text-[#00ff00] font-pixel-alt text-sm transition-colors"
         style={style}
       >
         Share

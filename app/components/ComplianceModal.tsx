@@ -53,7 +53,7 @@ export default function ComplianceModal() {
         <h3 className="text-xl font-pixel text-[#00ff00] mb-4" style={{ fontFamily: 'var(--font-pixel)' }}>
           Compliance & Terms
         </h3>
-        <p className="text-sm text-[#aa77ee] font-pixel-alt mb-4" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+        <p className="text-sm text-purple-muted font-pixel-alt mb-4" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
           Before using FSBD, please read and acknowledge the following:
         </p>
         <ul className="text-sm text-[#00ff00] font-pixel-alt space-y-2 mb-4 list-disc list-inside" style={{ fontFamily: 'var(--font-pixel-alt)' }}>

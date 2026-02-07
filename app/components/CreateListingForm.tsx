@@ -800,7 +800,7 @@ export default function CreateListingForm() {
             {importingFromUrl ? 'Importing…' : 'Import'}
           </Button>
         </div>
-        <p className="text-sm text-[#aa77ee] font-pixel-alt mt-1">Paste a product URL and click Import. Review the preview and choose what to use before submitting.</p>
+        <p className="text-sm text-purple-muted font-pixel-alt mt-1">Paste a product URL and click Import. Review the preview and choose what to use before submitting.</p>
 
         {importPreview && (
           <div className="mt-4 p-4 rounded-lg border border-[#00ff00]/40 bg-[#00ff00]/5">
@@ -1054,7 +1054,7 @@ export default function CreateListingForm() {
           <h3 className="font-pixel text-[#00ff00] text-base" style={{ fontFamily: 'var(--font-pixel)' }}>
             Digital Asset
           </h3>
-          <p className="text-sm text-[#aa77ee] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          <p className="text-sm text-purple-muted font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             List a token, whole token (project sale), NFT, wallet, or meme coin. Verify ownership below.
           </p>
           <div>
@@ -1087,7 +1087,7 @@ export default function CreateListingForm() {
                   setAssetVerified(null)
                 }}
               />
-              <p className="text-xs text-[#aa77ee] mt-1">You must hold at least this % of total supply to list.</p>
+              <p className="text-xs text-purple-muted mt-1">You must hold at least this % of total supply to list.</p>
             </div>
           )}
           {formData.subcategory === 'nft' && (
@@ -1186,7 +1186,7 @@ export default function CreateListingForm() {
               value={formData.locationRegion}
               onChange={(e) => setFormData(prev => ({ ...prev, locationRegion: e.target.value }))}
             />
-            <p className="text-sm text-[#aa77ee] font-pixel-alt col-span-2">
+            <p className="text-sm text-purple-muted font-pixel-alt col-span-2">
               Approximate area only. Exact meetup details via chat. We don&apos;t store exact addresses.
             </p>
           </div>
@@ -1201,7 +1201,7 @@ export default function CreateListingForm() {
           value={formData.externalListingUrl}
           onChange={(e) => setFormData(prev => ({ ...prev, externalListingUrl: e.target.value }))}
         />
-        <p className="text-sm text-[#aa77ee] font-pixel-alt mt-1">Link to the same item on another platform — helps buyers find you.</p>
+        <p className="text-sm text-purple-muted font-pixel-alt mt-1">Link to the same item on another platform — helps buyers find you.</p>
       </div>
 
       <div>
@@ -1227,7 +1227,7 @@ export default function CreateListingForm() {
                     .catch(() => {})
                 }
               }}
-              className="text-xs text-[#660099] hover:text-[#00ff00] font-pixel-alt border border-[#660099] px-2 py-1 rounded transition-colors"
+              className="text-xs text-purple-readable hover:text-[#00ff00] font-pixel-alt border border-[#660099] px-2 py-1 rounded transition-colors"
               style={{ fontFamily: 'var(--font-pixel-alt)' }}
             >
               {tierState.loading ? 'Refreshing…' : 'Refresh tier'}
@@ -1262,7 +1262,7 @@ export default function CreateListingForm() {
             setFormData(prev => ({ ...prev, images: limited }))
           }}
         />
-        <p className="text-sm text-[#aa77ee] font-pixel-alt mt-1">
+        <p className="text-sm text-purple-muted font-pixel-alt mt-1">
           Up to {maxImages} image{maxImages > 1 ? 's' : ''} per listing. Icon (1st image): 1:1 square, min 100px, max 4.5MB. PNG/JPG/WebP/GIF.
         </p>
         {imageValidationError && (
@@ -1306,13 +1306,13 @@ export default function CreateListingForm() {
                 >
                   {creatingListing ? 'Creating listing...' : '1. Create listing first (get link for token metadata)'}
                 </Button>
-                <p className="text-xs text-[#aa77ee] mt-1 font-pixel-alt">Create the listing first so the listing URL can be added to your token metadata.</p>
+                <p className="text-xs text-purple-muted mt-1 font-pixel-alt">Create the listing first so the listing URL can be added to your token metadata.</p>
               </div>
             ) : (
               <div className="col-span-2 p-3 rounded border border-[#00ff00]/50 bg-[#00ff00]/5">
                 <p className="text-sm text-[#00ff00] font-medium">Listing created</p>
                 <p className="text-xs text-muted-foreground mt-1 break-all">{createdListingForToken.url}</p>
-                <p className="text-xs text-[#aa77ee] mt-1">Link auto-filled below. Add optional socials, then click &quot;Launch token&quot;.</p>
+                <p className="text-xs text-purple-muted mt-1">Link auto-filled below. Add optional socials, then click &quot;Launch token&quot;.</p>
               </div>
             )}
             <div className="col-span-2">
@@ -1374,7 +1374,7 @@ export default function CreateListingForm() {
                       className={`px-2 py-1 text-xs rounded border transition-colors ${
                         formData.chatMinTokens === n
                           ? 'border-[#00ff00] bg-[#00ff00]/20 text-[#00ff00]'
-                          : 'border-[#660099] text-[#aa77ee] hover:bg-[#660099]/20'
+                          : 'border-[#660099] text-purple-muted hover:bg-[#660099]/20'
                       }`}
                     >
                       {n === 1 ? '1 (default)' : n.toLocaleString()}
@@ -1405,13 +1405,13 @@ export default function CreateListingForm() {
                 onChange={(e) => setFormData(prev => ({ ...prev, devBuySol: Math.max(0, parseFloat(e.target.value) || 0) }))}
                 placeholder="0.01"
               />
-              <p className="text-xs text-[#aa77ee] font-pixel-alt mt-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+              <p className="text-xs text-purple-muted font-pixel-alt mt-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                 Optional SOL to buy your token at launch (pump.fun). Use 0 to skip.
               </p>
               {(vanityGenerating || vanityKeypair) && (
                 <p className="text-xs mt-1 font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                   {vanityGenerating ? (
-                    <span className="text-[#aa77ee]">Generating vanity address ending in &quot;pump&quot;… (runs in background)</span>
+                    <span className="text-purple-muted">Generating vanity address ending in &quot;pump&quot;… (runs in background)</span>
                   ) : vanityKeypair ? (
                     <span className="text-[#00ff00]">✓ Vanity address ready! Token will end in &quot;pump&quot;.</span>
                   ) : null}
@@ -1420,7 +1420,7 @@ export default function CreateListingForm() {
             </div>
             {(canAddSocialsForTier((limitCheck?.tier ?? tierState.tier) as 'free' | 'bronze' | 'silver' | 'gold' | 'platinum') || isAdminUser) && (
               <div className="col-span-2 space-y-2 pt-2 border-t border-[#660099]/30">
-                <p className="text-xs text-[#aa77ee] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                <p className="text-xs text-purple-muted font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                   Optional socials for token metadata (100k+ $FSBD). Website = listing link (auto-filled after step 1) or your personal site.
                 </p>
                 <div className="grid gap-2">
@@ -1442,7 +1442,7 @@ export default function CreateListingForm() {
           <h3 className="font-pixel text-amber-400 mb-2" style={{ fontFamily: 'var(--font-pixel)' }}>
             Token may have launched — link it manually
           </h3>
-          <p className="text-sm text-[#aa77ee] font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          <p className="text-sm text-purple-muted font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             If you see your token in your wallet, paste the mint address from pump.fun to link it to your listing.
           </p>
           <TokenLaunchRecoveryForm
@@ -1460,7 +1460,7 @@ export default function CreateListingForm() {
 
       {limitCheck && (
         <div className="mb-2">
-          <p className="text-sm text-[#aa77ee] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          <p className="text-sm text-purple-muted font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             {limitCheck.currentCount} of {limitCheck.maxAllowed} listings used
           {!limitCheck.canCreate && (
             <span className="block text-amber-400 mt-1">
@@ -1513,7 +1513,7 @@ export default function CreateListingForm() {
             </div>
           ) : (
             <div className="w-full h-32 sm:h-40 bg-black/50 border border-[#660099] rounded mb-2 sm:mb-3 flex items-center justify-center">
-              <span className="text-[#660099] text-xs">No image yet</span>
+              <span className="text-purple-readable text-xs">No image yet</span>
             </div>
           )}
           <h3 className="text-base sm:text-lg font-semibold mb-2 line-clamp-2 break-words">

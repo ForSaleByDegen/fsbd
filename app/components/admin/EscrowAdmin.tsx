@@ -91,7 +91,7 @@ export default function EscrowAdmin({ adminWallet }: EscrowAdminProps) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2 items-center">
-        <span className="font-pixel-alt text-[#aa77ee]" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+        <span className="font-pixel-alt text-purple-muted" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
           Filter:
         </span>
         {(['all', 'release', 'refund'] as const).map((f) => (
@@ -101,7 +101,7 @@ export default function EscrowAdmin({ adminWallet }: EscrowAdminProps) {
             className={`px-3 py-1 border-2 font-pixel-alt text-sm ${
               filter === f
                 ? 'border-[#00ff00] text-[#00ff00] bg-black/50'
-                : 'border-[#660099] text-[#660099] hover:border-[#00ff00] hover:text-[#00ff00]'
+                : 'border-[#660099] text-purple-readable hover:border-[#00ff00] hover:text-[#00ff00]'
             }`}
             style={{ fontFamily: 'var(--font-pixel-alt)' }}
           >
@@ -117,7 +117,7 @@ export default function EscrowAdmin({ adminWallet }: EscrowAdminProps) {
       )}
 
       {escrows.length === 0 ? (
-        <p className="text-[#aa77ee] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+        <p className="text-purple-muted font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
           No escrows need admin action.
         </p>
       ) : (
@@ -143,7 +143,7 @@ export default function EscrowAdmin({ adminWallet }: EscrowAdminProps) {
                       {e.title}
                     </Link>
                   </td>
-                  <td className="p-2 text-[#aa77ee]">
+                  <td className="p-2 text-purple-muted">
                     {e.escrow_amount ?? e.price} {e.price_token || 'SOL'}
                   </td>
                   <td className="p-2">
@@ -185,7 +185,7 @@ export default function EscrowAdmin({ adminWallet }: EscrowAdminProps) {
         </div>
       )}
 
-      <p className="text-xs text-[#660099] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+      <p className="text-xs text-purple-readable font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
         Admin approval updates DB state. On-chain release/refund requires the deployed Anchor escrow program.
       </p>
     </div>

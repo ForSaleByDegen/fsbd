@@ -35,10 +35,10 @@ export default function TokenPreviewCard({
 
   return (
     <div className="rounded-lg border-2 border-[#660099]/60 bg-gradient-to-b from-[#1a0a2e] to-black overflow-hidden">
-      <p className="text-[10px] uppercase tracking-wider text-[#aa77ee]/70 px-3 pt-3 font-mono">
+      <p className="text-[10px] uppercase tracking-wider text-purple-muted/70 px-3 pt-3 font-mono">
         Preview — how it will look on pump.fun
       </p>
-      <p className="text-[10px] text-[#660099]/80 px-3 mt-0.5 font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+      <p className="text-[10px] text-purple-readable/80 px-3 mt-0.5 font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
         Line breaks display on pump.fun &amp; DEXes
       </p>
       {bannerUrl && (
@@ -59,7 +59,7 @@ export default function TokenPreviewCard({
               className="w-full h-full object-cover"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-[#660099] text-xl font-bold">
+            <div className="w-full h-full flex items-center justify-center text-purple-readable text-xl font-bold">
               {displaySymbol.slice(0, 1)}
             </div>
           )}
@@ -68,18 +68,18 @@ export default function TokenPreviewCard({
           <p className="font-semibold text-[#00ff00] truncate" style={{ fontFamily: 'var(--font-pixel)' }}>
             {displayName}
           </p>
-          <p className="text-xs text-[#aa77ee] font-mono">
+          <p className="text-xs text-purple-muted font-mono">
             ${displaySymbol}
           </p>
           {contractPreview && (
-            <p className="text-[10px] text-[#660099] font-mono mt-0.5">
+            <p className="text-[10px] text-purple-readable font-mono mt-0.5">
               {contractPreview}
             </p>
           )}
         </div>
       </div>
       {description && (
-        <p className="text-xs text-[#aa77ee]/90 mt-2 px-3 line-clamp-4 font-pixel-alt whitespace-pre-line" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+        <p className="text-xs text-purple-muted/90 mt-2 px-3 line-clamp-4 font-pixel-alt whitespace-pre-line" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
           {description.slice(0, 200)}{description.length > 200 ? '…' : ''}
         </p>
       )}
@@ -107,7 +107,7 @@ export default function TokenPreviewCard({
           )}
         </div>
       )}
-      <p className="text-[10px] text-[#660099] mt-2 px-3 pb-3 font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+      <p className="text-[10px] text-purple-readable mt-2 px-3 pb-3 font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
         Launched on FSBD.fun
       </p>
     </div>

@@ -49,7 +49,7 @@ export default function ProfileAreaTag({
 
   return (
     <div className="space-y-2">
-      <label className="text-[#aa77ee] font-pixel-alt text-sm block" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+      <label className="text-purple-muted font-pixel-alt text-sm block" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
         Area (optional) — e.g. Austin, TX or Greater NYC
       </label>
       <div className="flex flex-wrap gap-2">

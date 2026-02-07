@@ -13,7 +13,7 @@ export default function GuidesPage() {
           Buyer & Seller Guides
         </h1>
 
-        <div className="space-y-8 font-pixel-alt text-sm sm:text-base text-[#aa77ee]" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+        <div className="space-y-8 font-pixel-alt text-sm sm:text-base text-purple-muted" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
           {/* Platform disclaimer */}
           <section className="p-4 border-2 border-amber-600/60 bg-amber-950/20 rounded">
             <h2 className="text-base font-pixel text-amber-400 mb-2" style={{ fontFamily: 'var(--font-pixel)' }}>

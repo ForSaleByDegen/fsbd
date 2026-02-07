@@ -68,7 +68,7 @@ export default function ManualVerificationSection({ walletAddress, onVerified }:
 
   return (
     <div className="space-y-3 pt-2 border-t border-[#660099]/30">
-      <p className="text-xs text-[#aa77ee] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+      <p className="text-xs text-purple-muted font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
         Add a verification QR to your listing image. Request a code, add the QR to your photo, then submit the listing URL.
       </p>
       {step === 'idle' && (
@@ -88,7 +88,7 @@ export default function ManualVerificationSection({ walletAddress, onVerified }:
             <img src={qrDataUrl} alt="Verification QR" className="w-32 h-32 border-2 border-[#660099] bg-white" />
             <div>
               <p className="text-sm text-[#00ff00] font-pixel-alt font-mono">{code}</p>
-              <p className="text-xs text-[#aa77ee] mt-1">
+              <p className="text-xs text-purple-muted mt-1">
                 Download the QR, add it to your listing photo (corner), save & re-upload to your external listing.
               </p>
             </div>
@@ -115,7 +115,7 @@ export default function ManualVerificationSection({ walletAddress, onVerified }:
           <button
             type="button"
             onClick={() => { setStep('idle'); setCode(null); setQrDataUrl(null); setListingUrl(''); setError(null); }}
-            className="text-xs text-[#660099] hover:text-[#ff00ff] font-pixel-alt"
+            className="text-xs text-purple-readable hover:text-[#ff00ff] font-pixel-alt"
             style={{ fontFamily: 'var(--font-pixel-alt)' }}
           >
             Start over

@@ -55,7 +55,7 @@ export default function UserManagement() {
     return (
       <div className="text-center py-8">
         <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#00ff00]"></div>
-        <p className="text-[#660099] font-pixel-alt mt-2 text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+        <p className="text-purple-readable font-pixel-alt mt-2 text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
           Loading users...
         </p>
       </div>
@@ -71,7 +71,7 @@ export default function UserManagement() {
           placeholder="Search by wallet hash or tier..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full px-3 py-2 bg-black/30 border-2 border-[#660099] text-[#00ff00] font-pixel-alt text-sm placeholder:text-[#660099] focus:border-[#00ff00] focus:outline-none"
+          className="w-full px-3 py-2 bg-black/30 border-2 border-[#660099] text-[#00ff00] font-pixel-alt text-sm placeholder:text-purple-readable focus:border-[#00ff00] focus:outline-none"
           style={{ fontFamily: 'var(--font-pixel-alt)' }}
         />
       </div>
@@ -81,7 +81,7 @@ export default function UserManagement() {
         <div className="min-w-full">
           <div className="space-y-2">
             {filteredUsers.length === 0 ? (
-              <p className="text-center text-[#660099] font-pixel-alt py-8" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+              <p className="text-center text-purple-readable font-pixel-alt py-8" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                 No users found
               </p>
             ) : (
@@ -94,22 +94,22 @@ export default function UserManagement() {
                     <p className="text-[#00ff00] font-pixel-alt text-xs sm:text-sm break-all" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                       {user.wallet_address_hash.substring(0, 16)}...
                     </p>
-                    <p className="text-[#660099] font-pixel-alt text-xs mt-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                    <p className="text-purple-readable font-pixel-alt text-xs mt-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                       Tier: {user.tier} • Joined: {new Date(user.created_at).toLocaleDateString()}
                     </p>
                   </div>
 
                   <div className="flex flex-wrap gap-4 text-xs sm:text-sm">
                     <div className="text-center">
-                      <p className="text-[#660099] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>Listings</p>
+                      <p className="text-purple-readable font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>Listings</p>
                       <p className="text-[#00ff00] font-pixel" style={{ fontFamily: 'var(--font-pixel)' }}>{user.listings_count}</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-[#660099] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>Sold</p>
+                      <p className="text-purple-readable font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>Sold</p>
                       <p className="text-[#00ff00] font-pixel" style={{ fontFamily: 'var(--font-pixel)' }}>{user.total_listings_sold || 0}</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-[#660099] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>Fees Paid</p>
+                      <p className="text-purple-readable font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>Fees Paid</p>
                       <p className="text-[#00ff00] font-pixel" style={{ fontFamily: 'var(--font-pixel)' }}>{user.total_fees_paid.toFixed(2)}</p>
                     </div>
                   </div>
@@ -120,7 +120,7 @@ export default function UserManagement() {
         </div>
       </div>
 
-      <p className="text-[#660099] font-pixel-alt text-xs text-center" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+      <p className="text-purple-readable font-pixel-alt text-xs text-center" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
         Showing {filteredUsers.length} of {users.length} users
       </p>
     </div>

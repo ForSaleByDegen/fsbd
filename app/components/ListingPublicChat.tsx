@@ -256,7 +256,7 @@ export default function ListingPublicChat({
 
   if (loading) {
     return (
-      <div className="p-4 border-2 border-[#660099] rounded text-center text-[#660099] text-sm font-pixel-alt">
+      <div className="p-4 border-2 border-[#660099] rounded text-center text-purple-readable text-sm font-pixel-alt">
         Loading public chat...
       </div>
     )
@@ -270,7 +270,7 @@ export default function ListingPublicChat({
             🔐 Token-gated Chat — holders only
           </span>
         </div>
-        <div className="p-4 text-center text-[#aa77ee] font-pixel-alt text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+        <div className="p-4 text-center text-purple-muted font-pixel-alt text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
           {keyError}
         </div>
       </div>
@@ -286,7 +286,7 @@ export default function ListingPublicChat({
       </div>
       <div className="h-48 overflow-y-auto p-3 space-y-2 bg-black/50">
         {displayMessages.length === 0 ? (
-          <p className="text-[#660099]/80 text-sm font-pixel-alt">No messages yet. Start the conversation!</p>
+          <p className="text-purple-readable/80 text-sm font-pixel-alt">No messages yet. Start the conversation!</p>
         ) : (
           displayMessages.map((m) => (
             <div
@@ -300,7 +300,7 @@ export default function ListingPublicChat({
                     : 'bg-[#660099]/20 border border-[#660099]'
                 }`}
               >
-                <p className="text-sm text-[#aa77ee] mb-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                <p className="text-sm text-purple-muted mb-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                   {displaySender(m.sender_wallet_hash)}
                 </p>
                 {(() => {
@@ -320,7 +320,7 @@ export default function ListingPublicChat({
                     </>
                   )
                 })()}
-                <p className="text-xs text-[#660099] mt-1">
+                <p className="text-xs text-purple-readable mt-1">
                   {new Date(m.created_at).toLocaleTimeString()}
                 </p>
               </div>
@@ -331,7 +331,7 @@ export default function ListingPublicChat({
       </div>
       <div className="p-2 border-t border-[#660099]">
         {canChatByFsbd === false && fsbdChatError && (
-          <p className="text-xs text-[#aa77ee] font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          <p className="text-xs text-purple-muted font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             {fsbdChatError}
           </p>
         )}
@@ -352,7 +352,7 @@ export default function ListingPublicChat({
             type="button"
             onClick={() => imageInputRef.current?.click()}
             disabled={!canSend}
-            className="p-2 border-2 border-[#660099] text-[#660099] hover:border-[#00ff00] hover:text-[#00ff00] rounded shrink-0 disabled:opacity-50"
+            className="p-2 border-2 border-[#660099] text-purple-readable hover:border-[#00ff00] hover:text-[#00ff00] rounded shrink-0 disabled:opacity-50"
             title="Attach image"
           >
             📷

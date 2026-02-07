@@ -56,7 +56,7 @@ export default function BuyFsbdSection({
         href={pumpUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-1.5 text-sm text-[#00ff00] hover:text-[#660099] font-pixel-alt transition-colors"
+        className="inline-flex items-center gap-1.5 text-sm text-[#00ff00] hover:text-purple-readable font-pixel-alt transition-colors"
         style={{ fontFamily: 'var(--font-pixel-alt)' }}
       >
         Buy $FSBD on pump.fun →
@@ -67,12 +67,12 @@ export default function BuyFsbdSection({
   if (variant === 'card') {
     return (
       <div className="p-4 border-2 border-[#660099] bg-black/50 rounded-lg">
-        <p className="text-sm font-pixel-alt text-[#aa77ee] mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+        <p className="text-sm font-pixel-alt text-purple-muted mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
           $FSBD Contract: <code className="text-[#00ff00]">{shortMint}</code>
           <button
             type="button"
             onClick={copyMint}
-            className="ml-2 text-xs text-[#660099] hover:text-[#00ff00] transition-colors"
+            className="ml-2 text-xs text-purple-readable hover:text-[#00ff00] transition-colors"
           >
             {copied ? 'Copied!' : 'Copy'}
           </button>
@@ -90,7 +90,7 @@ export default function BuyFsbdSection({
           href={explorerUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="ml-3 text-xs text-[#660099] hover:text-[#00ff00] transition-colors"
+          className="ml-3 text-xs text-purple-readable hover:text-[#00ff00] transition-colors"
         >
           View on Explorer
         </a>
@@ -110,7 +110,7 @@ export default function BuyFsbdSection({
       >
         Buy $FSBD on pump.fun →
       </a>
-      <span className="text-xs text-[#660099] font-pixel-alt">
+      <span className="text-xs text-purple-readable font-pixel-alt">
         Contract: {shortMint}
         <button
           type="button"
@@ -124,7 +124,7 @@ export default function BuyFsbdSection({
         href={explorerUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-xs text-[#660099] hover:text-[#00ff00] font-pixel-alt transition-colors"
+        className="text-xs text-purple-readable hover:text-[#00ff00] font-pixel-alt transition-colors"
       >
         Explorer
       </a>

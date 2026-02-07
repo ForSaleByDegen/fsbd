@@ -70,11 +70,11 @@ export default function ExternalListingsSection() {
         <span className="text-[#ff00ff] font-pixel-alt text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
           Nearby from the web
         </span>
-        <span className="text-[#660099] text-xs">{expanded ? '−' : '+'}</span>
+        <span className="text-purple-readable text-xs">{expanded ? '−' : '+'}</span>
       </button>
       {expanded && (
         <div className="mt-3 pt-3 border-t border-[#660099]/50">
-          <p className="text-sm text-[#aa77ee] font-pixel-alt mb-3" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          <p className="text-sm text-purple-muted font-pixel-alt mb-3" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             Listings from external classifieds in your area. Not affiliated. Prices in local currency. Links open in a new tab.
           </p>
           <Select value={area} onValueChange={setArea}>
@@ -90,7 +90,7 @@ export default function ExternalListingsSection() {
             </SelectContent>
           </Select>
           {loading && (
-            <p className="text-xs text-[#660099]">Loading...</p>
+            <p className="text-xs text-purple-readable">Loading...</p>
           )}
           {!loading && items.length > 0 && (
             <ul className="space-y-2">

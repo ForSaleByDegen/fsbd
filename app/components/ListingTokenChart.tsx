@@ -36,12 +36,12 @@ export default function ListingTokenChart({ tokenMint, tokenName, tokenSymbol }:
           {tokenSymbol ? `$${tokenSymbol}` : ''} {tokenName || ''}
         </p>
       )}
-      <p className="text-xs sm:text-sm text-[#aa77ee] font-pixel-alt mb-3 break-all" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+      <p className="text-xs sm:text-sm text-purple-muted font-pixel-alt mb-3 break-all" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
         Contract: <code className="text-[#00ff00]">{shortMint}</code>
         <button
           type="button"
           onClick={copyMint}
-          className="ml-2 text-[#660099] hover:text-[#00ff00] transition-colors"
+          className="ml-2 text-purple-readable hover:text-[#00ff00] transition-colors"
         >
           {copied ? 'Copied!' : 'Copy'}
         </button>
@@ -71,7 +71,7 @@ export default function ListingTokenChart({ tokenMint, tokenName, tokenSymbol }:
           href={pumpUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 border border-[#660099] text-[#aa77ee] hover:bg-[#660099]/30 font-pixel-alt text-xs sm:text-sm transition-colors rounded"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 border border-[#660099] text-purple-muted hover:bg-[#660099]/30 font-pixel-alt text-xs sm:text-sm transition-colors rounded"
           style={{ fontFamily: 'var(--font-pixel-alt)' }}
         >
           View on pump.fun ↗
@@ -99,7 +99,7 @@ export default function ListingTokenChart({ tokenMint, tokenName, tokenSymbol }:
           href={`${DEXSCREENER_BASE}/${tokenMint}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-xs sm:text-sm text-[#00ff00] hover:text-[#660099] font-pixel-alt underline transition-colors"
+          className="text-xs sm:text-sm text-[#00ff00] hover:text-purple-readable font-pixel-alt underline transition-colors"
           style={{ fontFamily: 'var(--font-pixel-alt)' }}
         >
           DexScreener ↗
@@ -108,7 +108,7 @@ export default function ListingTokenChart({ tokenMint, tokenName, tokenSymbol }:
           href={`${BIRDEYE_TOKEN_BASE}/${tokenMint}?chain=solana`}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-xs sm:text-sm text-[#00ff00] hover:text-[#660099] font-pixel-alt underline transition-colors"
+          className="text-xs sm:text-sm text-[#00ff00] hover:text-purple-readable font-pixel-alt underline transition-colors"
           style={{ fontFamily: 'var(--font-pixel-alt)' }}
         >
           Birdeye ↗

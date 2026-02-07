@@ -24,7 +24,7 @@ export default function FeaturesDocsPage() {
           Features & Tiers Guide
         </h1>
 
-        <div className="space-y-8 font-pixel-alt text-sm sm:text-base text-[#aa77ee]" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+        <div className="space-y-8 font-pixel-alt text-sm sm:text-base text-purple-muted" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
           {/* Tiers */}
           <section>
             <h2 className="text-lg sm:text-xl font-pixel text-[#ff00ff] mb-3" style={{ fontFamily: 'var(--font-pixel)' }}>
@@ -53,7 +53,7 @@ export default function FeaturesDocsPage() {
                 </tbody>
               </table>
             </div>
-            <p className="mt-3 text-xs text-[#aa77ee]/80">
+            <p className="mt-3 text-xs text-purple-muted/80">
               Gold+ can create auctions. Bronze+ get socials & banner in token metadata when launching.
             </p>
           </section>

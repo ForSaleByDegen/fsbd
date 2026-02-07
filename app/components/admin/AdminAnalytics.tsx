@@ -57,7 +57,7 @@ export default function AdminAnalytics({ adminWallet }: AdminAnalyticsProps) {
     return (
       <div className="text-center py-8">
         <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#00ff00]"></div>
-        <p className="text-[#660099] font-pixel-alt mt-2 text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+        <p className="text-purple-readable font-pixel-alt mt-2 text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
           Loading analytics...
         </p>
       </div>
@@ -67,7 +67,7 @@ export default function AdminAnalytics({ adminWallet }: AdminAnalyticsProps) {
   if (!analytics) {
     return (
       <div className="text-center py-8">
-        <p className="text-[#660099] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+        <p className="text-purple-readable font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
           Unable to load analytics. Please check Supabase configuration.
         </p>
       </div>
@@ -79,7 +79,7 @@ export default function AdminAnalytics({ adminWallet }: AdminAnalyticsProps) {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="pixel-box bg-black border-2 border-[#660099] p-4">
-          <h3 className="text-[#660099] font-pixel-alt text-xs sm:text-sm mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          <h3 className="text-purple-readable font-pixel-alt text-xs sm:text-sm mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             Total Listings
           </h3>
           <p className="text-2xl sm:text-3xl font-pixel text-[#00ff00]" style={{ fontFamily: 'var(--font-pixel)' }}>
@@ -88,7 +88,7 @@ export default function AdminAnalytics({ adminWallet }: AdminAnalyticsProps) {
         </div>
 
         <div className="pixel-box bg-black border-2 border-[#660099] p-4">
-          <h3 className="text-[#660099] font-pixel-alt text-xs sm:text-sm mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          <h3 className="text-purple-readable font-pixel-alt text-xs sm:text-sm mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             Active Listings
           </h3>
           <p className="text-2xl sm:text-3xl font-pixel text-[#00ff00]" style={{ fontFamily: 'var(--font-pixel)' }}>
@@ -97,7 +97,7 @@ export default function AdminAnalytics({ adminWallet }: AdminAnalyticsProps) {
         </div>
 
         <div className="pixel-box bg-black border-2 border-[#660099] p-4">
-          <h3 className="text-[#660099] font-pixel-alt text-xs sm:text-sm mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          <h3 className="text-purple-readable font-pixel-alt text-xs sm:text-sm mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             Sold
           </h3>
           <p className="text-2xl sm:text-3xl font-pixel text-[#00ff00]" style={{ fontFamily: 'var(--font-pixel)' }}>
@@ -106,7 +106,7 @@ export default function AdminAnalytics({ adminWallet }: AdminAnalyticsProps) {
         </div>
 
         <div className="pixel-box bg-black border-2 border-[#660099] p-4">
-          <h3 className="text-[#660099] font-pixel-alt text-xs sm:text-sm mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          <h3 className="text-purple-readable font-pixel-alt text-xs sm:text-sm mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             Total Users
           </h3>
           <p className="text-2xl sm:text-3xl font-pixel text-[#00ff00]" style={{ fontFamily: 'var(--font-pixel)' }}>
@@ -115,7 +115,7 @@ export default function AdminAnalytics({ adminWallet }: AdminAnalyticsProps) {
         </div>
 
         <div className="pixel-box bg-black border-2 border-[#660099] p-4">
-          <h3 className="text-[#660099] font-pixel-alt text-xs sm:text-sm mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          <h3 className="text-purple-readable font-pixel-alt text-xs sm:text-sm mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             Beta Signups
           </h3>
           <p className="text-2xl sm:text-3xl font-pixel text-[#00ff00]" style={{ fontFamily: 'var(--font-pixel)' }}>
@@ -124,7 +124,7 @@ export default function AdminAnalytics({ adminWallet }: AdminAnalyticsProps) {
         </div>
 
         <div className="pixel-box bg-black border-2 border-[#660099] p-4">
-          <h3 className="text-[#660099] font-pixel-alt text-xs sm:text-sm mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          <h3 className="text-purple-readable font-pixel-alt text-xs sm:text-sm mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             Bug Reports
           </h3>
           <p className="text-2xl sm:text-3xl font-pixel text-[#00ff00]" style={{ fontFamily: 'var(--font-pixel)' }}>
@@ -133,7 +133,7 @@ export default function AdminAnalytics({ adminWallet }: AdminAnalyticsProps) {
         </div>
 
         <div className="pixel-box bg-black border-2 border-[#660099] p-4">
-          <h3 className="text-[#660099] font-pixel-alt text-xs sm:text-sm mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          <h3 className="text-purple-readable font-pixel-alt text-xs sm:text-sm mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             Listing Fees (SOL)
           </h3>
           <p className="text-2xl sm:text-3xl font-pixel text-[#00ff00]" style={{ fontFamily: 'var(--font-pixel)' }}>
@@ -142,7 +142,7 @@ export default function AdminAnalytics({ adminWallet }: AdminAnalyticsProps) {
         </div>
 
         <div className="pixel-box bg-black border-2 border-[#660099] p-4">
-          <h3 className="text-[#660099] font-pixel-alt text-xs sm:text-sm mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          <h3 className="text-purple-readable font-pixel-alt text-xs sm:text-sm mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             Platform Fees (0.42%)
           </h3>
           <p className="text-2xl sm:text-3xl font-pixel text-[#ff00ff]" style={{ fontFamily: 'var(--font-pixel)' }}>
@@ -159,7 +159,7 @@ export default function AdminAnalytics({ adminWallet }: AdminAnalyticsProps) {
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {Object.entries(analytics.listingsByCategory).map(([category, count]) => (
             <div key={category} className="text-center">
-              <p className="text-[#660099] font-pixel-alt text-xs sm:text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+              <p className="text-purple-readable font-pixel-alt text-xs sm:text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                 {category.replace('-', ' ')}
               </p>
               <p className="text-xl font-pixel text-[#00ff00]" style={{ fontFamily: 'var(--font-pixel)' }}>
@@ -185,12 +185,12 @@ export default function AdminAnalytics({ adminWallet }: AdminAnalyticsProps) {
                 <p className="text-[#00ff00] font-pixel-alt text-xs sm:text-sm break-words" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                   {activity.title}
                 </p>
-                <p className="text-[#660099] font-pixel-alt text-xs" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                <p className="text-purple-readable font-pixel-alt text-xs" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                   {activity.category} • {new Date(activity.created_at).toLocaleDateString()}
                 </p>
               </div>
               <span className={`text-xs font-pixel-alt px-2 py-1 ${
-                activity.status === 'active' ? 'text-[#00ff00]' : 'text-[#660099]'
+                activity.status === 'active' ? 'text-[#00ff00]' : 'text-purple-readable'
               }`} style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                 {activity.status}
               </span>

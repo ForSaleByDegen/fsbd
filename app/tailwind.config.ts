@@ -2,6 +2,14 @@ import type { Config } from "tailwindcss"
 
 const config = {
   darkMode: ["class"],
+  safelist: [
+    "text-purple-readable",
+    "text-purple-muted",
+    "text-purple-readable/80",
+    "text-purple-readable/90",
+    "text-purple-muted/80",
+    "text-purple-muted/90",
+  ],
   content: [
     './pages/**/*.{ts,tsx}',
     './components/**/*.{ts,tsx}',
@@ -52,6 +60,8 @@ const config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        "purple-readable": "hsl(var(--purple-readable))",
+        "purple-muted": "hsl(var(--purple-muted))",
       },
       borderRadius: {
         lg: "var(--radius)",

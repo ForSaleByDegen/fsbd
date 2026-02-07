@@ -56,7 +56,7 @@ export default function FsbdTokenHero() {
 
       {/* Full CA - copyable */}
       <div className="mb-4">
-        <p className="text-xs text-[#aa77ee] font-pixel-alt mb-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+        <p className="text-xs text-purple-muted font-pixel-alt mb-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
           Contract Address (CA)
         </p>
         <div className="flex flex-wrap items-center gap-2">
@@ -76,7 +76,7 @@ export default function FsbdTokenHero() {
 
       {/* DEX links */}
       <div className="mb-4">
-        <p className="text-xs text-[#aa77ee] font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+        <p className="text-xs text-purple-muted font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
           DEX & Chart
         </p>
         <div className="flex flex-wrap gap-2">
@@ -93,7 +93,7 @@ export default function FsbdTokenHero() {
             href={dexscreenerUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex px-3 py-1.5 border-2 border-[#660099] text-[#aa77ee] hover:bg-[#660099] hover:text-black font-pixel-alt text-sm transition-colors rounded"
+            className="inline-flex px-3 py-1.5 border-2 border-[#660099] text-purple-muted hover:bg-[#660099] hover:text-black font-pixel-alt text-sm transition-colors rounded"
             style={{ fontFamily: 'var(--font-pixel-alt)' }}
           >
             DexScreener
@@ -102,7 +102,7 @@ export default function FsbdTokenHero() {
             href={birdeyeUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex px-3 py-1.5 border-2 border-[#660099] text-[#aa77ee] hover:bg-[#660099] hover:text-black font-pixel-alt text-sm transition-colors rounded"
+            className="inline-flex px-3 py-1.5 border-2 border-[#660099] text-purple-muted hover:bg-[#660099] hover:text-black font-pixel-alt text-sm transition-colors rounded"
             style={{ fontFamily: 'var(--font-pixel-alt)' }}
           >
             Birdeye
@@ -111,7 +111,7 @@ export default function FsbdTokenHero() {
             href={jupiterUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex px-3 py-1.5 border-2 border-[#660099] text-[#aa77ee] hover:bg-[#660099] hover:text-black font-pixel-alt text-sm transition-colors rounded"
+            className="inline-flex px-3 py-1.5 border-2 border-[#660099] text-purple-muted hover:bg-[#660099] hover:text-black font-pixel-alt text-sm transition-colors rounded"
             style={{ fontFamily: 'var(--font-pixel-alt)' }}
           >
             Jupiter
@@ -121,7 +121,7 @@ export default function FsbdTokenHero() {
 
       {/* Verification links */}
       <div className="mb-4">
-        <p className="text-xs text-[#aa77ee] font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+        <p className="text-xs text-purple-muted font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
           Verify / List
         </p>
         <div className="flex flex-wrap gap-2">
@@ -129,7 +129,7 @@ export default function FsbdTokenHero() {
             href={COINGECKO_REQUEST}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm text-[#00ff00] hover:text-[#660099] font-pixel-alt underline transition-colors"
+            className="text-sm text-[#00ff00] hover:text-purple-readable font-pixel-alt underline transition-colors"
             style={{ fontFamily: 'var(--font-pixel-alt)' }}
           >
             CoinGecko Request
@@ -138,7 +138,7 @@ export default function FsbdTokenHero() {
             href={COINMARKETCAP_REQUEST}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm text-[#00ff00] hover:text-[#660099] font-pixel-alt underline transition-colors"
+            className="text-sm text-[#00ff00] hover:text-purple-readable font-pixel-alt underline transition-colors"
             style={{ fontFamily: 'var(--font-pixel-alt)' }}
           >
             CoinMarketCap Request
@@ -148,14 +148,14 @@ export default function FsbdTokenHero() {
 
       {/* Hackathon tweet */}
       <div className="mt-6 pt-4 border-t border-[#660099]/50">
-        <p className="text-xs text-[#aa77ee] font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+        <p className="text-xs text-purple-muted font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
           pump.fun Hackathon
         </p>
         <a
           href={HACKATHON_TWEET_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-sm text-[#00ff00] hover:text-[#660099] font-pixel-alt underline mb-3 block"
+          className="text-sm text-[#00ff00] hover:text-purple-readable font-pixel-alt underline mb-3 block"
           style={{ fontFamily: 'var(--font-pixel-alt)' }}
         >
           View pump.fun hackathon tweet →

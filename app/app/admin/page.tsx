@@ -66,7 +66,7 @@ export default function AdminPage() {
         <Header />
         <main className="max-w-4xl mx-auto px-2 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 w-full">
           <div className="text-center py-16">
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-pixel text-[#660099] mb-4 break-words" style={{ fontFamily: 'var(--font-pixel)' }}>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-pixel text-purple-readable mb-4 break-words" style={{ fontFamily: 'var(--font-pixel)' }}>
               Access Denied
             </h1>
             <p className="text-[#00ff00] font-pixel-alt mb-6 text-sm sm:text-base" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
@@ -90,7 +90,7 @@ export default function AdminPage() {
       <Header />
       <main className="max-w-6xl mx-auto px-2 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 w-full relative z-10">
         <div className="mb-4 sm:mb-6">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-pixel text-[#660099] mb-2 break-words" style={{ fontFamily: 'var(--font-pixel)' }}>
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-pixel text-purple-readable mb-2 break-words" style={{ fontFamily: 'var(--font-pixel)' }}>
             Admin Dashboard
           </h1>
           <p className="text-[#00ff00] font-pixel-alt text-xs sm:text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>

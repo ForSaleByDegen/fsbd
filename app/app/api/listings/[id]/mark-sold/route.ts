@@ -73,7 +73,7 @@ export async function POST(
     const newQty = Math.max(0, qty - 1)
 
     const updatePayload: Record<string, unknown> = isLastOne
-      ? { status: 'sold', buyer_wallet_hash: buyerHash, quantity: 0 }
+      ? { status: 'sold', buyer_wallet_hash: buyerHash, buyer_wallet_address: buyer, quantity: 0 }
       : { quantity: newQty }
 
     const { data: updated, error: updateError } = await supabaseAdmin

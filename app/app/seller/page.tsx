@@ -65,22 +65,22 @@ export default function SellerPage() {
     <div className="min-h-screen bg-background w-full overflow-x-hidden">
       <Header />
       <main className="max-w-4xl mx-auto px-2 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 w-full relative z-10">
-        <h1 className="text-2xl sm:text-3xl font-pixel text-[#660099] mb-4" style={{ fontFamily: 'var(--font-pixel)' }}>
+        <h1 className="text-2xl sm:text-3xl font-pixel text-purple-readable mb-4" style={{ fontFamily: 'var(--font-pixel)' }}>
           Seller profile
         </h1>
 
         {!wallet ? (
-          <p className="text-[#660099] font-pixel-alt text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          <p className="text-purple-readable font-pixel-alt text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             Add ?wallet=ADDRESS to view a seller&apos;s stats. Example: /seller?wallet=...
           </p>
         ) : loading ? (
           <p className="text-[#00ff00] font-pixel-alt text-sm">Loading...</p>
         ) : !stats ? (
-          <p className="text-[#660099] font-pixel-alt text-sm">Could not load seller stats.</p>
+          <p className="text-purple-readable font-pixel-alt text-sm">Could not load seller stats.</p>
         ) : (
           <div className="space-y-6">
             <div className="p-4 bg-black/50 border-2 border-[#660099] rounded">
-              <p className="text-[#660099] font-pixel-alt text-xs mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+              <p className="text-purple-readable font-pixel-alt text-xs mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                 Wallet
               </p>
               <p className="text-[#00ff00] font-pixel-alt text-sm break-all" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
@@ -90,7 +90,7 @@ export default function SellerPage() {
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               <div className="p-4 bg-black/50 border-2 border-[#660099] rounded">
-                <p className="text-[#660099] font-pixel-alt text-xs mb-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                <p className="text-purple-readable font-pixel-alt text-xs mb-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                   Reviews
                 </p>
                 <p className="text-[#00ff00] font-pixel text-2xl" style={{ fontFamily: 'var(--font-pixel)' }}>
@@ -98,7 +98,7 @@ export default function SellerPage() {
                 </p>
               </div>
               <div className="p-4 bg-black/50 border-2 border-[#660099] rounded">
-                <p className="text-[#660099] font-pixel-alt text-xs mb-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                <p className="text-purple-readable font-pixel-alt text-xs mb-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                   Listings
                 </p>
                 <p className="text-[#00ff00] font-pixel text-2xl" style={{ fontFamily: 'var(--font-pixel)' }}>
@@ -106,7 +106,7 @@ export default function SellerPage() {
                 </p>
               </div>
               <div className="p-4 bg-black/50 border-2 border-[#660099] rounded">
-                <p className="text-[#660099] font-pixel-alt text-xs mb-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                <p className="text-purple-readable font-pixel-alt text-xs mb-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                   Items sold
                 </p>
                 <p className="text-[#00ff00] font-pixel text-2xl" style={{ fontFamily: 'var(--font-pixel)' }}>
@@ -114,7 +114,7 @@ export default function SellerPage() {
                 </p>
               </div>
               <div className="p-4 bg-black/50 border-2 border-[#660099] rounded">
-                <p className="text-[#660099] font-pixel-alt text-xs mb-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                <p className="text-purple-readable font-pixel-alt text-xs mb-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                   Items bought
                 </p>
                 <p className="text-[#00ff00] font-pixel text-2xl" style={{ fontFamily: 'var(--font-pixel)' }}>
@@ -122,7 +122,7 @@ export default function SellerPage() {
                 </p>
               </div>
               <div className="p-4 bg-black/50 border-2 border-[#660099] rounded">
-                <p className="text-[#660099] font-pixel-alt text-xs mb-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                <p className="text-purple-readable font-pixel-alt text-xs mb-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                   Shipped
                 </p>
                 <p className="text-[#00ff00] font-pixel text-2xl" style={{ fontFamily: 'var(--font-pixel)' }}>
@@ -130,7 +130,7 @@ export default function SellerPage() {
                 </p>
               </div>
               <div className="p-4 bg-black/50 border-2 border-[#660099] rounded">
-                <p className="text-[#660099] font-pixel-alt text-xs mb-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                <p className="text-purple-readable font-pixel-alt text-xs mb-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                   Received
                 </p>
                 <p className="text-[#00ff00] font-pixel text-2xl" style={{ fontFamily: 'var(--font-pixel)' }}>
@@ -151,7 +151,7 @@ export default function SellerPage() {
                         <span className="text-[#00ff00] text-sm">
                           {'★'.repeat(f.rating)}{'☆'.repeat(5 - f.rating)}
                         </span>
-                        <span className="text-[#660099] font-pixel-alt text-xs" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                        <span className="text-purple-readable font-pixel-alt text-xs" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                           {new Date(f.createdAt).toLocaleDateString()}
                         </span>
                       </div>
@@ -167,7 +167,7 @@ export default function SellerPage() {
             )}
 
             {stats.feedback.length === 0 && (
-              <p className="text-[#660099] font-pixel-alt text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+              <p className="text-purple-readable font-pixel-alt text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                 No feedback yet. Buyers can leave feedback after confirming receipt.
               </p>
             )}
@@ -178,7 +178,7 @@ export default function SellerPage() {
                 Active listings
               </h2>
               {listingsLoading ? (
-                <p className="text-[#660099] font-pixel-alt text-sm">Loading...</p>
+                <p className="text-purple-readable font-pixel-alt text-sm">Loading...</p>
               ) : listings.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {listings.map((l) => (
@@ -186,11 +186,11 @@ export default function SellerPage() {
                   ))}
                 </div>
               ) : (stats.listingCount ?? 0) > 0 ? (
-                <p className="text-[#660099] font-pixel-alt text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                <p className="text-purple-readable font-pixel-alt text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                   This seller&apos;s listings are hidden.
                 </p>
               ) : (
-                <p className="text-[#660099] font-pixel-alt text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                <p className="text-purple-readable font-pixel-alt text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                   No active listings.
                 </p>
               )}

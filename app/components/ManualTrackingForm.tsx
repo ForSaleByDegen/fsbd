@@ -108,7 +108,7 @@ export default function ManualTrackingForm({ listingId, onTrackingAdded }: Manua
         <Button
           type="button"
           onClick={onTrackingAdded}
-          className="flex-1 border-2 border-[#660099] text-[#660099] hover:bg-[#660099] hover:text-black font-pixel-alt text-xs"
+          className="flex-1 border-2 border-[#660099] text-purple-readable hover:bg-[#660099] hover:text-black font-pixel-alt text-xs"
           style={{ fontFamily: 'var(--font-pixel-alt)' }}
         >
           Skip
@@ -123,7 +123,7 @@ export default function ManualTrackingForm({ listingId, onTrackingAdded }: Manua
         </Button>
       </div>
 
-      <p className="text-[#aa77ee] font-pixel-alt text-sm mt-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+      <p className="text-purple-muted font-pixel-alt text-sm mt-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
         💡 Tip: You can add tracking information later if you don't have it yet. Just mark the item as shipped and add tracking when available.
       </p>
     </form>

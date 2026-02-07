@@ -64,7 +64,7 @@ export default function SellerStatsCard({ sellerWallet, compact = false }: Selle
       </h3>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
         <div>
-          <p className="text-[#660099] font-pixel-alt text-xs" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          <p className="text-purple-readable font-pixel-alt text-xs" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             Reviews
           </p>
           <p className="text-[#00ff00] font-pixel text-lg" style={{ fontFamily: 'var(--font-pixel)' }}>
@@ -72,7 +72,7 @@ export default function SellerStatsCard({ sellerWallet, compact = false }: Selle
           </p>
         </div>
         <div>
-          <p className="text-[#660099] font-pixel-alt text-xs" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          <p className="text-purple-readable font-pixel-alt text-xs" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             Listings
           </p>
           <p className="text-[#00ff00] font-pixel text-lg" style={{ fontFamily: 'var(--font-pixel)' }}>
@@ -80,7 +80,7 @@ export default function SellerStatsCard({ sellerWallet, compact = false }: Selle
           </p>
         </div>
         <div>
-          <p className="text-[#660099] font-pixel-alt text-xs" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          <p className="text-purple-readable font-pixel-alt text-xs" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             Items sold
           </p>
           <p className="text-[#00ff00] font-pixel text-lg" style={{ fontFamily: 'var(--font-pixel)' }}>
@@ -88,7 +88,7 @@ export default function SellerStatsCard({ sellerWallet, compact = false }: Selle
           </p>
         </div>
         <div>
-          <p className="text-[#660099] font-pixel-alt text-xs" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          <p className="text-purple-readable font-pixel-alt text-xs" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             Items bought
           </p>
           <p className="text-[#00ff00] font-pixel text-lg" style={{ fontFamily: 'var(--font-pixel)' }}>
@@ -96,7 +96,7 @@ export default function SellerStatsCard({ sellerWallet, compact = false }: Selle
           </p>
         </div>
         <div>
-          <p className="text-[#660099] font-pixel-alt text-xs" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          <p className="text-purple-readable font-pixel-alt text-xs" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             Shipped
           </p>
           <p className="text-[#00ff00] font-pixel text-lg" style={{ fontFamily: 'var(--font-pixel)' }}>
@@ -104,7 +104,7 @@ export default function SellerStatsCard({ sellerWallet, compact = false }: Selle
           </p>
         </div>
         <div>
-          <p className="text-[#660099] font-pixel-alt text-xs" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          <p className="text-purple-readable font-pixel-alt text-xs" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             Received
           </p>
           <p className="text-[#00ff00] font-pixel text-lg" style={{ fontFamily: 'var(--font-pixel)' }}>
@@ -114,14 +114,14 @@ export default function SellerStatsCard({ sellerWallet, compact = false }: Selle
       </div>
       {stats.feedback.length > 0 && (
         <div className="space-y-2">
-          <p className="text-[#660099] font-pixel-alt text-xs" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          <p className="text-purple-readable font-pixel-alt text-xs" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             Recent feedback
           </p>
           {stats.feedback.slice(0, 5).map((f) => (
             <div key={f.id} className="text-sm">
               <span className="text-[#00ff00]">{'★'.repeat(f.rating)}{'☆'.repeat(5 - f.rating)}</span>
               {f.comment && (
-                <p className="text-[#660099] font-pixel-alt text-xs mt-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                <p className="text-purple-readable font-pixel-alt text-xs mt-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                   {f.comment}
                 </p>
               )}

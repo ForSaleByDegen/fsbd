@@ -41,12 +41,12 @@ export default function Header() {
 
   const navLinkClass = (href: string) => {
     const active = isActive(href)
-    return `text-xs md:text-sm font-pixel-alt transition-colors touch-manipulation px-2 py-1 border-2 ${active ? 'text-[#00ff00] border-[#660099]' : 'text-[#660099] border-transparent hover:text-[#00ff00] hover:border-[#660099]'}`
+    return `text-xs md:text-sm font-pixel-alt transition-colors touch-manipulation px-2 py-1 border-2 ${active ? 'text-[#00ff00] border-[#660099]' : 'text-purple-readable border-transparent hover:text-[#00ff00] hover:border-[#660099]'}`
   }
 
   const mobileNavLinkClass = (href: string) => {
     const active = isActive(href)
-    return `text-sm font-pixel-alt transition-colors touch-manipulation px-3 py-2 border-2 min-h-[44px] flex items-center ${active ? 'text-[#00ff00] border-[#660099]' : 'text-[#660099] border-transparent hover:text-[#00ff00] hover:border-[#660099]'}`
+    return `text-sm font-pixel-alt transition-colors touch-manipulation px-3 py-2 border-2 min-h-[44px] flex items-center ${active ? 'text-[#00ff00] border-[#660099]' : 'text-purple-readable border-transparent hover:text-[#00ff00] hover:border-[#660099]'}`
   }
 
   useEffect(() => {
@@ -75,7 +75,7 @@ export default function Header() {
         <div className="flex justify-between items-center">
           <Link 
             href="/" 
-            className="text-lg sm:text-xl md:text-2xl font-pixel text-[#00ff00] touch-manipulation hover:text-[#660099] transition-colors flex-shrink-0" 
+            className="text-lg sm:text-xl md:text-2xl font-pixel text-[#00ff00] touch-manipulation hover:text-purple-readable transition-colors flex-shrink-0" 
             style={{ fontFamily: 'var(--font-pixel)' }}
           >
             $FSBD

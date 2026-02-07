@@ -12,10 +12,10 @@ export default function SubscribePage() {
     <div className="min-h-screen bg-background">
       <Header />
       <main className="max-w-3xl mx-auto px-4 py-8">
-        <h1 className="text-2xl sm:text-3xl font-pixel text-[#660099] mb-4" style={{ fontFamily: 'var(--font-pixel)' }}>
+        <h1 className="text-2xl sm:text-3xl font-pixel text-purple-readable mb-4" style={{ fontFamily: 'var(--font-pixel)' }}>
           Seller Subscription
         </h1>
-        <p className="text-[#aa77ee] font-pixel-alt text-sm sm:text-base mb-6" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+        <p className="text-purple-muted font-pixel-alt text-sm sm:text-base mb-6" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
           Everyone gets 1 free listing. For more, hold $FSBD (2–10 by tier) or subscribe below—4 tiers like token holders: 2, 10, 30, 100 listings.
         </p>
 
@@ -30,10 +30,10 @@ export default function SubscribePage() {
                 <h3 className="text-lg font-pixel text-[#00ff00] capitalize mb-1" style={{ fontFamily: 'var(--font-pixel)' }}>
                   {key}
                 </h3>
-                <p className="text-2xl font-pixel text-[#660099] mb-2" style={{ fontFamily: 'var(--font-pixel)' }}>
+                <p className="text-2xl font-pixel text-purple-readable mb-2" style={{ fontFamily: 'var(--font-pixel)' }}>
                   ${t.priceUsd.toFixed(2)}/mo
                 </p>
-                <p className="text-[#aa77ee] font-pixel-alt text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                <p className="text-purple-muted font-pixel-alt text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                   {t.listings} active listings
                 </p>
               </div>

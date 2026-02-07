@@ -64,7 +64,7 @@ export default function TermsAgreementModal({ isOpen, onAccept, onDecline }: Ter
             <Button
               onClick={onDecline}
               variant="outline"
-              className="border-2 border-[#660099] text-[#660099]"
+              className="border-2 border-[#660099] text-purple-readable"
             >
               Decline
             </Button>

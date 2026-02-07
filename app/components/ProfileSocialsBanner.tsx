@@ -77,12 +77,12 @@ export default function ProfileSocialsBanner({
       <h3 className="text-base font-pixel text-[#00ff00]" style={{ fontFamily: 'var(--font-pixel)' }}>
         Socials & banner (optional)
       </h3>
-      <p className="text-[#aa77ee] font-pixel-alt text-xs" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+      <p className="text-purple-muted font-pixel-alt text-xs" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
         Shown in token metadata when you launch a token with a listing.
       </p>
       <div className="grid gap-2">
         <div>
-          <label className="text-[#aa77ee] font-pixel-alt text-xs block mb-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          <label className="text-purple-muted font-pixel-alt text-xs block mb-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             Banner image URL
           </label>
           <Input
@@ -94,7 +94,7 @@ export default function ProfileSocialsBanner({
           />
         </div>
         <div>
-          <label className="text-[#aa77ee] font-pixel-alt text-xs block mb-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          <label className="text-purple-muted font-pixel-alt text-xs block mb-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             Website
           </label>
           <Input
@@ -106,7 +106,7 @@ export default function ProfileSocialsBanner({
           />
         </div>
         <div>
-          <label className="text-[#aa77ee] font-pixel-alt text-xs block mb-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          <label className="text-purple-muted font-pixel-alt text-xs block mb-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             Twitter / X
           </label>
           <Input
@@ -118,7 +118,7 @@ export default function ProfileSocialsBanner({
           />
         </div>
         <div>
-          <label className="text-[#aa77ee] font-pixel-alt text-xs block mb-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          <label className="text-purple-muted font-pixel-alt text-xs block mb-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             Telegram
           </label>
           <Input
@@ -130,7 +130,7 @@ export default function ProfileSocialsBanner({
           />
         </div>
         <div>
-          <label className="text-[#aa77ee] font-pixel-alt text-xs block mb-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          <label className="text-purple-muted font-pixel-alt text-xs block mb-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             Discord
           </label>
           <Input

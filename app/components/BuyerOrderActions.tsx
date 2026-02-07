@@ -144,7 +144,7 @@ export default function BuyerOrderActions({
                   key={r}
                   type="button"
                   onClick={() => setRating(r)}
-                  className={`text-sm font-pixel-alt ${rating >= r ? 'text-[#00ff00]' : 'text-[#660099]'}`}
+                  className={`text-sm font-pixel-alt ${rating >= r ? 'text-[#00ff00]' : 'text-purple-readable'}`}
                   style={{ fontFamily: 'var(--font-pixel-alt)' }}
                 >
                   ★
@@ -171,7 +171,7 @@ export default function BuyerOrderActions({
               <button
                 type="button"
                 onClick={() => setShowFeedback(false)}
-                className="text-xs text-[#660099] font-pixel-alt"
+                className="text-xs text-purple-readable font-pixel-alt"
                 style={{ fontFamily: 'var(--font-pixel-alt)' }}
               >
                 Cancel
@@ -223,7 +223,7 @@ export default function BuyerOrderActions({
               <button
                 type="button"
                 onClick={() => { setShowClaimForm(false); setError(null); }}
-                className="text-xs text-[#660099] font-pixel-alt"
+                className="text-xs text-purple-readable font-pixel-alt"
                 style={{ fontFamily: 'var(--font-pixel-alt)' }}
               >
                 Cancel
@@ -232,7 +232,7 @@ export default function BuyerOrderActions({
           </form>
         )}
         {hasExistingClaim && (
-          <span className="text-xs text-[#660099] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          <span className="text-xs text-purple-readable font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             Claim: {claimStatus}
           </span>
         )}
@@ -255,7 +255,7 @@ export default function BuyerOrderActions({
           <span className="text-[#00ff00] font-pixel-alt text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             I received this item
           </span>
-          {confirming && <span className="text-xs text-[#660099]">Confirming...</span>}
+          {confirming && <span className="text-xs text-purple-readable">Confirming...</span>}
         </label>
       ) : (
         <>
@@ -282,7 +282,7 @@ export default function BuyerOrderActions({
                     key={r}
                     type="button"
                     onClick={() => setRating(r)}
-                    className={`text-lg ${rating >= r ? 'text-[#00ff00]' : 'text-[#660099]'}`}
+                    className={`text-lg ${rating >= r ? 'text-[#00ff00]' : 'text-purple-readable'}`}
                   >
                     ★
                   </button>
@@ -308,7 +308,7 @@ export default function BuyerOrderActions({
                 <button
                   type="button"
                   onClick={() => setShowFeedback(false)}
-                  className="text-sm text-[#660099] font-pixel-alt"
+                  className="text-sm text-purple-readable font-pixel-alt"
                   style={{ fontFamily: 'var(--font-pixel-alt)' }}
                 >
                   Cancel
@@ -365,7 +365,7 @@ export default function BuyerOrderActions({
             <button
               type="button"
               onClick={() => { setShowClaimForm(false); setError(null); }}
-              className="text-sm text-[#660099] font-pixel-alt"
+              className="text-sm text-purple-readable font-pixel-alt"
               style={{ fontFamily: 'var(--font-pixel-alt)' }}
             >
               Cancel
@@ -374,7 +374,7 @@ export default function BuyerOrderActions({
         </form>
       )}
       {hasExistingClaim && (
-        <p className="text-[#660099] font-pixel-alt text-sm mt-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+        <p className="text-purple-readable font-pixel-alt text-sm mt-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
           Protection claim: {claimStatus}
         </p>
       )}

@@ -48,10 +48,10 @@ export default function ProfilePrivacyToggle({
 
   return (
     <div className="space-y-2">
-      <label className="text-[#aa77ee] font-pixel-alt text-sm block" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+      <label className="text-purple-muted font-pixel-alt text-sm block" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
         Profile privacy
       </label>
-      <p className="text-[#660099] font-pixel-alt text-xs mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+      <p className="text-purple-readable font-pixel-alt text-xs mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
         When private: your listings and connected listings are hidden from your public seller profile. Your stats (reviews, listing count, sold, bought, shipped, received) remain visible.
       </p>
       <div className="flex flex-wrap items-center gap-2">

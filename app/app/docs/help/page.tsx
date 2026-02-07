@@ -13,7 +13,7 @@ export default function HelpDocsPage() {
           FAQ, Common Issues & Safety
         </h1>
 
-        <div className="space-y-10 font-pixel-alt text-sm sm:text-base text-[#aa77ee]" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+        <div className="space-y-10 font-pixel-alt text-sm sm:text-base text-purple-muted" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
           {/* FAQ */}
           <section>
             <h2 className="text-lg sm:text-xl font-pixel text-[#ff00ff] mb-4" style={{ fontFamily: 'var(--font-pixel)' }}>
@@ -93,7 +93,7 @@ export default function HelpDocsPage() {
             </h2>
             <div className="p-4 border-2 border-[#00ff00]/40 rounded bg-[#00ff00]/5">
               <h3 className="font-pixel text-[#00ff00] mb-3 text-sm">For Buyers</h3>
-              <ul className="list-disc list-inside space-y-2 text-[#aa77ee]">
+              <ul className="list-disc list-inside space-y-2 text-purple-muted">
                 <li>Check seller profile: confirmed deliveries, rating, feedback</li>
                 <li>Prefer <strong>Verified Sellers</strong> for imported (eBay/Etsy) listings</li>
                 <li>Use chat to confirm item details, shipping, and price before paying</li>
@@ -105,7 +105,7 @@ export default function HelpDocsPage() {
             </div>
             <div className="p-4 border-2 border-[#00ff00]/40 rounded bg-[#00ff00]/5 mt-4">
               <h3 className="font-pixel text-[#00ff00] mb-3 text-sm">For Sellers</h3>
-              <ul className="list-disc list-inside space-y-2 text-[#aa77ee]">
+              <ul className="list-disc list-inside space-y-2 text-purple-muted">
                 <li>Ship within <strong>7 days</strong> of escrow deposit—add tracking to avoid dispute/ban</li>
                 <li>Use accurate descriptions and photos; misrepresentation can lead to claims</li>
                 <li>Verify payment on-chain before shipping (check your wallet)</li>
@@ -116,7 +116,7 @@ export default function HelpDocsPage() {
             </div>
             <div className="p-4 border-2 border-amber-600/60 rounded bg-amber-950/20 mt-4">
               <h3 className="font-pixel text-amber-400 mb-3 text-sm">General</h3>
-              <ul className="list-disc list-inside space-y-2 text-[#aa77ee]">
+              <ul className="list-disc list-inside space-y-2 text-purple-muted">
                 <li>Never share your seed phrase or private keys—FSBD will never ask for them</li>
                 <li>Review every transaction in your wallet before signing</li>
                 <li>Use a dedicated wallet for marketplace activity if you prefer separation</li>

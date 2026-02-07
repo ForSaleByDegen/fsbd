@@ -12,11 +12,11 @@ export default function WhitepaperPage() {
         <h1 className="text-2xl sm:text-3xl md:text-4xl font-pixel text-[#00ff00] mb-2" style={{ fontFamily: 'var(--font-pixel)' }}>
           $FSBD Whitepaper
         </h1>
-        <p className="text-sm text-[#660099] font-pixel-alt mb-8" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+        <p className="text-sm text-purple-readable font-pixel-alt mb-8" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
           For Sale By Degen — Decentralized P2P Marketplace on Solana
         </p>
 
-        <div className="space-y-10 font-pixel-alt text-sm sm:text-base text-[#aa77ee] leading-relaxed" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+        <div className="space-y-10 font-pixel-alt text-sm sm:text-base text-purple-muted leading-relaxed" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
           <section>
             <h2 className="text-lg sm:text-xl font-pixel text-[#ff00ff] mb-3" style={{ fontFamily: 'var(--font-pixel)' }}>
               1. Abstract

@@ -301,7 +301,7 @@ export default function ListingChat({
 
   if (!supabase) {
     return (
-      <div className="p-4 border-2 border-[#660099] rounded text-center text-[#660099]">
+      <div className="p-4 border-2 border-[#660099] rounded text-center text-purple-readable">
         Chat requires Supabase. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel, then run migration_chat.sql.
       </div>
     )
@@ -309,7 +309,7 @@ export default function ListingChat({
 
   if (loading) {
     return (
-      <div className="p-4 border-2 border-[#660099] rounded text-center text-[#660099]">
+      <div className="p-4 border-2 border-[#660099] rounded text-center text-purple-readable">
         Loading chat...
       </div>
     )
@@ -317,7 +317,7 @@ export default function ListingChat({
 
   if (!threadId) {
     return (
-      <div className="p-4 border-2 border-[#660099] rounded text-center text-[#660099]">
+      <div className="p-4 border-2 border-[#660099] rounded text-center text-purple-readable">
         {isSeller
           ? 'No conversations yet. Buyers will see a chat when they view this listing.'
           : 'Could not load chat. Ensure Supabase is configured and the chat migration has been run.'}
@@ -372,7 +372,7 @@ export default function ListingChat({
               <p className="text-sm text-[#00ff00] break-words" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                 {m.content}
               </p>
-              <p className="text-xs text-[#660099] mt-1">
+              <p className="text-xs text-purple-readable mt-1">
                 {new Date(m.created_at).toLocaleTimeString()}
               </p>
             </div>
@@ -396,7 +396,7 @@ export default function ListingChat({
         <button
           type="button"
           onClick={() => imageInputRef.current?.click()}
-          className="p-2 border-2 border-[#660099] text-[#660099] hover:border-[#00ff00] hover:text-[#00ff00] rounded shrink-0"
+          className="p-2 border-2 border-[#660099] text-purple-readable hover:border-[#00ff00] hover:text-[#00ff00] rounded shrink-0"
           title="Attach image"
         >
           📷
@@ -436,7 +436,7 @@ export default function ListingChat({
             onClick={() => handleUseSavedAddress()}
             disabled={sending || loadingAddress}
             variant="outline"
-            className="w-full border-2 border-[#aa77ee] text-[#aa77ee] hover:bg-[#aa77ee]/20 text-sm font-pixel-alt"
+            className="w-full border-2 border-[#aa77ee] text-purple-muted hover:bg-[#aa77ee]/20 text-sm font-pixel-alt"
           >
             {loadingAddress ? '...' : 'Use my saved address'}
           </Button>

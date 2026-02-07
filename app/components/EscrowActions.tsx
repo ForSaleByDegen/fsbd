@@ -196,7 +196,7 @@ export default function EscrowActions({ listing, userRole }: EscrowActionsProps)
         >
           {processing ? 'Processing...' : 'Mark as Shipped'}
         </Button>
-        <p className="text-[#660099] font-pixel-alt text-xs mt-3" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+        <p className="text-purple-readable font-pixel-alt text-xs mt-3" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
           💡 You can add tracking information after marking as shipped. Shipping labels are optional - manual tracking works great too!
         </p>
       </div>

@@ -99,7 +99,7 @@ export default function ListingManagement() {
     return (
       <div className="text-center py-8">
         <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#00ff00]"></div>
-        <p className="text-[#660099] font-pixel-alt mt-2 text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+        <p className="text-purple-readable font-pixel-alt mt-2 text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
           Loading listings...
         </p>
       </div>
@@ -118,7 +118,7 @@ export default function ListingManagement() {
               className={`px-3 py-1 border-2 font-pixel-alt text-xs sm:text-sm min-h-[36px] touch-manipulation ${
                 filter === status
                   ? 'border-[#00ff00] text-[#00ff00] bg-black/50'
-                  : 'border-[#660099] text-[#660099] hover:border-[#00ff00]'
+                  : 'border-[#660099] text-purple-readable hover:border-[#00ff00]'
               }`}
               style={{ fontFamily: 'var(--font-pixel-alt)' }}
             >
@@ -132,7 +132,7 @@ export default function ListingManagement() {
           placeholder="Search listings..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="flex-1 min-w-[200px] px-3 py-2 bg-black/30 border-2 border-[#660099] text-[#00ff00] font-pixel-alt text-sm placeholder:text-[#660099] focus:border-[#00ff00] focus:outline-none"
+          className="flex-1 min-w-[200px] px-3 py-2 bg-black/30 border-2 border-[#660099] text-[#00ff00] font-pixel-alt text-sm placeholder:text-purple-readable focus:border-[#00ff00] focus:outline-none"
           style={{ fontFamily: 'var(--font-pixel-alt)' }}
         />
       </div>
@@ -142,7 +142,7 @@ export default function ListingManagement() {
         <div className="min-w-full">
           <div className="space-y-2">
             {filteredListings.length === 0 ? (
-              <p className="text-center text-[#660099] font-pixel-alt py-8" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+              <p className="text-center text-purple-readable font-pixel-alt py-8" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                 No listings found
               </p>
             ) : (
@@ -154,12 +154,12 @@ export default function ListingManagement() {
                   <div className="flex-1 min-w-0">
                     <Link
                       href={`/listings/${listing.id}`}
-                      className="text-[#00ff00] font-pixel-alt text-sm sm:text-base hover:text-[#660099] break-words"
+                      className="text-[#00ff00] font-pixel-alt text-sm sm:text-base hover:text-purple-readable break-words"
                       style={{ fontFamily: 'var(--font-pixel-alt)' }}
                     >
                       {listing.title}
                     </Link>
-                    <p className="text-[#660099] font-pixel-alt text-xs mt-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                    <p className="text-purple-readable font-pixel-alt text-xs mt-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                       {listing.category} • {listing.price} {listing.price_token} • {new Date(listing.created_at).toLocaleDateString()}
                     </p>
                   </div>
@@ -193,7 +193,7 @@ export default function ListingManagement() {
         </div>
       </div>
 
-      <p className="text-[#660099] font-pixel-alt text-xs text-center" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+      <p className="text-purple-readable font-pixel-alt text-xs text-center" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
         Showing {filteredListings.length} of {listings.length} listings
       </p>
     </div>

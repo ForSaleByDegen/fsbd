@@ -122,7 +122,7 @@ export default function NotificationPreferences({
 
   return (
     <div className="space-y-4">
-      <p className="text-xs text-[#aa77ee] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+      <p className="text-xs text-purple-muted font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
         Get notified about new DMs, bids, and activity. Email and phone are optional.
       </p>
       <div className="space-y-2">

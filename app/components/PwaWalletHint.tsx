@@ -29,7 +29,7 @@ export default function PwaWalletHint() {
   if (!showHint || connected) return null
 
   return (
-    <p className="text-xs text-[#aa77ee] font-pixel-alt mt-2 max-w-xs text-center" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+    <p className="text-xs text-purple-muted font-pixel-alt mt-2 max-w-xs text-center" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
       Wallet not detected?{' '}
       <a
         href={SITE_URL}

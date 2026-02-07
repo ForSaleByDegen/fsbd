@@ -15,7 +15,7 @@ export default function WhyFsbdPage() {
             Why $FSBD?
           </h1>
           
-          <p className="text-[#660099] font-pixel-alt text-sm mb-6" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          <p className="text-purple-readable font-pixel-alt text-sm mb-6" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             Other classifieds and marketplaces work. But if you already live in crypto, why not one built for you?
           </p>
 

@@ -107,7 +107,7 @@ export default function LocalShippingAddressForm() {
 
   return (
     <div className="p-4 bg-black/50 border-2 border-[#660099] rounded max-w-xl space-y-4">
-      <p className="text-[#aa77ee] font-pixel-alt text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+      <p className="text-purple-muted font-pixel-alt text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
         Save your address on this device (encrypted). Use it when buying to auto-fill in chat. Stored only here—clearing site data removes it.
       </p>
 
@@ -205,7 +205,7 @@ export default function LocalShippingAddressForm() {
                   onChange={() => setMethod('pin')}
                   className="accent-[#00ff00]"
                 />
-                <span className="text-sm text-[#aa77ee] font-pixel-alt">PIN (4–8 digits)</span>
+                <span className="text-sm text-purple-muted font-pixel-alt">PIN (4–8 digits)</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -215,7 +215,7 @@ export default function LocalShippingAddressForm() {
                   onChange={() => setMethod('signature')}
                   className="accent-[#00ff00]"
                 />
-                <span className="text-sm text-[#aa77ee] font-pixel-alt">Wallet signature</span>
+                <span className="text-sm text-purple-muted font-pixel-alt">Wallet signature</span>
               </label>
             </div>
           </div>
@@ -263,7 +263,7 @@ export default function LocalShippingAddressForm() {
               type="button"
               variant="outline"
               onClick={() => setShowForm(false)}
-              className="ml-2 border-2 border-[#660099] text-[#660099]"
+              className="ml-2 border-2 border-[#660099] text-purple-readable"
             >
               Cancel
             </Button>

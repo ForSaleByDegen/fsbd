@@ -42,7 +42,7 @@ export default function AdminDashboard({ adminUser }: AdminDashboardProps) {
             className={`px-4 py-2 border-2 font-pixel-alt text-sm sm:text-base min-h-[44px] touch-manipulation transition-colors ${
               activeTab === tab.id
                 ? 'border-[#00ff00] text-[#00ff00] bg-black/50'
-                : 'border-[#660099] text-[#660099] hover:border-[#00ff00] hover:text-[#00ff00]'
+                : 'border-[#660099] text-purple-readable hover:border-[#00ff00] hover:text-[#00ff00]'
             }`}
             style={{ fontFamily: 'var(--font-pixel-alt)' }}
           >

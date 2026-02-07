@@ -123,7 +123,7 @@ export default function NotificationsPanel() {
           <button
             type="button"
             onClick={clearAll}
-            className="text-xs text-[#660099] hover:text-[#00ff00] font-pixel-alt transition-colors"
+            className="text-xs text-purple-readable hover:text-[#00ff00] font-pixel-alt transition-colors"
             style={{ fontFamily: 'var(--font-pixel-alt)' }}
           >
             Clear all
@@ -132,9 +132,9 @@ export default function NotificationsPanel() {
       </div>
       <div className="p-4 max-h-64 overflow-y-auto">
         {loading ? (
-          <p className="text-[#660099]/80 text-sm font-pixel-alt">Loading...</p>
+          <p className="text-purple-readable/80 text-sm font-pixel-alt">Loading...</p>
         ) : visibleItems.length === 0 ? (
-          <p className="text-[#660099]/80 text-sm font-pixel-alt">
+          <p className="text-purple-readable/80 text-sm font-pixel-alt">
             {items.length === 0
               ? 'No new chats, bids, or activity in the last 7 days.'
               : 'All notifications cleared.'}
@@ -151,14 +151,14 @@ export default function NotificationsPanel() {
                   >
                     <div className="flex justify-between items-start gap-2">
                       <div>
-                        <span className="text-xs text-[#aa77ee] font-pixel-alt">
+                        <span className="text-xs text-purple-muted font-pixel-alt">
                           {typeLabel(item.type)}
                         </span>
                         <p className="text-sm text-[#00ff00] font-pixel-alt mt-1">
                           {item.listingTitle || 'Listing'}
                         </p>
                         {item.message && (
-                          <p className="text-xs text-[#660099]/90 mt-0.5">{item.message}</p>
+                          <p className="text-xs text-purple-readable/90 mt-0.5">{item.message}</p>
                         )}
                         {item.type === 'bid' && item.amount != null && (
                           <p className="text-xs text-[#00ff00] mt-0.5">
@@ -166,7 +166,7 @@ export default function NotificationsPanel() {
                           </p>
                         )}
                       </div>
-                      <span className="text-xs text-[#660099]/70 shrink-0">
+                      <span className="text-xs text-purple-readable/70 shrink-0">
                         {formatDate(item.createdAt)}
                       </span>
                     </div>
@@ -178,7 +178,7 @@ export default function NotificationsPanel() {
                       e.stopPropagation()
                       dismissOne(itemKey)
                     }}
-                    className="absolute top-2 right-2 p-1.5 text-[#660099] hover:text-red-400 hover:bg-red-400/20 rounded transition-colors"
+                    className="absolute top-2 right-2 p-1.5 text-purple-readable hover:text-red-400 hover:bg-red-400/20 rounded transition-colors"
                     title="Dismiss"
                     aria-label="Dismiss notification"
                   >

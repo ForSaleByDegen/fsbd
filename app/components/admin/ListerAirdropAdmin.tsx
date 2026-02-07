@@ -78,7 +78,7 @@ export default function ListerAirdropAdmin({ adminWallet }: ListerAirdropAdminPr
         <h3 className="font-pixel text-[#00ff00] mb-2 text-lg" style={{ fontFamily: 'var(--font-pixel)' }}>
           Lister Airdrop
         </h3>
-        <p className="text-sm text-[#aa77ee] font-pixel-alt mb-4" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+        <p className="text-sm text-purple-muted font-pixel-alt mb-4" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
           Snapshot unique listers and airdrop 4200.69 $FSBD to each. Requires{' '}
           <code className="text-[#00ff00]">AIRDROP_SOURCE_KEYPAIR_BASE64</code> env var and migration_lister_airdrop.sql run.
         </p>

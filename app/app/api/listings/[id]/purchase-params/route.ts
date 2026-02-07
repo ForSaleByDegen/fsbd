@@ -55,7 +55,7 @@ export async function GET(
 
     const { data, error } = await supabaseAdmin
       .from('listings')
-      .select('id, wallet_address, price, price_token, token_mint, status')
+      .select('id, wallet_address, wallet_address_hash, price, price_token, token_mint, status, external_listing_url')
       .eq('id', id)
       .single()
 
@@ -64,6 +64,28 @@ export async function GET(
         return NextResponse.json({ error: 'Listing not found' }, { status: 404 })
       }
       return NextResponse.json({ error: error?.message || 'Listing not found' }, { status: 500 })
+    }
+
+    const externalUrl = typeof data.external_listing_url === 'string' ? data.external_listing_url.trim() : ''
+    if (externalUrl) {
+      let sellerVerified = false
+      const walletHash = data.wallet_address_hash
+      if (walletHash) {
+        try {
+          const { data: verifications } = await supabaseAdmin
+            .from('seller_verifications')
+            .select('id')
+            .eq('wallet_address_hash', walletHash)
+            .limit(1)
+          sellerVerified = !!(verifications && verifications.length > 0)
+        } catch { /* ignore */ }
+      }
+      if (!sellerVerified) {
+        return NextResponse.json(
+          { error: 'This listing must be purchased on the original site. The seller has not verified ownership.' },
+          { status: 400 }
+        )
+      }
     }
 
     if (data.status !== 'active') {

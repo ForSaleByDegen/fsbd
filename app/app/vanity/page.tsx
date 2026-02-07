@@ -140,11 +140,11 @@ export default function VanityAddressPage() {
         <h1 className="text-2xl font-pixel text-[#00ff00] mb-2" style={{ fontFamily: 'var(--font-pixel)' }}>
           Vanity Address Generator
         </h1>
-        <p className="text-sm text-[#aa77ee] font-pixel-alt mb-4" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+        <p className="text-sm text-purple-muted font-pixel-alt mb-4" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
           Generate a Solana wallet address ending in your chosen suffix (e.g. &quot;pump&quot;). Keys are generated locally — never sent to any server.
         </p>
         <p className="text-xs text-[#888] font-mono mb-6 p-3 rounded bg-black/30 border border-[#333] space-y-1">
-          <span className="text-[#00ff00]">Faster?</span> Run locally: <code className="text-[#aa77ee]">cd app &amp;&amp; npm run vanity pump</code> or <code className="text-[#aa77ee]">solana-keygen grind --ends-with pump:1</code>
+          <span className="text-[#00ff00]">Faster?</span> Run locally: <code className="text-purple-muted">cd app &amp;&amp; npm run vanity pump</code> or <code className="text-purple-muted">solana-keygen grind --ends-with pump:1</code>
         </p>
 
         <div className="flex gap-2 mb-4">
@@ -166,7 +166,7 @@ export default function VanityAddressPage() {
 
         {generating && (
           <div className="mb-4">
-            <p className="text-sm text-[#660099] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+            <p className="text-sm text-purple-readable font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
               Trying… {attempts.toLocaleString()} attempts
               {rate > 0 && (
                 <span className="text-[#00ff00] ml-2">
@@ -174,7 +174,7 @@ export default function VanityAddressPage() {
                 </span>
               )}
             </p>
-            <p className="text-xs text-[#660099]/80 mt-1">No timeout — runs until found. Check the CLI for 10–100x speed.</p>
+            <p className="text-xs text-purple-readable/80 mt-1">No timeout — runs until found. Check the CLI for 10–100x speed.</p>
           </div>
         )}
 
@@ -190,12 +190,12 @@ export default function VanityAddressPage() {
               ✓ Found{result.attempts > 0 ? ` after ${result.attempts.toLocaleString()} attempts` : ' (from pool)'}
             </p>
             <div>
-              <label className="text-xs text-[#660099]">Public Key</label>
+              <label className="text-xs text-purple-readable">Public Key</label>
               <p className="font-mono text-sm break-all text-[#00ff00]">{result.publicKey}</p>
             </div>
             <div>
-              <label className="text-xs text-[#660099]">Secret Key (JSON array — import into Phantom/Solflare)</label>
-              <p className="font-mono text-xs break-all text-[#aa77ee] bg-black/50 p-2 rounded mt-1">
+              <label className="text-xs text-purple-readable">Secret Key (JSON array — import into Phantom/Solflare)</label>
+              <p className="font-mono text-xs break-all text-purple-muted bg-black/50 p-2 rounded mt-1">
                 {result.secretKey}
               </p>
             </div>

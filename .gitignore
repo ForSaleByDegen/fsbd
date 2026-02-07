@@ -61,3 +61,6 @@ airdrop-rewards.json
 # Database
 *.db
 *.sqlite
+
+# Standalone bot folder (hand off to other project)
+telegram-token-launch-bot/

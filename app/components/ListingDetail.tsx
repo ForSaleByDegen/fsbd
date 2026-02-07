@@ -24,6 +24,111 @@ import { formatRelativeTime } from '@/lib/format-time'
 import { formatPrice, formatPriceToken } from '@/lib/utils'
 import { wrapWithAffiliate, hasAffiliateConfig } from '@/lib/affiliate-links'
 import OptionalEscrowSection from './OptionalEscrowSection'
+import ForwardFeesToBuyer from './ForwardFeesToBuyer'
+
+/** Get display name for external listing URL host */
+function getExternalSiteDisplayName(url: string): string {
+  try {
+    const h = new URL(url).hostname.toLowerCase()
+    if (/amazon\./.test(h)) return 'Amazon'
+    if (/ebay\./.test(h)) return 'eBay'
+    if (/etsy\./.test(h)) return 'Etsy'
+    if (/mercari\./.test(h)) return 'Mercari'
+    if (/sns\.id/.test(h) || /bonfida\./.test(h)) return 'SNS'
+    return h.replace(/^www\./, '')
+  } catch {
+    return 'external site'
+  }
+}
+
+/** Record purchase - for buyers who paid via Solana Pay link or outside app */
+function RecordPurchaseButton({
+  listingId,
+  onSuccess,
+}: {
+  listingId: string
+  onSuccess: () => void
+}) {
+  const { publicKey } = useWallet()
+  const [showForm, setShowForm] = useState(false)
+  const [txSig, setTxSig] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!publicKey || !txSig.trim()) return
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/listings/${listingId}/record-purchase`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ buyer: publicKey.toString(), txSignature: txSig.trim() }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Failed to record purchase')
+      setShowForm(false)
+      setTxSig('')
+      onSuccess()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unknown error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (!publicKey) return null
+
+  if (!showForm) {
+    return (
+      <button
+        type="button"
+        onClick={() => setShowForm(true)}
+        className="text-xs sm:text-sm text-purple-readable hover:text-[#ff00ff] underline font-pixel-alt"
+        style={{ fontFamily: 'var(--font-pixel-alt)' }}
+      >
+        I already paid — record my purchase
+      </button>
+    )
+  }
+
+  return (
+    <div className="p-3 border border-[#660099] rounded bg-black/30">
+      <p className="text-sm text-purple-muted font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+        Paste your transaction signature from your wallet or Solscan:
+      </p>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-2">
+        <input
+          type="text"
+          value={txSig}
+          onChange={(e) => setTxSig(e.target.value)}
+          placeholder="Transaction signature..."
+          className="px-3 py-2 bg-black/50 border border-[#660099] rounded text-[#00ff00] font-mono text-sm"
+        />
+        {error && <p className="text-red-400 text-xs">{error}</p>}
+        <div className="flex gap-2">
+          <Button
+            type="submit"
+            disabled={loading || !txSig.trim()}
+            variant="outline"
+            className="border-[#00ff00] text-[#00ff00] hover:bg-[#00ff00]/20 text-sm"
+          >
+            {loading ? 'Verifying...' : 'Submit'}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => { setShowForm(false); setTxSig(''); setError(null); }}
+            className="text-purple-readable text-sm"
+          >
+            Cancel
+          </Button>
+        </div>
+      </form>
+    </div>
+  )
+}
 
 /** Solana Pay link - alternative when in-app transaction fails */
 function SolanaPayLink({ listingId }: { listingId: string }) {
@@ -73,7 +178,7 @@ function SolanaPayLink({ listingId }: { listingId: string }) {
       type="button"
       onClick={handleClick}
       disabled={loading}
-      className="text-xs sm:text-sm text-[#660099] hover:text-[#ff00ff] underline font-pixel-alt disabled:opacity-50"
+      className="text-xs sm:text-sm text-purple-readable hover:text-[#ff00ff] underline font-pixel-alt disabled:opacity-50"
       style={{ fontFamily: 'var(--font-pixel-alt)' }}
     >
       {loading ? 'Loading...' : error ? `Error: ${error}` : 'Having trouble? Pay via wallet link'}
@@ -516,7 +621,7 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
                   // Show error placeholder
                   const parent = target.parentElement
                   if (parent) {
-                    parent.innerHTML = `<div class="w-full h-64 flex items-center justify-center border-2 border-[#660099] rounded"><span class="text-[#660099] text-sm">Image ${index + 1} failed to load</span></div>`
+                    parent.innerHTML = `<div class="w-full h-64 flex items-center justify-center border-2 border-[#660099] rounded"><span class="text-purple-readable text-sm">Image ${index + 1} failed to load</span></div>`
                   }
                 }}
               />
@@ -525,9 +630,9 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
         </div>
       ) : listing.images && listing.images.length > 0 ? (
         <div className="mb-4 sm:mb-6 p-4 bg-black/50 border-2 border-[#660099] rounded">
-          <p className="text-[#660099] text-sm font-pixel-alt mb-2">⚠️ Images found but failed to process</p>
-          <p className="text-[#660099] text-xs font-pixel-alt">Raw images data: {JSON.stringify(listing.images)}</p>
-          <p className="text-[#660099] text-xs font-pixel-alt mt-2">Check browser console for details.</p>
+          <p className="text-purple-readable text-sm font-pixel-alt mb-2">⚠️ Images found but failed to process</p>
+          <p className="text-purple-readable text-xs font-pixel-alt">Raw images data: {JSON.stringify(listing.images)}</p>
+          <p className="text-purple-readable text-xs font-pixel-alt mt-2">Check browser console for details.</p>
         </div>
       ) : null}
 
@@ -547,7 +652,7 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
               ×{listingQty} available
             </span>
           )}
-          <span className="text-sm sm:text-base text-[#660099] font-pixel-alt capitalize" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          <span className="text-sm sm:text-base text-purple-readable font-pixel-alt capitalize" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             {listing.subcategory
               ? getSubcategoryLabel(listing.category, listing.subcategory)
               : listing.category?.replace('-', ' ')}
@@ -558,13 +663,13 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
             </span>
           )}
           {listing.created_at && listing.status === 'active' && (
-            <span className="text-sm text-[#aa77ee] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }} title={listing.created_at}>
+            <span className="text-sm text-purple-muted font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }} title={listing.created_at}>
               Listed {formatRelativeTime(listing.created_at)}
             </span>
           )}
         </div>
         {(listing.location_city || listing.location_region) && (
-          <p className="text-sm text-[#660099] font-pixel-alt mt-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          <p className="text-sm text-purple-readable font-pixel-alt mt-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             Area: {[listing.location_city, listing.location_region].filter(Boolean).join(', ')} — meetup details via chat.
           </p>
         )}
@@ -578,16 +683,7 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
                 rel="noopener noreferrer"
                 className="text-[#ff00ff] hover:text-[#00ff00] underline"
               >
-                {(() => {
-                  try {
-                    const h = new URL(listing.external_listing_url).hostname
-                    if (/amazon\./i.test(h)) return 'Amazon'
-                    if (/ebay\./i.test(h)) return 'eBay'
-                    if (/etsy\./i.test(h)) return 'Etsy'
-                    if (/mercari\./i.test(h)) return 'Mercari'
-                    return new URL(listing.external_listing_url).hostname.replace(/^www\./, '')
-                  } catch { return 'external site' }
-                })()}
+                {getExternalSiteDisplayName(listing.external_listing_url)}
               </a>
             </p>
             <p className="text-xs text-amber-300/90 font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
@@ -595,7 +691,7 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
               {listing.seller_verified ? (
                 <span className="text-[#00ff00]">✓ This seller has verified their profile via our verification process.</span>
               ) : (
-                <>Verified sellers have a badge — they completed our unique verification process to prove ownership of their external listings.</>
+                <>This seller has not verified ownership. Purchase only on the original site for your safety.</>
               )}
               {hasAffiliateConfig() && (
                 <span className="block mt-1 text-amber-400/80">We may earn from qualifying purchases through affiliate links.</span>
@@ -687,36 +783,74 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
         <>
           {publicKey && publicKey.toString() !== listing.wallet_address && listing.status === 'active' && (
             <div className="flex flex-col gap-3">
-              {/* Direct payment (Degen) warning */}
-              <div className="p-3 sm:p-4 bg-amber-950/50 border-2 border-amber-600 rounded">
-                <h4 className="font-pixel text-amber-400 font-bold mb-2 text-sm sm:text-base" style={{ fontFamily: 'var(--font-pixel)' }}>
-                  🎲 DEGEN — Direct Payment
-                </h4>
-                <p className="text-sm text-[#aa77ee] font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-                  This sends {listing.price} {formatPriceToken(listing.price_token, listing.token_symbol)} <strong>directly to the seller</strong>. No buyer protection.
-                </p>
-                <p className="text-sm text-[#aa77ee] font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-                  No seller is affiliated with this platform. We do NOT stand by any item&apos;s authenticity or condition.
-                </p>
-                <p className="text-sm text-[#00ff00] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-                  Coordinate shipping and payment details with the seller via chat before paying.
-                </p>
-              </div>
-              <Button
-                onClick={handlePurchase}
-                disabled={processing}
-                className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 border-2 sm:border-4 border-amber-500 text-amber-400 hover:bg-amber-500 hover:text-black font-pixel-alt transition-colors min-h-[44px] text-base sm:text-lg touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ fontFamily: 'var(--font-pixel-alt)' }}
-              >
-                {processing ? 'Processing...' : 'Purchase (Degen — Direct)'}
-              </Button>
-              <SolanaPayLink listingId={listingId} />
+              {listing.external_listing_url && !listing.seller_verified ? (
+                <>
+                  <div className="p-3 sm:p-4 bg-amber-950/50 border-2 border-amber-600 rounded">
+                    <p className="text-sm text-amber-200 font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                      This seller has not verified ownership. Purchase only on the original site for your safety.
+                    </p>
+                    <a
+                      href={wrapWithAffiliate(listing.external_listing_url)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-block px-6 py-3 border-2 border-amber-500 text-amber-400 hover:bg-amber-500 hover:text-black font-pixel-alt transition-colors"
+                      style={{ fontFamily: 'var(--font-pixel-alt)' }}
+                    >
+                      Buy on {getExternalSiteDisplayName(listing.external_listing_url)}
+                    </a>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Direct payment (Degen) warning */}
+                  <div className="p-3 sm:p-4 bg-amber-950/50 border-2 border-amber-600 rounded">
+                    <h4 className="font-pixel text-amber-400 font-bold mb-2 text-sm sm:text-base" style={{ fontFamily: 'var(--font-pixel)' }}>
+                      🎲 DEGEN — Direct Payment
+                    </h4>
+                    <p className="text-sm text-purple-muted font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                      This sends {listing.price} {formatPriceToken(listing.price_token, listing.token_symbol)} <strong>directly to the seller</strong>. No buyer protection.
+                    </p>
+                    <p className="text-sm text-purple-muted font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                      No seller is affiliated with this platform. We do NOT stand by any item&apos;s authenticity or condition.
+                    </p>
+                    <p className="text-sm text-[#00ff00] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                      Coordinate shipping and payment details with the seller via chat before paying.
+                    </p>
+                    {listing.external_listing_url && listing.seller_verified && (
+                      <p className="text-sm text-amber-300 font-pixel-alt mt-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                        For safer checkout, use chat to agree on escrow before paying.
+                      </p>
+                    )}
+                  </div>
+                  <Button
+                    onClick={handlePurchase}
+                    disabled={processing}
+                    className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 border-2 sm:border-4 border-amber-500 text-amber-400 hover:bg-amber-500 hover:text-black font-pixel-alt transition-colors min-h-[44px] text-base sm:text-lg touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ fontFamily: 'var(--font-pixel-alt)' }}
+                  >
+                    {processing ? 'Processing...' : 'Purchase (Degen — Direct)'}
+                  </Button>
+                  {listing.external_listing_url && listing.seller_verified && (
+                    <a
+                      href={wrapWithAffiliate(listing.external_listing_url)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs sm:text-sm text-purple-readable hover:text-[#ff00ff] underline font-pixel-alt"
+                      style={{ fontFamily: 'var(--font-pixel-alt)' }}
+                    >
+                      Or buy on {getExternalSiteDisplayName(listing.external_listing_url)}
+                    </a>
+                  )}
+                  <SolanaPayLink listingId={listingId} />
+                  <RecordPurchaseButton listingId={listingId} onSuccess={() => { fetchListing(); router.refresh(); }} />
+                </>
+              )}
             </div>
           )}
 
           {publicKey && publicKey.toString() === listing.wallet_address && (
             <div className="flex flex-col gap-4">
-              <p className="text-[#660099] font-pixel-alt text-sm sm:text-base" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+              <p className="text-purple-readable font-pixel-alt text-sm sm:text-base" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                 This is your listing
               </p>
               {listing.status === 'active' && !listing.has_token && imageUrls.length > 0 && (
@@ -752,11 +886,21 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
                   onTrackingAdded={() => { fetchListing(); router.refresh(); }}
                 />
               )}
+              {/* Forward token dev fees to buyer (sold token listings) */}
+              {(listing.status === 'sold' || listing.status === 'shipped') &&
+                listing.has_token &&
+                listing.token_mint && (
+                <ForwardFeesToBuyer
+                  listingId={listingId}
+                  buyerWalletAddress={listing.buyer_wallet_address}
+                  onSuccess={() => { fetchListing(); router.refresh(); }}
+                />
+              )}
             </div>
           )}
 
           {!publicKey && listing.status === 'active' && (
-            <p className="text-[#660099] font-pixel-alt text-sm sm:text-base" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+            <p className="text-purple-readable font-pixel-alt text-sm sm:text-base" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
               Connect your wallet to purchase
             </p>
           )}

@@ -283,7 +283,7 @@ export default function ProfilePage() {
         <Header />
         <main className="max-w-4xl mx-auto px-2 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 w-full">
           <div className="text-center py-8 sm:py-12 md:py-16">
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-pixel text-[#660099] mb-4 break-words" style={{ fontFamily: 'var(--font-pixel)' }}>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-pixel text-purple-readable mb-4 break-words" style={{ fontFamily: 'var(--font-pixel)' }}>
               Profile
             </h1>
             <p className="text-[#00ff00] font-pixel-alt mb-6 text-sm sm:text-base px-4" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
@@ -312,7 +312,7 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-background w-full overflow-x-hidden">
       <Header />
       <main className="max-w-4xl mx-auto px-2 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 w-full relative z-10">
-        <h1 className="text-2xl sm:text-3xl md:text-4xl font-pixel text-[#660099] mb-4 sm:mb-6 break-words" style={{ fontFamily: 'var(--font-pixel)' }}>
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-pixel text-purple-readable mb-4 sm:mb-6 break-words" style={{ fontFamily: 'var(--font-pixel)' }}>
           Profile
         </h1>
 
@@ -335,7 +335,7 @@ export default function ProfilePage() {
               <h2 className="text-base sm:text-lg md:text-xl font-pixel text-[#00ff00] mb-2 break-words" style={{ fontFamily: 'var(--font-pixel)' }}>
                 Wallet Address
               </h2>
-              <p className="text-[#660099] font-pixel-alt break-all text-xs sm:text-sm md:text-base leading-relaxed" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+              <p className="text-purple-readable font-pixel-alt break-all text-xs sm:text-sm md:text-base leading-relaxed" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                 {walletAddress || 'Not connected'}
               </p>
             </div>
@@ -345,7 +345,7 @@ export default function ProfilePage() {
                 <h2 className="text-base sm:text-lg md:text-xl font-pixel text-[#00ff00] mb-2 break-words" style={{ fontFamily: 'var(--font-pixel)' }}>
                   Email
                 </h2>
-                <p className="text-[#660099] font-pixel-alt text-xs sm:text-sm md:text-base break-all" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                <p className="text-purple-readable font-pixel-alt text-xs sm:text-sm md:text-base break-all" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                   {email}
                 </p>
               </div>
@@ -355,7 +355,7 @@ export default function ProfilePage() {
               <h2 className="text-base sm:text-lg md:text-xl font-pixel text-[#00ff00] mb-2 break-words" style={{ fontFamily: 'var(--font-pixel)' }}>
                 Current Tier
               </h2>
-              <p className="text-xl sm:text-2xl md:text-3xl font-pixel text-[#660099] capitalize" style={{ fontFamily: 'var(--font-pixel)' }}>
+              <p className="text-xl sm:text-2xl md:text-3xl font-pixel text-purple-readable capitalize" style={{ fontFamily: 'var(--font-pixel)' }}>
                 {loading ? 'Loading...' : tier}
               </p>
             </div>
@@ -370,7 +370,7 @@ export default function ProfilePage() {
                   <h3 className="text-sm font-pixel text-[#00ff00] mb-1" style={{ fontFamily: 'var(--font-pixel)' }}>
                     Listings Created
                   </h3>
-                  <p className="text-lg font-pixel text-[#660099]" style={{ fontFamily: 'var(--font-pixel)' }}>
+                  <p className="text-lg font-pixel text-purple-readable" style={{ fontFamily: 'var(--font-pixel)' }}>
                     {stats.listings_count}
                   </p>
                 </div>
@@ -378,7 +378,7 @@ export default function ProfilePage() {
                   <h3 className="text-sm font-pixel text-[#00ff00] mb-1" style={{ fontFamily: 'var(--font-pixel)' }}>
                     Listings Sold
                   </h3>
-                  <p className="text-lg font-pixel text-[#660099]" style={{ fontFamily: 'var(--font-pixel)' }}>
+                  <p className="text-lg font-pixel text-purple-readable" style={{ fontFamily: 'var(--font-pixel)' }}>
                     {stats.total_listings_sold}
                   </p>
                 </div>
@@ -386,7 +386,7 @@ export default function ProfilePage() {
                   <h3 className="text-sm font-pixel text-[#00ff00] mb-1" style={{ fontFamily: 'var(--font-pixel)' }}>
                     Total Fees Paid
                   </h3>
-                  <p className="text-lg font-pixel text-[#660099]" style={{ fontFamily: 'var(--font-pixel)' }}>
+                  <p className="text-lg font-pixel text-purple-readable" style={{ fontFamily: 'var(--font-pixel)' }}>
                     {Number(stats.total_fees_paid || 0).toFixed(2)} SOL
                   </p>
                 </div>
@@ -400,7 +400,7 @@ export default function ProfilePage() {
                 </h2>
                 <div className="space-y-2">
                   {linkedAccounts.map((account: { type?: string; address?: string; email?: string }, idx: number) => (
-                    <div key={idx} className="text-[#660099] font-pixel-alt text-xs sm:text-sm md:text-base break-all" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                    <div key={idx} className="text-purple-readable font-pixel-alt text-xs sm:text-sm md:text-base break-all" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                       {account.type}: {account.address || account.email || 'N/A'}
                     </div>
                   ))}
@@ -436,16 +436,16 @@ export default function ProfilePage() {
                       ✓ Verified Seller
                     </span>
                   ) : (
-                    <span className="text-[#aa77ee]">Verify your seller profile</span>
+                    <span className="text-purple-muted">Verify your seller profile</span>
                   )}
                 </span>
-                <span className="text-[#660099]">{verifySectionOpen ? '▼' : '▶'}</span>
+                <span className="text-purple-readable">{verifySectionOpen ? '▼' : '▶'}</span>
               </button>
               {verifySectionOpen && (
                 <div className="pt-3 space-y-3">
                   {verifications?.verified && verifications.platforms.length > 0 && (
                     <div className="space-y-1">
-                      <p className="text-sm text-[#aa77ee] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                      <p className="text-sm text-purple-muted font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                         Verified platforms:
                       </p>
                       {verifications.platforms.map((p) => (
@@ -460,7 +460,7 @@ export default function ProfilePage() {
                       ))}
                     </div>
                   )}
-                  <p className="text-xs text-[#aa77ee] font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                  <p className="text-xs text-purple-muted font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                     The verified seller badge appears on your listings when you import from external sites (Amazon, eBay, Etsy). It proves you own or control those external listings.
                   </p>
                   <div className="flex flex-wrap gap-2 pt-2">
@@ -484,7 +484,7 @@ export default function ProfilePage() {
                     )}
                     {!verifications?.platforms?.some((p) => p.platform === 'manual') && (
                       <div className="flex flex-col gap-2 pt-2 border-t border-[#660099]/30 mt-2">
-                        <span className="text-xs text-[#aa77ee] font-pixel-alt">Manual: add QR to listing image</span>
+                        <span className="text-xs text-purple-muted font-pixel-alt">Manual: add QR to listing image</span>
                         {!manualCode ? (
                           <button
                             type="button"
@@ -511,7 +511,7 @@ export default function ProfilePage() {
                               <img src={manualCode.qrDataUrl} alt="QR" className="w-24 h-24 border border-[#660099]" />
                               <span className="text-[#00ff00] font-pixel-alt text-sm">{manualCode.code}</span>
                             </div>
-                            <p className="text-xs text-[#aa77ee]">Add QR to listing photo, then paste listing URL:</p>
+                            <p className="text-xs text-purple-muted">Add QR to listing photo, then paste listing URL:</p>
                             <div className="flex gap-2">
                               <input
                                 type="url"
@@ -561,7 +561,7 @@ export default function ProfilePage() {
                       </div>
                     )}
                   </div>
-                  <p className="text-xs text-[#aa77ee] pt-2 font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                  <p className="text-xs text-purple-muted pt-2 font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                     See{' '}
                     <Link href="/docs/features" className="text-[#ff00ff] hover:text-[#00ff00] underline">
                       Features &amp; Tiers
@@ -580,7 +580,7 @@ export default function ProfilePage() {
                 style={{ fontFamily: 'var(--font-pixel-alt)' }}
               >
                 <span>Notification preferences (email, phone, push)</span>
-                <span className="text-[#660099]">{notifySectionOpen ? '▼' : '▶'}</span>
+                <span className="text-purple-readable">{notifySectionOpen ? '▼' : '▶'}</span>
               </button>
               {notifySectionOpen && (
                 <div className="pt-3">
@@ -603,7 +603,7 @@ export default function ProfilePage() {
                 style={{ fontFamily: 'var(--font-pixel-alt)' }}
               >
                 <span>Socials & banner (for token metadata)</span>
-                <span className="text-[#660099]">{socialsSectionOpen ? '▼' : '▶'}</span>
+                <span className="text-purple-readable">{socialsSectionOpen ? '▼' : '▶'}</span>
               </button>
               {socialsSectionOpen && (
                 <div className="pt-3 space-y-4">
@@ -624,9 +624,9 @@ export default function ProfilePage() {
             My Listings
           </h2>
           {loading ? (
-            <p className="text-[#660099] font-pixel-alt text-sm">Loading...</p>
+            <p className="text-purple-readable font-pixel-alt text-sm">Loading...</p>
           ) : listings.length === 0 ? (
-            <p className="text-[#660099] font-pixel-alt text-sm mb-4">No listings yet.</p>
+            <p className="text-purple-readable font-pixel-alt text-sm mb-4">No listings yet.</p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
               {listings.slice(0, 6).map((l) => (
@@ -649,9 +649,9 @@ export default function ProfilePage() {
             My Bids
           </h2>
           {loading ? (
-            <p className="text-[#660099] font-pixel-alt text-sm">Loading...</p>
+            <p className="text-purple-readable font-pixel-alt text-sm">Loading...</p>
           ) : bids.length === 0 ? (
-            <p className="text-[#660099] font-pixel-alt text-sm mb-4">No bids yet.</p>
+            <p className="text-purple-readable font-pixel-alt text-sm mb-4">No bids yet.</p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               {bids.slice(0, 4).map((b) => (
@@ -667,9 +667,9 @@ export default function ProfilePage() {
             My Purchases
           </h2>
           {loading ? (
-            <p className="text-[#660099] font-pixel-alt text-sm">Loading...</p>
+            <p className="text-purple-readable font-pixel-alt text-sm">Loading...</p>
           ) : purchases.length === 0 ? (
-            <p className="text-[#660099] font-pixel-alt text-sm mb-4">No purchases yet.</p>
+            <p className="text-purple-readable font-pixel-alt text-sm mb-4">No purchases yet.</p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
               {purchases.slice(0, 6).map((p: (typeof purchases)[0]) => (
@@ -698,13 +698,13 @@ export default function ProfilePage() {
             📦 Shipping & Tracking
           </h2>
           {loading ? (
-            <p className="text-[#660099] font-pixel-alt text-sm">Loading...</p>
+            <p className="text-purple-readable font-pixel-alt text-sm">Loading...</p>
           ) : (() => {
             const withTracking = purchases.filter(
               (p: (typeof purchases)[0]) => p.tracking_number && String(p.tracking_number).trim()
             )
             return withTracking.length === 0 ? (
-              <p className="text-[#660099] font-pixel-alt text-sm mb-4">
+              <p className="text-purple-readable font-pixel-alt text-sm mb-4">
                 No shipping info yet. Sellers add tracking after shipping — check back or coordinate via chat.
               </p>
             ) : (
@@ -722,7 +722,7 @@ export default function ProfilePage() {
                         </span>
                       </Link>
                       <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <span className="text-[#660099] font-pixel-alt text-xs" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                        <span className="text-purple-readable font-pixel-alt text-xs" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                           {p.shipping_carrier || 'Carrier'}: {p.tracking_number}
                         </span>
                         <a
@@ -752,11 +752,11 @@ export default function ProfilePage() {
             style={{ fontFamily: 'var(--font-pixel-alt)' }}
           >
             <span>Delivery address (optional)</span>
-            <span className="text-[#660099]">{deliverySectionOpen ? '▼' : '▶'}</span>
+            <span className="text-purple-readable">{deliverySectionOpen ? '▼' : '▶'}</span>
           </button>
           {deliverySectionOpen && (
             <div className="p-3 sm:p-4 pt-0 border-t border-[#660099]/30 space-y-4 max-w-xl">
-              <p className="text-[#aa77ee] font-pixel-alt text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+              <p className="text-purple-muted font-pixel-alt text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                 Save your address on this device (encrypted) to auto-fill when buying. Stored only here — clearing site data removes it.
               </p>
               <LocalShippingAddressForm />

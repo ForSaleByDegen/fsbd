@@ -68,10 +68,10 @@ export default function SearchBar({
             placeholder="Search listings..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 bg-black border-2 border-[#660099] text-[#00ff00] font-pixel-alt placeholder:text-[#660099] focus:border-[#00ff00] focus:ring-2 focus:ring-[#00ff00] w-full min-h-[44px] text-base sm:text-sm"
+            className="pl-10 bg-black border-2 border-[#660099] text-[#00ff00] font-pixel-alt placeholder:text-purple-readable focus:border-[#00ff00] focus:ring-2 focus:ring-[#00ff00] w-full min-h-[44px] text-base sm:text-sm"
             style={{ fontFamily: 'var(--font-pixel-alt)' }}
           />
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#660099] pointer-events-none">🔍</span>
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-purple-readable pointer-events-none">🔍</span>
         </div>
         <Select value={category} onValueChange={setCategory}>
           <SelectTrigger className="w-full sm:w-[180px] min-h-[44px] text-base sm:text-sm">

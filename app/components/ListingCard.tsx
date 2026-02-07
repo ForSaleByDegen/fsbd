@@ -98,7 +98,7 @@ export default function ListingCard({ listing, priceChange24h, shouldFlash = fal
                 // Show error placeholder
                 const parent = target.parentElement
                 if (parent) {
-                  parent.innerHTML = '<div class="w-full h-full flex items-center justify-center"><span class="text-[#660099] text-xs">Image failed to load</span></div>'
+                  parent.innerHTML = '<div class="w-full h-full flex items-center justify-center"><span class="text-purple-readable text-xs">Image failed to load</span></div>'
                 }
               }}
               onLoad={() => {
@@ -107,7 +107,7 @@ export default function ListingCard({ listing, priceChange24h, shouldFlash = fal
           </div>
         ) : (
           <div className="w-full h-32 sm:h-40 md:h-48 bg-black/50 border border-[#660099] rounded mb-2 sm:mb-3 flex items-center justify-center">
-            <span className="text-[#660099] text-xs">No image</span>
+            <span className="text-purple-readable text-xs">No image</span>
           </div>
         )}
         <h3 className="text-base sm:text-lg font-semibold mb-2 line-clamp-2 break-words">{listing.title}</h3>
