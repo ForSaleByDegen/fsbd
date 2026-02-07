@@ -129,6 +129,7 @@ export default function AddTokenToListing({
           token_mint: tokenMint,
           token_name: name,
           token_symbol: symbol,
+          token_launched_via_fsbd: true,
         }),
       })
       if (!patchRes.ok) {

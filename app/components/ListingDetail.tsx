@@ -25,6 +25,7 @@ import { formatPrice, formatPriceToken } from '@/lib/utils'
 import { wrapWithAffiliate, hasAffiliateConfig } from '@/lib/affiliate-links'
 import OptionalEscrowSection from './OptionalEscrowSection'
 import ForwardFeesToBuyer from './ForwardFeesToBuyer'
+import RedirectFeesToBuyer from './RedirectFeesToBuyer'
 
 /** Get display name for external listing URL host */
 function getExternalSiteDisplayName(url: string): string {
@@ -886,7 +887,17 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
                   onTrackingAdded={() => { fetchListing(); router.refresh(); }}
                 />
               )}
-              {/* Forward token dev fees to buyer (sold token listings) */}
+              {/* Redirect future creator fees to buyer (on-chain) */}
+              {(listing.status === 'sold' || listing.status === 'shipped') &&
+                listing.has_token &&
+                listing.token_mint &&
+                listing.buyer_wallet_address && (
+                <RedirectFeesToBuyer
+                  listingId={listingId}
+                  onSuccess={() => { fetchListing(); router.refresh(); }}
+                />
+              )}
+              {/* Forward already-claimed SOL to buyer (manual) */}
               {(listing.status === 'sold' || listing.status === 'shipped') &&
                 listing.has_token &&
                 listing.token_mint && (

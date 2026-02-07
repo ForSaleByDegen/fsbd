@@ -1,28 +1,18 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useWallet, useConnection } from '@solana/wallet-adapter-react'
 import { useRouter } from 'next/navigation'
 import { VersionedTransaction } from '@solana/web3.js'
-import { isAdmin } from '@/lib/admin'
 import { Button } from './ui/button'
 
 export default function ClaimCreatorFees() {
   const { publicKey, signTransaction, connected } = useWallet()
   const { connection } = useConnection()
   const router = useRouter()
-  const [isAdminUser, setIsAdminUser] = useState<boolean | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [lastSig, setLastSig] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!publicKey) {
-      setIsAdminUser(null)
-      return
-    }
-    isAdmin(publicKey.toString()).then(setIsAdminUser)
-  }, [publicKey?.toString()])
 
   const handleClaim = async () => {
     if (!publicKey || !signTransaction) {
@@ -77,23 +67,6 @@ export default function ClaimCreatorFees() {
     return (
       <div className="rounded-lg border-2 border-[#660099] bg-black/50 p-6 text-center">
         <p className="text-muted-foreground mb-4">Connect your wallet to claim creator fees.</p>
-      </div>
-    )
-  }
-
-  if (isAdminUser === false) {
-    return (
-      <div className="rounded-lg border-2 border-red-500/50 bg-red-500/10 p-6 text-center">
-        <p className="text-red-400 font-medium">Admin only.</p>
-        <p className="text-muted-foreground mt-2 text-sm">This page is restricted to admin wallets.</p>
-      </div>
-    )
-  }
-
-  if (isAdminUser === null) {
-    return (
-      <div className="rounded-lg border-2 border-[#660099] bg-black/50 p-6 text-center">
-        <p className="text-muted-foreground">Checking access...</p>
       </div>
     )
   }

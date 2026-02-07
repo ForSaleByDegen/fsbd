@@ -108,6 +108,9 @@ export default function Header() {
                 <Link href="/tiers" className={`${navLinkClass('/tiers')} hidden lg:inline`} style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                   Tiers
                 </Link>
+                <Link href="/claim-fees" className={navLinkClass('/claim-fees')} style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                  Claim Fees
+                </Link>
               </>
             )}
               </>
@@ -117,9 +120,6 @@ export default function Header() {
             </Link>
             {userIsAdmin && (
               <>
-                <Link href="/claim-fees" className={navLinkClass('/claim-fees')} style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-                  Claim Fees
-                </Link>
                 <Link href="/admin" className={`text-xs md:text-sm font-pixel-alt transition-colors touch-manipulation px-2 py-1 border-2 ${isActive('/admin') ? 'text-[#00ff00] border-[#00ff00]' : 'text-[#ff00ff] border-[#ff00ff] hover:text-[#00ff00] hover:border-[#00ff00]'}`} style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                   Admin
                 </Link>
@@ -211,6 +211,14 @@ export default function Header() {
                       >
                         Tiers
                       </Link>
+                      <Link 
+                        href="/claim-fees" 
+                        onClick={() => setMobileMenuOpen(false)}
+                        className={mobileNavLinkClass('/claim-fees')}
+                        style={{ fontFamily: 'var(--font-pixel-alt)' }}
+                      >
+                        Claim Fees
+                      </Link>
                     </>
                   )}
                 </>
@@ -225,14 +233,6 @@ export default function Header() {
               </Link>
               {userIsAdmin && (
                 <>
-                  <Link 
-                    href="/claim-fees" 
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={mobileNavLinkClass('/claim-fees')}
-                    style={{ fontFamily: 'var(--font-pixel-alt)' }}
-                  >
-                    Claim Fees
-                  </Link>
                   <Link 
                     href="/admin" 
                     onClick={() => setMobileMenuOpen(false)}

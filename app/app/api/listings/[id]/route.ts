@@ -102,6 +102,7 @@ export async function PATCH(
     const chatTokenGated = body.chat_token_gated
     const chatMinTokens = typeof body.chat_min_tokens === 'number' ? Math.max(1, Math.floor(body.chat_min_tokens)) : body.chat_min_tokens === undefined ? undefined : Math.max(1, Math.floor(Number(body.chat_min_tokens) || 1))
     const priceToken = typeof body.price_token === 'string' ? body.price_token.trim() : null
+    const tokenLaunchedViaFsbd = typeof body.token_launched_via_fsbd === 'boolean' ? body.token_launched_via_fsbd : undefined
 
     if (!wallet) {
       return NextResponse.json(
@@ -145,6 +146,7 @@ export async function PATCH(
       updates.has_token = true
       if (tokenName) updates.token_name = tokenName
       if (tokenSymbol) updates.token_symbol = tokenSymbol
+      if (tokenLaunchedViaFsbd !== undefined) updates.token_launched_via_fsbd = tokenLaunchedViaFsbd
     }
     if (typeof chatTokenGated === 'boolean') updates.chat_token_gated = chatTokenGated
     if (chatMinTokens !== undefined) updates.chat_min_tokens = chatMinTokens
