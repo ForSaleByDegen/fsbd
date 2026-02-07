@@ -14,6 +14,9 @@ export default function MintLogoPage() {
   const [step, setStep] = useState<'idle' | 'signing' | 'verifying' | 'done' | 'error'>('idle')
   const [error, setError] = useState<string | null>(null)
   const [mintAddress, setMintAddress] = useState<string | null>(null)
+  const [pendingTxSignature, setPendingTxSignature] = useState<string | null>(null)
+  const [pastedSignature, setPastedSignature] = useState('')
+  const [retrying, setRetrying] = useState(false)
 
   useEffect(() => {
     fetch('/api/mint-logo-nft/config')
@@ -61,26 +64,74 @@ export default function MintLogoPage() {
         'confirmed'
       )
 
+      setPendingTxSignature(signature)
       setStep('verifying')
 
-      const verifyRes = await fetch('/api/mint-logo-nft/verify-and-mint', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          txSignature: signature,
-          wallet: publicKey.toString(),
-        }),
-      })
-      if (!verifyRes.ok) {
-        const err = await verifyRes.json().catch(() => ({}))
-        throw new Error(err.error || verifyRes.statusText || 'Verification failed.')
+      // Retry verify-and-mint: RPC may need a moment to index the tx
+      let verifyRes: Response | null = null
+      let lastError: string | null = null
+      for (let attempt = 0; attempt < 4; attempt++) {
+        verifyRes = await fetch('/api/mint-logo-nft/verify-and-mint', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            txSignature: signature,
+            wallet: publicKey.toString(),
+          }),
+        })
+        if (verifyRes.ok) break
+        const err = (await verifyRes.json().catch(() => ({}))) as { error?: string }
+        lastError = err.error || verifyRes.statusText
+        if (!lastError?.toLowerCase().includes('not found') && !lastError?.toLowerCase().includes('not yet confirmed')) {
+          throw new Error(lastError)
+        }
+        await new Promise((r) => setTimeout(r, 3000))
+      }
+      if (!verifyRes?.ok) {
+        throw new Error(lastError || 'Verification failed.')
       }
       const data = (await verifyRes.json()) as { ok: boolean; mint?: string }
       setMintAddress(data.mint || null)
+      setPendingTxSignature(null)
       setStep('done')
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
       setStep('error')
+    }
+  }
+
+  const handleRetryVerification = async () => {
+    const sig = (pastedSignature.trim() || pendingTxSignature)?.trim()
+    if (!publicKey || !sig) return
+    setError(null)
+    setRetrying(true)
+    try {
+      let verifyRes: Response | null = null
+      let lastErr: string | null = null
+      for (let attempt = 0; attempt < 4; attempt++) {
+        verifyRes = await fetch('/api/mint-logo-nft/verify-and-mint', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ txSignature: sig, wallet: publicKey.toString() }),
+        })
+        if (verifyRes.ok) break
+        const err = (await verifyRes.json().catch(() => ({}))) as { error?: string }
+        lastErr = err.error || verifyRes.statusText
+        if (!lastErr?.toLowerCase().includes('not found') && !lastErr?.toLowerCase().includes('not yet confirmed')) {
+          throw new Error(lastErr)
+        }
+        await new Promise((r) => setTimeout(r, 3000))
+      }
+      if (!verifyRes?.ok) throw new Error(lastErr || 'Verification failed.')
+      const data = (await verifyRes.json()) as { ok: boolean; mint?: string }
+      setMintAddress(data.mint || null)
+      setPendingTxSignature(null)
+      setPastedSignature('')
+      setStep('done')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setRetrying(false)
     }
   }
 
@@ -149,17 +200,51 @@ export default function MintLogoPage() {
                 )}
               </div>
             ) : (
-              <button
-                onClick={handleMint}
-                disabled={!publicKey || step === 'signing' || step === 'verifying'}
-                className="w-full sm:w-auto px-6 py-3 border-2 border-[#00ff00] text-[#00ff00] hover:bg-[#00ff00] hover:text-black font-pixel-alt transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ fontFamily: 'var(--font-pixel-alt)' }}
-              >
-                {step === 'signing' && 'Sign payment...'}
-                {step === 'verifying' && 'Minting...'}
-                {step === 'idle' && (publicKey ? 'Mint Logo NFT' : 'Connect wallet to mint')}
-                {step === 'error' && 'Try again'}
-              </button>
+              <div className="flex flex-wrap gap-3 items-center">
+                {step === 'error' ? (
+                  <div className="flex flex-col gap-3">
+                    <p className="text-purple-muted font-pixel-alt text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                      Already paid? Paste your transaction signature from Solscan:
+                    </p>
+                    <input
+                      type="text"
+                      value={pastedSignature}
+                      onChange={(e) => setPastedSignature(e.target.value)}
+                      placeholder="e.g. 5UtMsU3MznqmaDppjWDXNwrjwBoGCesen2C8B8J2veSi..."
+                      className="w-full px-3 py-2 bg-black border-2 border-[#660099] text-[#00ff00] font-mono text-sm placeholder:text-purple-readable/60 focus:border-[#00ff00] focus:outline-none"
+                    />
+                    <div className="flex flex-wrap gap-3">
+                      <button
+                        onClick={handleRetryVerification}
+                        disabled={!publicKey || retrying || (!pastedSignature.trim() && !pendingTxSignature)}
+                        className="px-6 py-3 border-2 border-[#00ff00] text-[#00ff00] hover:bg-[#00ff00] hover:text-black font-pixel-alt transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        style={{ fontFamily: 'var(--font-pixel-alt)' }}
+                      >
+                        {retrying ? 'Verifying...' : 'Retry verification (no extra payment)'}
+                      </button>
+                      <button
+                        onClick={handleMint}
+                        disabled={!publicKey || retrying}
+                        className="px-6 py-3 border-2 border-[#660099] text-purple-readable hover:bg-[#660099] hover:text-black font-pixel-alt transition-colors"
+                        style={{ fontFamily: 'var(--font-pixel-alt)' }}
+                      >
+                        Start over (new payment)
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleMint}
+                    disabled={!publicKey || step === 'signing' || step === 'verifying'}
+                    className="w-full sm:w-auto px-6 py-3 border-2 border-[#00ff00] text-[#00ff00] hover:bg-[#00ff00] hover:text-black font-pixel-alt transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ fontFamily: 'var(--font-pixel-alt)' }}
+                  >
+                    {step === 'signing' && 'Sign payment...'}
+                    {step === 'verifying' && 'Minting...'}
+                    {step === 'idle' && (publicKey ? 'Mint Logo NFT' : 'Connect wallet to mint')}
+                  </button>
+                )}
+              </div>
             )}
 
             {error && (

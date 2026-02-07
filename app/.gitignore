@@ -28,6 +28,10 @@ yarn-error.log*
 .env*.local
 .env
 
+# keypairs (keep secret)
+mint-logo-keypair.json
+airdrop-rewards.json
+
 # vercel
 .vercel
 

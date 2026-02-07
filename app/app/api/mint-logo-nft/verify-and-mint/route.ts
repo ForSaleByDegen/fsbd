@@ -40,9 +40,18 @@ export async function POST(request: NextRequest) {
 
     const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || 'https://api.mainnet-beta.solana.com'
     const connection = new Connection(rpcUrl)
-    const tx = await connection.getParsedTransaction(txSignature, { maxSupportedTransactionVersion: 0 })
+
+    // Retry: RPC may not have indexed the tx immediately after confirmation
+    let tx: Awaited<ReturnType<Connection['getParsedTransaction']>> = null
+    for (let attempt = 0; attempt < 5; attempt++) {
+      tx = await connection.getParsedTransaction(txSignature, { maxSupportedTransactionVersion: 0 })
+      if (tx?.meta) break
+      await new Promise((r) => setTimeout(r, 2000))
+    }
     if (!tx?.meta) {
-      return NextResponse.json({ error: 'Transaction not found or not yet confirmed' }, { status: 400 })
+      return NextResponse.json({
+        error: 'Transaction not found or not yet confirmed. Wait a minute and click Try again.',
+      }, { status: 400 })
     }
     if (tx.meta.err) {
       return NextResponse.json({ error: 'Transaction failed' }, { status: 400 })
