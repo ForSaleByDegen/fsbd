@@ -204,6 +204,9 @@ export async function PATCH(request: NextRequest) {
     if (body.notify_push_subscription === null || (typeof body.notify_push_subscription === 'object' && body.notify_push_subscription !== null)) {
       updates.notify_push_subscription = body.notify_push_subscription ?? null
     }
+    if (typeof body.profile_private === 'boolean') {
+      updates.profile_private = body.profile_private
+    }
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ ok: true })

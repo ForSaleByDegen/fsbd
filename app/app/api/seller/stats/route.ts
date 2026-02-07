@@ -1,6 +1,7 @@
 /**
  * GET /api/seller/stats?wallet=xxx
- * Public seller stats for honor system: successful deliveries, rating, feedback.
+ * Public seller stats - ALWAYS returned regardless of profile_private.
+ * Stats: reviews, listing count, sold, bought, shipped, received.
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
@@ -37,6 +38,33 @@ export async function GET(request: NextRequest) {
       // Columns may not exist
     }
 
+    // Listing counts from listings table (always public stats)
+    let listingCount = 0
+    let itemsBought = 0
+    let itemsShipped = 0
+    try {
+      const { count: listingCnt } = await supabaseAdmin
+        .from('listings')
+        .select('id', { count: 'exact', head: true })
+        .eq('wallet_address_hash', sellerHash)
+      listingCount = listingCnt ?? 0
+
+      const { count: boughtCnt } = await supabaseAdmin
+        .from('listings')
+        .select('id', { count: 'exact', head: true })
+        .eq('buyer_wallet_hash', sellerHash)
+      itemsBought = boughtCnt ?? 0
+
+      const { count: shippedCnt } = await supabaseAdmin
+        .from('listings')
+        .select('id', { count: 'exact', head: true })
+        .eq('wallet_address_hash', sellerHash)
+        .not('shipped_at', 'is', null)
+      itemsShipped = shippedCnt ?? 0
+    } catch {
+      // May fail if columns don't exist
+    }
+
     // Feedback: count, avg rating, recent (table may not exist)
     let feedbackList: Array<{ id: string; rating: number; comment: string | null; created_at: string }> = []
     try {
@@ -59,6 +87,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       totalConfirmedReceived: totalConfirmed,
       totalListingsSold: totalSold,
+      listingCount,
+      itemsBought,
+      itemsShipped,
       feedbackCount: count,
       averageRating: avgRating != null ? Math.round(avgRating * 10) / 10 : null,
       feedback: feedbackList.map((f: { id: string; rating: number; comment: string | null; created_at: string }) => ({

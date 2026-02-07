@@ -11,6 +11,7 @@ import BuyerOrderActions from '@/components/BuyerOrderActions'
 import ShippingAddressGuidance from '@/components/ShippingAddressGuidance'
 import LocalShippingAddressForm from '@/components/LocalShippingAddressForm'
 import ProfileAreaTag from '@/components/ProfileAreaTag'
+import ProfilePrivacyToggle from '@/components/ProfilePrivacyToggle'
 import ProfileSocialsBanner from '@/components/ProfileSocialsBanner'
 import NotificationsPanel from '@/components/NotificationsPanel'
 import NotificationPreferences from '@/components/NotificationPreferences'
@@ -54,6 +55,7 @@ type ProfileData = {
     total_fees_paid: number
     total_listings_sold: number
     area_tag?: string | null
+    profile_private?: boolean | null
     banner_url?: string | null
     twitter_url?: string | null
     telegram_url?: string | null
@@ -411,6 +413,14 @@ export default function ProfilePage() {
               initialValue={profileData?.profile?.area_tag ?? null}
               onSaved={loadProfile}
             />
+
+            <div className="mt-4">
+              <ProfilePrivacyToggle
+                walletAddress={walletAddress}
+                initialValue={profileData?.profile?.profile_private ?? false}
+                onSaved={loadProfile}
+              />
+            </div>
 
             {/* Verified Seller section */}
             <div className="mt-4 pt-4 border-t border-[#660099]/30">

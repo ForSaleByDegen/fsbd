@@ -6,6 +6,9 @@ import Link from 'next/link'
 interface SellerStats {
   totalConfirmedReceived: number
   totalListingsSold: number
+  listingCount?: number
+  itemsBought?: number
+  itemsShipped?: number
   feedbackCount: number
   averageRating: number | null
   feedback: Array<{
@@ -48,7 +51,7 @@ export default function SellerStatsCard({ sellerWallet, compact = false }: Selle
         className="inline-block p-2 bg-black/50 border border-[#660099] rounded text-[#00ff00] hover:border-[#00ff00] transition-colors"
       >
         <span className="font-pixel-alt text-xs" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-          ★ {stats.averageRating ?? '—'} ({stats.feedbackCount}) · {stats.totalConfirmedReceived} delivered
+          ★ {stats.averageRating ?? '—'} ({stats.feedbackCount}) · {stats.totalListingsSold} sold · {stats.totalConfirmedReceived} delivered
         </span>
       </Link>
     )
@@ -62,10 +65,18 @@ export default function SellerStatsCard({ sellerWallet, compact = false }: Selle
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
         <div>
           <p className="text-[#660099] font-pixel-alt text-xs" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-            Confirmed deliveries
+            Reviews
           </p>
           <p className="text-[#00ff00] font-pixel text-lg" style={{ fontFamily: 'var(--font-pixel)' }}>
-            {stats.totalConfirmedReceived}
+            {stats.averageRating != null ? `★ ${stats.averageRating}` : '—'} ({stats.feedbackCount})
+          </p>
+        </div>
+        <div>
+          <p className="text-[#660099] font-pixel-alt text-xs" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+            Listings
+          </p>
+          <p className="text-[#00ff00] font-pixel text-lg" style={{ fontFamily: 'var(--font-pixel)' }}>
+            {stats.listingCount ?? 0}
           </p>
         </div>
         <div>
@@ -78,10 +89,26 @@ export default function SellerStatsCard({ sellerWallet, compact = false }: Selle
         </div>
         <div>
           <p className="text-[#660099] font-pixel-alt text-xs" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-            Rating
+            Items bought
           </p>
           <p className="text-[#00ff00] font-pixel text-lg" style={{ fontFamily: 'var(--font-pixel)' }}>
-            {stats.averageRating != null ? `★ ${stats.averageRating}` : '—'} ({stats.feedbackCount})
+            {stats.itemsBought ?? 0}
+          </p>
+        </div>
+        <div>
+          <p className="text-[#660099] font-pixel-alt text-xs" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+            Shipped
+          </p>
+          <p className="text-[#00ff00] font-pixel text-lg" style={{ fontFamily: 'var(--font-pixel)' }}>
+            {stats.itemsShipped ?? 0}
+          </p>
+        </div>
+        <div>
+          <p className="text-[#660099] font-pixel-alt text-xs" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+            Received
+          </p>
+          <p className="text-[#00ff00] font-pixel text-lg" style={{ fontFamily: 'var(--font-pixel)' }}>
+            {stats.totalConfirmedReceived}
           </p>
         </div>
       </div>

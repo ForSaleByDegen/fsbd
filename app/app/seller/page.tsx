@@ -5,11 +5,15 @@ import { useEffect, useState } from 'react'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import SellerStatsCard from '@/components/SellerStatsCard'
+import ListingCard from '@/components/ListingCard'
 import Link from 'next/link'
 
 type SellerStats = {
   totalConfirmedReceived: number
   totalListingsSold: number
+  listingCount?: number
+  itemsBought?: number
+  itemsShipped?: number
   feedbackCount: number
   averageRating: number | null
   feedback: Array<{
@@ -24,11 +28,14 @@ export default function SellerPage() {
   const searchParams = useSearchParams()
   const wallet = searchParams.get('wallet') || ''
   const [stats, setStats] = useState<SellerStats | null>(null)
+  const [listings, setListings] = useState<Array<{ id: string; title: string; price: number; price_token: string; token_symbol?: string | null; status: string; images?: string[]; category: string; created_at?: string }>>([])
   const [loading, setLoading] = useState(true)
+  const [listingsLoading, setListingsLoading] = useState(true)
 
   useEffect(() => {
     if (!wallet) {
       setLoading(false)
+      setListingsLoading(false)
       return
     }
     fetch(`/api/seller/stats?wallet=${encodeURIComponent(wallet)}`)
@@ -36,6 +43,19 @@ export default function SellerPage() {
       .then(setStats)
       .catch(() => setStats(null))
       .finally(() => setLoading(false))
+  }, [wallet])
+
+  useEffect(() => {
+    if (!wallet) {
+      setListingsLoading(false)
+      return
+    }
+    setListingsLoading(true)
+    fetch(`/api/seller/listings?wallet=${encodeURIComponent(wallet)}`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then(setListings)
+      .catch(() => setListings([]))
+      .finally(() => setListingsLoading(false))
   }, [wallet])
 
   const truncate = (s: string, n: number) =>
@@ -68,16 +88,21 @@ export default function SellerPage() {
               </p>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               <div className="p-4 bg-black/50 border-2 border-[#660099] rounded">
                 <p className="text-[#660099] font-pixel-alt text-xs mb-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-                  Confirmed deliveries
+                  Reviews
                 </p>
                 <p className="text-[#00ff00] font-pixel text-2xl" style={{ fontFamily: 'var(--font-pixel)' }}>
-                  {stats.totalConfirmedReceived}
+                  {stats.averageRating != null ? `★ ${stats.averageRating}` : '—'} ({stats.feedbackCount})
                 </p>
-                <p className="text-[#660099] font-pixel-alt text-xs mt-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-                  Honor system
+              </div>
+              <div className="p-4 bg-black/50 border-2 border-[#660099] rounded">
+                <p className="text-[#660099] font-pixel-alt text-xs mb-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                  Listings
+                </p>
+                <p className="text-[#00ff00] font-pixel text-2xl" style={{ fontFamily: 'var(--font-pixel)' }}>
+                  {stats.listingCount ?? 0}
                 </p>
               </div>
               <div className="p-4 bg-black/50 border-2 border-[#660099] rounded">
@@ -90,18 +115,26 @@ export default function SellerPage() {
               </div>
               <div className="p-4 bg-black/50 border-2 border-[#660099] rounded">
                 <p className="text-[#660099] font-pixel-alt text-xs mb-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-                  Average rating
+                  Items bought
                 </p>
                 <p className="text-[#00ff00] font-pixel text-2xl" style={{ fontFamily: 'var(--font-pixel)' }}>
-                  {stats.averageRating != null ? `★ ${stats.averageRating}` : '—'}
+                  {stats.itemsBought ?? 0}
                 </p>
               </div>
               <div className="p-4 bg-black/50 border-2 border-[#660099] rounded">
                 <p className="text-[#660099] font-pixel-alt text-xs mb-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-                  Reviews
+                  Shipped
                 </p>
                 <p className="text-[#00ff00] font-pixel text-2xl" style={{ fontFamily: 'var(--font-pixel)' }}>
-                  {stats.feedbackCount}
+                  {stats.itemsShipped ?? 0}
+                </p>
+              </div>
+              <div className="p-4 bg-black/50 border-2 border-[#660099] rounded">
+                <p className="text-[#660099] font-pixel-alt text-xs mb-1" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                  Received
+                </p>
+                <p className="text-[#00ff00] font-pixel text-2xl" style={{ fontFamily: 'var(--font-pixel)' }}>
+                  {stats.totalConfirmedReceived}
                 </p>
               </div>
             </div>
@@ -138,6 +171,30 @@ export default function SellerPage() {
                 No feedback yet. Buyers can leave feedback after confirming receipt.
               </p>
             )}
+
+            {/* Listings (hidden when profile is private) */}
+            <div>
+              <h2 className="font-pixel text-[#00ff00] mb-3" style={{ fontFamily: 'var(--font-pixel)' }}>
+                Active listings
+              </h2>
+              {listingsLoading ? (
+                <p className="text-[#660099] font-pixel-alt text-sm">Loading...</p>
+              ) : listings.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {listings.map((l) => (
+                    <ListingCard key={l.id} listing={l} />
+                  ))}
+                </div>
+              ) : (stats.listingCount ?? 0) > 0 ? (
+                <p className="text-[#660099] font-pixel-alt text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                  This seller&apos;s listings are hidden.
+                </p>
+              ) : (
+                <p className="text-[#660099] font-pixel-alt text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                  No active listings.
+                </p>
+              )}
+            </div>
           </div>
         )}
 
