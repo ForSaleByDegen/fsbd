@@ -18,6 +18,7 @@ export const SUBCATEGORIES: Record<string, { value: string; label: string }[]> =
     { value: 'nft', label: 'NFT' },
     { value: 'token', label: 'Token (existing token)' },
     { value: 'whole_token', label: 'Whole Token (project sale)' },
+    { value: 'token_rights', label: 'Token Rights (sell creator fee rights)' },
     { value: 'meme_coin', label: 'Meme Coin (large % holder)' },
     { value: 'wallet', label: 'Wallet (sell a wallet)' },
   ],

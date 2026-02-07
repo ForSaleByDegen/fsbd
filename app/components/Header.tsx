@@ -116,9 +116,14 @@ export default function Header() {
               Why $FSBD
             </Link>
             {userIsAdmin && (
-              <Link href="/admin" className={`text-xs md:text-sm font-pixel-alt transition-colors touch-manipulation px-2 py-1 border-2 ${isActive('/admin') ? 'text-[#00ff00] border-[#00ff00]' : 'text-[#ff00ff] border-[#ff00ff] hover:text-[#00ff00] hover:border-[#00ff00]'}`} style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-                Admin
-              </Link>
+              <>
+                <Link href="/claim-fees" className={navLinkClass('/claim-fees')} style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                  Claim Fees
+                </Link>
+                <Link href="/admin" className={`text-xs md:text-sm font-pixel-alt transition-colors touch-manipulation px-2 py-1 border-2 ${isActive('/admin') ? 'text-[#00ff00] border-[#00ff00]' : 'text-[#ff00ff] border-[#ff00ff] hover:text-[#00ff00] hover:border-[#00ff00]'}`} style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                  Admin
+                </Link>
+              </>
             )}
             <div className="touch-manipulation">
               <PrivyConnectButton />
@@ -219,14 +224,24 @@ export default function Header() {
                 Why $FSBD
               </Link>
               {userIsAdmin && (
-                <Link 
-                  href="/admin" 
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`text-sm font-pixel-alt transition-colors touch-manipulation px-3 py-2 border-2 min-h-[44px] flex items-center ${isActive('/admin') ? 'text-[#00ff00] border-[#00ff00]' : 'text-[#ff00ff] border-[#ff00ff] hover:text-[#00ff00] hover:border-[#00ff00]'}`}
-                  style={{ fontFamily: 'var(--font-pixel-alt)' }}
-                >
-                  Admin
-                </Link>
+                <>
+                  <Link 
+                    href="/claim-fees" 
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={mobileNavLinkClass('/claim-fees')}
+                    style={{ fontFamily: 'var(--font-pixel-alt)' }}
+                  >
+                    Claim Fees
+                  </Link>
+                  <Link 
+                    href="/admin" 
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`text-sm font-pixel-alt transition-colors touch-manipulation px-3 py-2 border-2 min-h-[44px] flex items-center ${isActive('/admin') ? 'text-[#00ff00] border-[#00ff00]' : 'text-[#ff00ff] border-[#ff00ff] hover:text-[#00ff00] hover:border-[#00ff00]'}`}
+                    style={{ fontFamily: 'var(--font-pixel-alt)' }}
+                  >
+                    Admin
+                  </Link>
+                </>
               )}
             </div>
           </nav>

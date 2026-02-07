@@ -295,15 +295,18 @@ export default function CreateListingForm() {
         price_token: formData.priceToken === 'LISTING_TOKEN' ? 'LISTING_TOKEN' : formData.priceToken,
       }
       if (isDigitalAsset) {
-        listingDataForCreate.asset_type = ['nft','token','whole_token','wallet','meme_coin'].includes(formData.subcategory) ? formData.subcategory : (formData.subcategory === 'nft' ? 'nft' : 'meme_coin')
+        listingDataForCreate.asset_type = ['nft','token','whole_token','token_rights','wallet','meme_coin'].includes(formData.subcategory) ? formData.subcategory : (formData.subcategory === 'nft' ? 'nft' : 'meme_coin')
         listingDataForCreate.asset_chain = 'solana'
         listingDataForCreate.asset_mint = formData.assetMint.trim()
         listingDataForCreate.meme_coin_min_percent = (formData.subcategory === 'meme_coin' || formData.subcategory === 'whole_token') ? (formData.memeCoinMinPercent ?? 0) : null
         listingDataForCreate.asset_collection_name = formData.assetCollectionName.trim() || null
         listingDataForCreate.asset_verified_at = new Date().toISOString()
-        if (['token', 'whole_token'].includes(formData.subcategory)) {
+        if (['token', 'whole_token', 'token_rights'].includes(formData.subcategory)) {
           listingDataForCreate.has_token = true
           listingDataForCreate.token_mint = formData.assetMint.trim()
+        }
+        if (formData.subcategory === 'token_rights') {
+          listingDataForCreate.listing_type = 'token_rights'
         }
       }
       const createRes = await fetch('/api/listings', {
@@ -467,15 +470,18 @@ export default function CreateListingForm() {
             chat_min_tokens: Math.max(1, Math.floor(Number(formData.chatMinTokens) || 1)),
           }
           if (isDigitalAsset) {
-            listingDataForCreate.asset_type = ['nft','token','whole_token','wallet','meme_coin'].includes(formData.subcategory) ? formData.subcategory : 'meme_coin'
+            listingDataForCreate.asset_type = ['nft','token','whole_token','token_rights','wallet','meme_coin'].includes(formData.subcategory) ? formData.subcategory : 'meme_coin'
             listingDataForCreate.asset_chain = 'solana'
             listingDataForCreate.asset_mint = formData.assetMint.trim()
             listingDataForCreate.meme_coin_min_percent = (formData.subcategory === 'meme_coin' || formData.subcategory === 'whole_token') ? (formData.memeCoinMinPercent ?? (formData.subcategory === 'whole_token' ? 50 : 1)) : null
             listingDataForCreate.asset_collection_name = formData.assetCollectionName.trim() || null
             listingDataForCreate.asset_verified_at = new Date().toISOString()
-            if (['token', 'whole_token'].includes(formData.subcategory)) {
+            if (['token', 'whole_token', 'token_rights'].includes(formData.subcategory)) {
               listingDataForCreate.has_token = true
               listingDataForCreate.token_mint = formData.assetMint.trim()
+            }
+            if (formData.subcategory === 'token_rights') {
+              listingDataForCreate.listing_type = 'token_rights'
             }
           }
           const createRes = await fetch('/api/listings', {
@@ -991,9 +997,11 @@ export default function CreateListingForm() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">None</SelectItem>
-                {getSubcategories(formData.category).map((s) => (
-                  <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                ))}
+                {getSubcategories(formData.category)
+                  .filter((s) => s.value !== 'token_rights' || isAdminUser)
+                  .map((s) => (
+                    <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </div>

@@ -52,6 +52,13 @@ export default function manifest(): MetadataRoute.Manifest {
         url: '/listings/my',
         icons: [{ src: '/icon-192.png', sizes: '192x192' }],
       },
+      {
+        name: 'Claim Creator Fees',
+        short_name: 'Claim',
+        description: 'Claim pump.fun creator fees',
+        url: '/claim-fees',
+        icons: [{ src: '/icon-192.png', sizes: '192x192' }],
+      },
     ],
   }
 }
