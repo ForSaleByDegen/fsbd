@@ -7,8 +7,11 @@ import { Connection, PublicKey } from '@solana/web3.js'
 const TX_SIG = '4R8ncr1z1FLioNCa1UBUSwTt9UvexyTh2VNBzNpD7n6DLUfPeGrZLaPnhRCUGZnQ8DGRWcC5eLYLrA4tzBY7GGpq'
 const PUMP_FEES_PROGRAM_ID = 'pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ'
 
-function getAccountKeys(msg: { accountKeys: Array<{ pubkey?: { toBase58: () => string }; toString?: () => string }> }): string[] {
-  return msg.accountKeys.map((k) => (k.pubkey ? k.pubkey.toBase58() : String(k)))
+function getAccountKeys(msg: { accountKeys: unknown[] }): string[] {
+  return msg.accountKeys.map((k: unknown) => {
+    const key = k as { pubkey?: { toBase58: () => string } }
+    return key?.pubkey ? key.pubkey.toBase58() : String(k)
+  })
 }
 
 function collectInstructions(parsed: {
