@@ -744,6 +744,9 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
                 escrow_deposited_at: listing.escrow_deposited_at,
                 tracking_number: listing.tracking_number,
                 shipping_carrier: listing.shipping_carrier,
+                has_token: listing.has_token,
+                token_mint: listing.token_mint,
+                buyer_wallet_address: listing.buyer_wallet_address,
               }}
               threadId={threadId}
               escrowAgreed={escrowAgreed}
@@ -894,6 +897,7 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
                 listing.buyer_wallet_address && (
                 <RedirectFeesToBuyer
                   listingId={listingId}
+                  autoTrigger
                   onSuccess={() => { fetchListing(); router.refresh(); }}
                 />
               )}

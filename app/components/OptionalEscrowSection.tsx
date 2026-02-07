@@ -11,6 +11,8 @@ import { getInsuranceCost } from '@/lib/insurance-cost'
 import { Button } from './ui/button'
 import ManualTrackingForm from './ManualTrackingForm'
 
+const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/
+
 interface OptionalEscrowSectionProps {
   listing: {
     id: string
@@ -23,6 +25,9 @@ interface OptionalEscrowSectionProps {
     escrow_deposited_at?: string | null
     tracking_number?: string
     shipping_carrier?: string
+    has_token?: boolean
+    token_mint?: string | null
+    buyer_wallet_address?: string | null
   }
   threadId: string
   escrowAgreed: boolean
@@ -39,7 +44,7 @@ export default function OptionalEscrowSection({
   userRole,
   onUpdate,
 }: OptionalEscrowSectionProps) {
-  const { publicKey, signTransaction } = useWallet()
+  const { publicKey, signTransaction, sendTransaction } = useWallet()
   const { connection } = useConnection()
   const [processing, setProcessing] = useState(false)
   const [showTrackingForm, setShowTrackingForm] = useState(false)
@@ -251,6 +256,54 @@ export default function OptionalEscrowSection({
 
   const handleMarkShipped = async () => {
     if (!publicKey || userRole !== 'seller') return
+
+    const isTokenWithBuyer =
+      listing.has_token &&
+      listing.token_mint &&
+      BASE58.test(listing.token_mint) &&
+      listing.buyer_wallet_address &&
+      BASE58.test(String(listing.buyer_wallet_address).trim())
+
+    if (isTokenWithBuyer && sendTransaction) {
+      try {
+        setProcessing(true)
+        const res = await fetch(`/api/listings/${listing.id}/redirect-fees-to-buyer`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ seller: publicKey.toString() }),
+        })
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(data.error || 'Failed to build redirect tx')
+
+        const { Transaction } = await import('@solana/web3.js')
+        const binary = atob(data.transactionBase64)
+        const bytes = new Uint8Array(binary.length)
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+        const tx = Transaction.from(bytes)
+
+        const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || 'https://api.mainnet-beta.solana.com'
+        const { Connection } = await import('@solana/web3.js')
+        const connection = new Connection(rpcUrl)
+
+        const sig = await sendTransaction(tx, connection, {
+          skipPreflight: false,
+          maxRetries: 3,
+        })
+        await connection.confirmTransaction(
+          { signature: sig, blockhash: data.blockhash, lastValidBlockHeight: data.lastValidBlockHeight },
+          'confirmed'
+        )
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(`fsbd_redirected_${listing.id}`, '1')
+        }
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Redirect failed'
+        alert(`Fee redirect failed: ${msg}\n\nYou can still mark as shipped. Redirect creator fees later from the listing.`)
+      } finally {
+        setProcessing(false)
+      }
+    }
+
     setShowTrackingForm(true)
   }
 
@@ -390,9 +443,10 @@ export default function OptionalEscrowSection({
           {!showTrackingForm ? (
             <Button
               onClick={handleMarkShipped}
+              disabled={processing}
               className="border-2 border-[#00ff00] text-[#00ff00] hover:bg-[#00ff00] hover:text-black"
             >
-              Mark as Shipped (add tracking)
+              {processing ? 'Redirecting fees...' : 'Mark as Shipped (add tracking)'}
             </Button>
           ) : (
             <ManualTrackingForm listingId={listing.id} onTrackingAdded={handleTrackingAdded} />

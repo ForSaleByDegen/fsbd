@@ -1,24 +1,33 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { Transaction } from '@solana/web3.js'
 import { Button } from './ui/button'
 
+const STORAGE_KEY = (id: string) => `fsbd_redirected_${id}`
+
 interface RedirectFeesToBuyerProps {
   listingId: string
   onSuccess?: () => void
+  /** When true, automatically trigger redirect on mount (seller still signs once). */
+  autoTrigger?: boolean
 }
 
 /** On-chain redirect of future pump.fun creator fees to the buyer via update_fee_shares. */
 export default function RedirectFeesToBuyer({
   listingId,
   onSuccess,
+  autoTrigger = false,
 }: RedirectFeesToBuyerProps) {
   const { publicKey, sendTransaction } = useWallet()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [done, setDone] = useState(false)
+  const [done, setDone] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return !!localStorage.getItem(STORAGE_KEY(listingId))
+  })
+  const hasAutoTriggered = useRef(false)
 
   const handleRedirect = async () => {
     if (!publicKey || !sendTransaction) {
@@ -57,6 +66,7 @@ export default function RedirectFeesToBuyer({
       )
 
       setDone(true)
+      if (typeof window !== 'undefined') localStorage.setItem(STORAGE_KEY(listingId), '1')
       onSuccess?.()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed')
@@ -64,6 +74,13 @@ export default function RedirectFeesToBuyer({
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (!autoTrigger || hasAutoTriggered.current || done) return
+    if (!publicKey || !sendTransaction) return
+    hasAutoTriggered.current = true
+    void handleRedirect()
+  }, [autoTrigger, publicKey?.toString(), !!sendTransaction, done])
 
   if (done) {
     return (
@@ -77,21 +94,31 @@ export default function RedirectFeesToBuyer({
 
   return (
     <div className="p-3 border border-[#660099] rounded bg-black/30">
-      <p className="text-sm text-purple-muted font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-        Redirect future pump.fun creator fees to the buyer (on-chain)
-      </p>
-      <p className="text-xs text-purple-readable/80 mb-2">
-        Signs one transaction to update fee shares so future fees go to the buyer instead of you.
-      </p>
-      {error && <p className="text-red-400 text-xs mb-2">{error}</p>}
-      <Button
-        onClick={handleRedirect}
-        disabled={loading}
-        variant="outline"
-        className="border-[#00ff00] text-[#00ff00] hover:bg-[#00ff00]/20 text-sm w-fit"
-      >
-        {loading ? 'Signing...' : 'Redirect fees to buyer'}
-      </Button>
+      {autoTrigger && loading ? (
+        <p className="text-sm text-purple-muted font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          Redirecting creator fees to buyer... Approve in your wallet.
+        </p>
+      ) : (
+        <>
+          <p className="text-sm text-purple-muted font-pixel-alt mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+            {autoTrigger ? 'Creator fees will redirect to the buyer when you approve.' : 'Redirect future pump.fun creator fees to the buyer (on-chain)'}
+          </p>
+          {!autoTrigger && (
+            <p className="text-xs text-purple-readable/80 mb-2">
+              Signs one transaction to update fee shares so future fees go to the buyer instead of you.
+            </p>
+          )}
+          {error && <p className="text-red-400 text-xs mb-2">{error}</p>}
+          <Button
+            onClick={handleRedirect}
+            disabled={loading}
+            variant="outline"
+            className="border-[#00ff00] text-[#00ff00] hover:bg-[#00ff00]/20 text-sm w-fit"
+          >
+            {loading ? 'Signing...' : 'Redirect fees to buyer'}
+          </Button>
+        </>
+      )}
     </div>
   )
 }
