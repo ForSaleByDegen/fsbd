@@ -157,7 +157,7 @@ export async function POST(request: NextRequest) {
     }
     const mintForTier = fsbdMint || getFsbdMintAddress(null)
 
-    // Admin bypass for image limit (admins get max 4)
+    // Admin bypass for image limit (admins get max 4); token_rights listings are admin only
     let isAdmin = false
     if (supabaseAdmin) {
       const { data: adminRow } = await supabaseAdmin
@@ -168,6 +168,11 @@ export async function POST(request: NextRequest) {
         .maybeSingle()
       isAdmin = !!adminRow
     }
+    const listingType = body.listing_type === 'token_rights' ? 'token_rights' : 'item'
+    if (listingType === 'token_rights' && !isAdmin) {
+      return NextResponse.json({ error: 'Token rights listings are admin only.' }, { status: 403 })
+    }
+    listingData = { ...listingData, listing_type: listingType }
 
     // Get tier via balance-check API (same as limit-check/chat) for reliable $FSBD detection
     let tier: 'free' | 'bronze' | 'silver' | 'gold' | 'platinum' = 'free'
