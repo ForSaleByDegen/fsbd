@@ -195,37 +195,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (!rawContent && OPENAI_API_KEY) {
-      const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o',
-          max_tokens: 500,
-          messages: [
-            {
-              role: 'user',
-              content: [
-                { type: 'text', text: promptWithImage },
-                { type: 'image_url', image_url: { url: dataUrl } },
-              ],
-            },
-          ],
-        }),
-      })
-      if (!openaiRes.ok) {
-        const err = await openaiRes.text()
-        console.error('[find-comps-from-image] OpenAI error:', err)
-        const msg = parseOpenAIError(err)
-        return NextResponse.json({ error: msg }, { status: 502 })
-      }
-      const openaiData = (await openaiRes.json()) as { choices?: { message?: { content?: string } }[] }
-      rawContent = openaiData?.choices?.[0]?.message?.content ?? ''
-    }
-
+    // Prefer Gemini with image over OpenAI (free tier, avoids OpenAI rate limits)
     if (!rawContent && GEMINI_API_KEY) {
       const mimeMatch = dataUrl.match(/^data:(image\/[a-z]+);base64,/i)
       const mimeType = mimeMatch?.[1] ?? 'image/jpeg'
@@ -258,6 +228,38 @@ export async function POST(request: NextRequest) {
       }
       rawContent = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
     }
+
+    if (!rawContent && OPENAI_API_KEY) {
+      const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o',
+          max_tokens: 500,
+          messages: [
+            {
+              role: 'user',
+              content: [
+                { type: 'text', text: promptWithImage },
+                { type: 'image_url', image_url: { url: dataUrl } },
+              ],
+            },
+          ],
+        }),
+      })
+      if (!openaiRes.ok) {
+        const err = await openaiRes.text()
+        console.error('[find-comps-from-image] OpenAI error:', err)
+        const msg = parseOpenAIError(err)
+        return NextResponse.json({ error: msg }, { status: 502 })
+      }
+      const openaiData = (await openaiRes.json()) as { choices?: { message?: { content?: string } }[] }
+      rawContent = openaiData?.choices?.[0]?.message?.content ?? ''
+    }
+
     let parsed: { itemDescription?: string; category?: string; subcategory?: string; searchKeywords?: string[] }
     try {
       const cleaned = rawContent.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim()
