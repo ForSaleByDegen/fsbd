@@ -14,6 +14,7 @@ import { getUserTier, getSnapToCompareLimits, type Tier } from '@/lib/tier-check
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY
 const GEMINI_API_KEY = process.env.GOOGLE_GEMINI_API_KEY || process.env.GEMINI_API_KEY
+const VISION_API_KEY = process.env.GOOGLE_CLOUD_VISION_API_KEY || process.env.GOOGLE_VISION_API_KEY
 const CATEGORIES = ['for-sale', 'digital-assets', 'services', 'gigs', 'housing', 'community', 'jobs']
 const SUBCATEGORIES_FOR_SALE = ['electronics', 'furniture', 'vehicles', 'collectibles', 'clothing', 'sports', 'books', 'other']
 
@@ -50,13 +51,75 @@ function parseGeminiError(err: string): string {
   return 'Image analysis failed. Try a clearer photo or use keyword search below.'
 }
 
+type VisionWebDetection = {
+  bestGuessLabels?: { label?: string }[]
+  webEntities?: { description?: string; score?: number }[]
+}
+type VisionLabel = { description?: string; score?: number }
+type VisionResponse = {
+  error?: unknown
+  webDetection?: VisionWebDetection
+  labelAnnotations?: VisionLabel[]
+}
+
+/** Call Google Cloud Vision API; return findings text or null on failure */
+async function getGoogleVisionFindings(base64: string): Promise<string | null> {
+  if (!VISION_API_KEY) return null
+  try {
+    const res = await fetch(
+      `https://vision.googleapis.com/v1/images:annotate?key=${VISION_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requests: [
+            {
+              image: { content: base64 },
+              features: [
+                { type: 'WEB_DETECTION', maxResults: 15 },
+                { type: 'LABEL_DETECTION', maxResults: 15 },
+              ],
+            },
+          ],
+        }),
+      }
+    )
+    if (!res.ok) return null
+    const data = (await res.json()) as { responses?: VisionResponse[] }
+    const r: VisionResponse | undefined = data?.responses?.[0]
+    if (!r || r.error) return null
+
+    const parts: string[] = []
+    const bestGuess = r.webDetection?.bestGuessLabels?.map((x) => x.label).filter(Boolean)
+    if (bestGuess?.length) parts.push(`Best guess: ${bestGuess.join(', ')}`)
+
+    const webEntities = r.webDetection?.webEntities
+      ?.filter((e) => e.description && (e.score ?? 0) > 0.5)
+      .map((e) => e.description)
+      .slice(0, 10)
+    if (webEntities?.length) parts.push(`Related: ${webEntities.join(', ')}`)
+
+    const labels = r.labelAnnotations
+      ?.filter((l) => (l.score ?? 0) > 0.7)
+      .map((l) => l.description)
+      .slice(0, 10)
+    if (labels?.length) parts.push(`Labels: ${labels.join(', ')}`)
+
+    return parts.length ? parts.join('. ') : null
+  } catch {
+    return null
+  }
+}
+
 export async function POST(request: NextRequest) {
-  if (!OPENAI_API_KEY && !GEMINI_API_KEY) {
+  const hasDirectVision = !!(OPENAI_API_KEY || GEMINI_API_KEY)
+  const hasVisionPipeline = !!(VISION_API_KEY && GEMINI_API_KEY)
+  if (!hasDirectVision && !hasVisionPipeline) {
     return NextResponse.json(
       {
         error:
           'Image analysis is not configured. Set OPENAI_API_KEY or GOOGLE_GEMINI_API_KEY to enable Snap to Compare. ' +
-          'Get a free Gemini key at aistudio.google.com/apikey',
+          'Optionally add GOOGLE_CLOUD_VISION_API_KEY for Google Vision → Gemini pipeline. Get a free Gemini key at aistudio.google.com/apikey',
       },
       { status: 503 }
     )
@@ -95,15 +158,44 @@ export async function POST(request: NextRequest) {
     const base64 = extractBase64(imageBase64)
     const dataUrl = base64.includes(',') ? imageBase64 : `data:image/jpeg;base64,${base64}`
 
-    const prompt = `You are helping a user list an item for sale on a marketplace. Look at this image and respond with a JSON object (no markdown, no code block) with these exact keys:
+    const promptWithImage = `You are helping a user list an item for sale on a marketplace. Look at this image and respond with a JSON object (no markdown, no code block) with these exact keys:
 - "itemDescription": A 1-2 sentence description of the item for a listing (condition if visible, key features).
 - "category": One of: ${CATEGORIES.join(', ')}. Usually "for-sale" for physical items.
 - "subcategory": For for-sale use one of: ${SUBCATEGORIES_FOR_SALE.join(', ')}. For other categories use "other" or a sensible value.
 - "searchKeywords": An array of 3-6 search terms (strings) to find similar listings, e.g. ["vintage lamp", "brass", "table lamp"]. Use specific descriptive terms.`
 
+    const promptFromFindings = (findings: string) =>
+      `Google Vision analyzed an image and found: "${findings}". Based on these findings, create a JSON object (no markdown, no code block) with these exact keys:
+- "itemDescription": A 1-2 sentence listing description (condition, key features).
+- "category": One of: ${CATEGORIES.join(', ')}. Usually "for-sale" for physical items.
+- "subcategory": For for-sale use one of: ${SUBCATEGORIES_FOR_SALE.join(', ')}. For other categories use "other".
+- "searchKeywords": An array of 3-6 search terms to find similar listings, e.g. ["vintage lamp", "brass", "table lamp"]. Use specific descriptive terms from the findings.`
+
     let rawContent = ''
 
-    if (OPENAI_API_KEY) {
+    // Pipeline: Google Vision (findings) → Gemini (text) — uses Google's product knowledge, then AI for description
+    const visionFindings = await getGoogleVisionFindings(base64)
+    if (visionFindings && GEMINI_API_KEY) {
+      const geminiRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: promptFromFindings(visionFindings) }] }],
+            generationConfig: { maxOutputTokens: 500 },
+          }),
+        }
+      )
+      if (geminiRes.ok) {
+        const geminiData = (await geminiRes.json()) as {
+          candidates?: { content?: { parts?: { text?: string }[] } }[]
+        }
+        rawContent = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
+      }
+    }
+
+    if (!rawContent && OPENAI_API_KEY) {
       const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -117,7 +209,7 @@ export async function POST(request: NextRequest) {
             {
               role: 'user',
               content: [
-                { type: 'text', text: prompt },
+                { type: 'text', text: promptWithImage },
                 { type: 'image_url', image_url: { url: dataUrl } },
               ],
             },
@@ -132,7 +224,9 @@ export async function POST(request: NextRequest) {
       }
       const openaiData = (await openaiRes.json()) as { choices?: { message?: { content?: string } }[] }
       rawContent = openaiData?.choices?.[0]?.message?.content ?? ''
-    } else if (GEMINI_API_KEY) {
+    }
+
+    if (!rawContent && GEMINI_API_KEY) {
       const mimeMatch = dataUrl.match(/^data:(image\/[a-z]+);base64,/i)
       const mimeType = mimeMatch?.[1] ?? 'image/jpeg'
       const geminiRes = await fetch(
@@ -145,7 +239,7 @@ export async function POST(request: NextRequest) {
               {
                 parts: [
                   { inline_data: { mime_type: mimeType, data: base64 } },
-                  { text: prompt },
+                  { text: promptWithImage },
                 ],
               },
             ],
