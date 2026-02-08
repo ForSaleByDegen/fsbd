@@ -1,9 +1,10 @@
 /**
  * POST /api/listings/find-comps-from-image
  * Analyzes an image with AI vision, describes the item, and returns comparable listings from FSBD.
+ * Pipeline order: 1) Gemini + Google Search grounding (ListingGenius), 2) Vision→Gemini, 3) Gemini image, 4) OpenAI.
  * Rate limit and max comps are tier-based (pass wallet for tier; anonymous = free tier).
  * Body: { imageBase64: string, wallet?: string }
- * Returns: { itemDescription, suggestedCategory, suggestedSubcategory, searchKeywords, comps, tier, rateLimit }
+ * Returns: { itemDescription, suggestedCategory, suggestedSubcategory, searchKeywords, comps, groundingSources?, tier, rateLimit }
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { Connection } from '@solana/web3.js'
@@ -60,6 +61,88 @@ type VisionResponse = {
   error?: unknown
   webDetection?: VisionWebDetection
   labelAnnotations?: VisionLabel[]
+}
+
+type GroundingSource = { title?: string; uri?: string }
+
+/** ListingGenius pipeline: Gemini + Google Search grounding. Returns { rawContent, groundingSources } or null. */
+async function runGeminiWithGoogleSearch(
+  base64: string,
+  mimeType: string,
+  geminiKey: string
+): Promise<{ rawContent: string; groundingSources: GroundingSource[] } | null> {
+  try {
+    // Step 1: Identify item + find market listings via Google Search grounding
+    const searchRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                { inline_data: { mime_type: mimeType, data: base64 } },
+                {
+                  text: `Identify this item precisely. Use Google Search to find current active listings for similar items on platforms like eBay, Amazon, or specialized marketplaces. Return a brief summary of what you found.`,
+                },
+              ],
+            },
+          ],
+          tools: [{ google_search: {} }],
+          generationConfig: { maxOutputTokens: 500 },
+        }),
+      }
+    )
+    if (!searchRes.ok) return null
+    const searchData = (await searchRes.json()) as {
+      candidates?: {
+        content?: { parts?: { text?: string }[] }
+        groundingMetadata?: {
+          groundingChunks?: { web?: { title?: string; uri?: string } }[]
+        }
+      }[]
+    }
+    const cand = searchData?.candidates?.[0]
+    const identifiedText = cand?.content?.parts?.[0]?.text ?? ''
+    const chunks = cand?.groundingMetadata?.groundingChunks ?? []
+    const groundingSources: GroundingSource[] = chunks
+      .filter((c) => c?.web?.uri)
+      .map((c) => ({ title: c.web?.title, uri: c.web?.uri }))
+      .slice(0, 10)
+
+    // Step 2: Generate listing JSON from identified item + search results
+    const sourcesStr =
+      groundingSources.length > 0
+        ? JSON.stringify(groundingSources.slice(0, 5).map((s) => ({ title: s.title, uri: s.uri })))
+        : 'No direct market matches'
+    const genPrompt = `Based on the item identified as "${identifiedText.slice(0, 300)}" and these search results: ${sourcesStr}, create a JSON object (no markdown) with these exact keys:
+- "itemDescription": A 1-2 sentence listing description (condition, key features).
+- "category": One of: ${CATEGORIES.join(', ')}. Usually "for-sale" for physical items.
+- "subcategory": For for-sale use one of: ${SUBCATEGORIES_FOR_SALE.join(', ')}. For other categories use "other".
+- "searchKeywords": An array of 3-6 search terms, e.g. ["vintage lamp", "brass", "table lamp"]. Use specific descriptive terms.`
+
+    const genRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: genPrompt }] }],
+          generationConfig: { maxOutputTokens: 500 },
+        }),
+      }
+    )
+    if (!genRes.ok) return null
+    const genData = (await genRes.json()) as {
+      candidates?: { content?: { parts?: { text?: string }[] } }[]
+    }
+    const rawContent = genData?.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
+    if (!rawContent.trim()) return null
+    return { rawContent, groundingSources }
+  } catch {
+    return null
+  }
 }
 
 /** Call Google Cloud Vision API; return findings text or null on failure */
@@ -172,9 +255,21 @@ export async function POST(request: NextRequest) {
 - "searchKeywords": An array of 3-6 search terms to find similar listings, e.g. ["vintage lamp", "brass", "table lamp"]. Use specific descriptive terms from the findings.`
 
     let rawContent = ''
+    let groundingSources: GroundingSource[] = []
+    const mimeMatch = dataUrl.match(/^data:(image\/[a-z]+);base64,/i)
+    const mimeType = mimeMatch?.[1] ?? 'image/jpeg'
 
-    // Pipeline: Google Vision (findings) → Gemini (text) — uses Google's product knowledge, then AI for description
-    const visionFindings = await getGoogleVisionFindings(base64)
+    // Pipeline 1: ListingGenius — Gemini + Google Search grounding (real market data)
+    if (GEMINI_API_KEY) {
+      const groundingResult = await runGeminiWithGoogleSearch(base64, mimeType, GEMINI_API_KEY)
+      if (groundingResult) {
+        rawContent = groundingResult.rawContent
+        groundingSources = groundingResult.groundingSources
+      }
+    }
+
+    // Pipeline 2: Google Vision (findings) → Gemini (text)
+    const visionFindings = !rawContent ? await getGoogleVisionFindings(base64) : null
     if (visionFindings && GEMINI_API_KEY) {
       const geminiRes = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
@@ -195,10 +290,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Prefer Gemini with image over OpenAI (free tier, avoids OpenAI rate limits)
+    // Pipeline 3: Gemini with image (no grounding)
     if (!rawContent && GEMINI_API_KEY) {
-      const mimeMatch = dataUrl.match(/^data:(image\/[a-z]+);base64,/i)
-      const mimeType = mimeMatch?.[1] ?? 'image/jpeg'
       const geminiRes = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
         {
@@ -322,6 +415,7 @@ export async function POST(request: NextRequest) {
         suggestedSubcategory,
         searchKeywords: keywords,
         comps,
+        groundingSources: groundingSources.length > 0 ? groundingSources : undefined,
         tier,
         rateLimit: {
           remaining: Number(rateLimitHeaders['X-RateLimit-Remaining']),

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { BarChart3 } from 'lucide-react'
+import { BarChart3, ExternalLink } from 'lucide-react'
 import { Button, buttonVariants } from './ui/button'
 import { Input } from './ui/input'
 import ImageFileButton from './ImageFileButton'
@@ -22,12 +22,16 @@ export type CompListing = {
   images?: string[] | null
 }
 
+export type GroundingSource = { title?: string; uri?: string }
+
 export type SnapResult = {
   itemDescription: string
   suggestedCategory: string
   suggestedSubcategory: string
   searchKeywords: string[]
   comps: CompListing[]
+  /** External market links from Google Search grounding (eBay, Amazon, etc.) */
+  groundingSources?: GroundingSource[]
 }
 
 type Props = {
@@ -83,6 +87,7 @@ export default function SnapToCompare({ onUseComp, onUseSuggested, applyingComp 
         suggestedSubcategory: data.suggestedSubcategory ?? 'other',
         searchKeywords: Array.isArray(data.searchKeywords) ? data.searchKeywords : [],
         comps: Array.isArray(data.comps) ? data.comps : [],
+        groundingSources: Array.isArray(data.groundingSources) ? data.groundingSources : undefined,
       })
       setSnappedPhoto(dataUrl)
       setViewMode('grid')
@@ -303,6 +308,27 @@ export default function SnapToCompare({ onUseComp, onUseSuggested, applyingComp 
             </div>
           )}
 
+          {/* Market references from Google Search (eBay, Amazon, etc.) */}
+          {result.groundingSources && result.groundingSources.length > 0 && (
+            <div className="p-3 rounded-lg border border-cyan-500/30 bg-black/20">
+              <p className="text-xs font-medium text-cyan-400 mb-2">Market references (Google Search)</p>
+              <div className="flex flex-wrap gap-2">
+                {result.groundingSources.slice(0, 8).map((src, idx) => (
+                  <a
+                    key={idx}
+                    href={src.uri}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-cyan-500/30 bg-cyan-500/5 text-sm text-cyan-300 hover:bg-cyan-500/15 hover:border-cyan-500/50 transition-colors"
+                  >
+                    <span className="truncate max-w-[180px]">{src.title || 'Link'}</span>
+                    <ExternalLink size={12} className="flex-shrink-0" />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Comps - multiple listings with view toggle and compare */}
           {result.comps.length > 0 ? (
             <div className="space-y-3">
@@ -453,6 +479,25 @@ export default function SnapToCompare({ onUseComp, onUseSuggested, applyingComp 
                         </div>
                       ))}
                     </div>
+                    {result.groundingSources && result.groundingSources.length > 0 && (
+                      <div className="mt-4 pt-4 border-t border-cyan-500/20">
+                        <p className="text-xs font-medium text-cyan-400 mb-2">Market references</p>
+                        <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
+                          {result.groundingSources.slice(0, 5).map((src, idx) => (
+                            <a
+                              key={idx}
+                              href={src.uri}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 p-2 rounded-lg border border-cyan-500/20 bg-black/20 hover:bg-cyan-500/10 text-xs"
+                            >
+                              <ExternalLink size={12} className="flex-shrink-0 text-cyan-400" />
+                              <span className="truncate">{src.title || 'Link'}</span>
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
