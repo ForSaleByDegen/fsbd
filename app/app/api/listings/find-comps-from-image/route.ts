@@ -13,6 +13,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getUserTier, getSnapToCompareLimits, type Tier } from '@/lib/tier-check'
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY
+const GEMINI_API_KEY = process.env.GOOGLE_GEMINI_API_KEY || process.env.GEMINI_API_KEY
 const CATEGORIES = ['for-sale', 'digital-assets', 'services', 'gigs', 'housing', 'community', 'jobs']
 const SUBCATEGORIES_FOR_SALE = ['electronics', 'furniture', 'vehicles', 'collectibles', 'clothing', 'sports', 'books', 'other']
 
@@ -26,9 +27,13 @@ function extractBase64(dataUrlOrBase64: string): string {
 }
 
 export async function POST(request: NextRequest) {
-  if (!OPENAI_API_KEY) {
+  if (!OPENAI_API_KEY && !GEMINI_API_KEY) {
     return NextResponse.json(
-      { error: 'Image analysis is not configured. Set OPENAI_API_KEY to enable Snap to Compare.' },
+      {
+        error:
+          'Image analysis is not configured. Set OPENAI_API_KEY or GOOGLE_GEMINI_API_KEY to enable Snap to Compare. ' +
+          'Get a free Gemini key at aistudio.google.com/apikey',
+      },
       { status: 503 }
     )
   }
@@ -72,41 +77,73 @@ export async function POST(request: NextRequest) {
 - "subcategory": For for-sale use one of: ${SUBCATEGORIES_FOR_SALE.join(', ')}. For other categories use "other" or a sensible value.
 - "searchKeywords": An array of 3-6 search terms (strings) to find similar listings, e.g. ["vintage lamp", "brass", "table lamp"]. Use specific descriptive terms.`
 
-    const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        max_tokens: 500,
-        messages: [
-          {
-            role: 'user',
-            content: [
-              { type: 'text', text: prompt },
+    let rawContent = ''
+
+    if (OPENAI_API_KEY) {
+      const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o',
+          max_tokens: 500,
+          messages: [
+            {
+              role: 'user',
+              content: [
+                { type: 'text', text: prompt },
+                { type: 'image_url', image_url: { url: dataUrl } },
+              ],
+            },
+          ],
+        }),
+      })
+      if (!openaiRes.ok) {
+        const err = await openaiRes.text()
+        console.error('[find-comps-from-image] OpenAI error:', err)
+        return NextResponse.json(
+          { error: 'Image analysis failed. Please try a clearer photo.' },
+          { status: 502 }
+        )
+      }
+      const openaiData = (await openaiRes.json()) as { choices?: { message?: { content?: string } }[] }
+      rawContent = openaiData?.choices?.[0]?.message?.content ?? ''
+    } else if (GEMINI_API_KEY) {
+      const mimeMatch = dataUrl.match(/^data:(image\/[a-z]+);base64,/i)
+      const mimeType = mimeMatch?.[1] ?? 'image/jpeg'
+      const geminiRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [
               {
-                type: 'image_url',
-                image_url: { url: dataUrl },
+                parts: [
+                  { inline_data: { mime_type: mimeType, data: base64 } },
+                  { text: prompt },
+                ],
               },
             ],
-          },
-        ],
-      }),
-    })
-
-    if (!openaiRes.ok) {
-      const err = await openaiRes.text()
-      console.error('[find-comps-from-image] OpenAI error:', err)
-      return NextResponse.json(
-        { error: 'Image analysis failed. Please try a clearer photo.' },
-        { status: 502 }
+            generationConfig: { maxOutputTokens: 500 },
+          }),
+        }
       )
+      if (!geminiRes.ok) {
+        const err = await geminiRes.text()
+        console.error('[find-comps-from-image] Gemini error:', err)
+        return NextResponse.json(
+          { error: 'Image analysis failed. Please try a clearer photo.' },
+          { status: 502 }
+        )
+      }
+      const geminiData = (await geminiRes.json()) as {
+        candidates?: { content?: { parts?: { text?: string }[] } }[]
+      }
+      rawContent = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
     }
-
-    const openaiData = await openaiRes.json() as { choices?: { message?: { content?: string } }[] }
-    const rawContent = openaiData?.choices?.[0]?.message?.content ?? ''
     let parsed: { itemDescription?: string; category?: string; subcategory?: string; searchKeywords?: string[] }
     try {
       const cleaned = rawContent.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim()
