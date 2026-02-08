@@ -1,9 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+import { BarChart3 } from 'lucide-react'
 import { Button, buttonVariants } from './ui/button'
 import { Input } from './ui/input'
 import ImageFileButton from './ImageFileButton'
+import CameraCapture from './CameraCapture'
 import { formatPriceToken } from '@/lib/utils'
 import { getCategoryLabel, getSubcategoryLabel } from '@/lib/categories'
 import { getIPFSGatewayURL } from '@/lib/pinata'
@@ -52,6 +54,7 @@ export default function SnapToCompare({ onUseComp, onUseSuggested, applyingComp 
     resetIn: number
     tier: string
   } | null>(null)
+  const [cameraOpen, setCameraOpen] = useState(false)
 
   const runAnalysis = async (dataUrl: string) => {
     setError(null)
@@ -136,6 +139,12 @@ export default function SnapToCompare({ onUseComp, onUseSuggested, applyingComp 
     }
   }
 
+  const handleImageDataUrl = async (dataUrl: string) => {
+    setSnappedPhoto(dataUrl)
+    const enhanced = await enhanceImageForAnalysis(dataUrl)
+    await runAnalysis(enhanced)
+  }
+
   const handleFile = async (file: File) => {
     if (!file.type.startsWith('image/')) {
       setError('Please select an image file (JPEG, PNG, etc.)')
@@ -148,9 +157,12 @@ export default function SnapToCompare({ onUseComp, onUseSuggested, applyingComp 
       reader.onerror = reject
       reader.readAsDataURL(file)
     })
-    setSnappedPhoto(dataUrl)
-    const enhanced = await enhanceImageForAnalysis(dataUrl)
-    await runAnalysis(enhanced)
+    await handleImageDataUrl(dataUrl)
+  }
+
+  const handleCameraCapture = async (dataUrl: string) => {
+    setCameraOpen(false)
+    await handleImageDataUrl(dataUrl)
   }
 
   const formatPrice = (comp: CompListing) => {
@@ -196,16 +208,33 @@ export default function SnapToCompare({ onUseComp, onUseSuggested, applyingComp 
       )}
 
       <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={loading}
+          onClick={() => setCameraOpen(true)}
+          className="border-cyan-500 text-cyan-400 hover:bg-cyan-500/20"
+        >
+          Use camera
+        </Button>
         <ImageFileButton
           onChange={handleFile}
           disabled={loading}
           className={buttonVariants({ variant: 'outline', size: 'sm', className: 'border-cyan-500 text-cyan-400 hover:bg-cyan-500/20' })}
         >
           <span className="pointer-events-none">
-            {loading ? 'Analyzing…' : '📷 Take photo / Upload image'}
+            {loading ? 'Analyzing…' : 'Upload image'}
           </span>
         </ImageFileButton>
       </div>
+
+      {cameraOpen && (
+        <CameraCapture
+          onCapture={handleCameraCapture}
+          onCancel={() => setCameraOpen(false)}
+        />
+      )}
 
       {error && (
         <div className="mt-3 p-3 rounded-lg border border-red-500/40 bg-red-500/5 space-y-2">
@@ -344,13 +373,13 @@ export default function SnapToCompare({ onUseComp, onUseSuggested, applyingComp 
                   ))}
                 </div>
               ) : (
-                <div className="rounded-lg border border-cyan-500/30 bg-black/30 overflow-hidden">
-                  <div className="grid grid-cols-1 lg:grid-cols-[minmax(180px,1fr)_2fr] gap-0 min-h-[280px]">
-                    {/* Your item (left) */}
-                    <div className="p-3 border-b lg:border-b-0 lg:border-r border-cyan-500/30 flex flex-col">
-                      <p className="text-xs font-medium text-cyan-400 mb-2">Your item</p>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Your item (left - form area) */}
+                  <div className="lg:col-span-2 p-4 rounded-2xl border border-cyan-500/30 bg-black/30">
+                    <p className="text-xs font-medium text-cyan-400 mb-3">Your item</p>
+                    <div className="flex gap-4">
                       {snappedPhoto ? (
-                        <div className="aspect-square rounded overflow-hidden bg-muted mb-2 flex-shrink-0">
+                        <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl overflow-hidden bg-muted flex-shrink-0">
                           <img
                             src={snappedPhoto}
                             alt="Your photo"
@@ -358,73 +387,71 @@ export default function SnapToCompare({ onUseComp, onUseSuggested, applyingComp 
                           />
                         </div>
                       ) : null}
-                      <p className="text-xs text-muted-foreground line-clamp-4 flex-1">
-                        {result.itemDescription || 'No description'}
-                      </p>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-muted-foreground">
+                          {result.itemDescription || 'No description'}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          {getCategoryLabel(result.suggestedCategory)} → {getSubcategoryLabel(result.suggestedCategory, result.suggestedSubcategory)}
+                        </p>
+                        {onUseSuggested && result.itemDescription && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="mt-3 border-cyan-500 text-cyan-400 hover:bg-cyan-500/20"
+                            onClick={() => onUseSuggested(result.itemDescription, result.suggestedCategory, result.suggestedSubcategory)}
+                          >
+                            Use suggested
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                    {/* Compare table (right) */}
-                    <div className="overflow-x-auto overflow-y-auto max-h-[360px]">
-                      <table className="w-full text-left text-sm">
-                        <thead className="sticky top-0 bg-black/80 border-b border-cyan-500/30">
-                          <tr>
-                            <th className="px-3 py-2 font-medium text-cyan-400 w-16">Image</th>
-                            <th className="px-3 py-2 font-medium text-cyan-400">Title</th>
-                            <th className="px-3 py-2 font-medium text-cyan-400 whitespace-nowrap">Price</th>
-                            <th className="px-3 py-2 font-medium text-cyan-400 hidden sm:table-cell">Description</th>
-                            <th className="px-3 py-2 font-medium text-cyan-400 w-24">Action</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {result.comps.map((comp) => (
-                            <tr
-                              key={comp.id}
-                              className="border-b border-cyan-500/20 hover:bg-cyan-500/5"
-                            >
-                              <td className="px-3 py-2">
-                                <div className="w-12 h-12 rounded bg-muted overflow-hidden flex-shrink-0">
-                                  {imageUrl(comp) ? (
-                                    <img
-                                      src={imageUrl(comp)!}
-                                      alt=""
-                                      className="w-full h-full object-cover"
-                                    />
-                                  ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-[10px] text-muted-foreground">
-                                      —
-                                    </div>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="px-3 py-2">
-                                <span className="font-medium" title={comp.title || ''}>
-                                  {(comp.title || 'Untitled').slice(0, 40)}
-                                  {(comp.title?.length ?? 0) > 40 ? '…' : ''}
-                                </span>
-                              </td>
-                              <td className="px-3 py-2 text-cyan-400 whitespace-nowrap">
-                                {formatPrice(comp)}
-                              </td>
-                              <td className="px-3 py-2 text-muted-foreground max-w-[200px] hidden sm:table-cell">
-                                <span className="line-clamp-2">
-                                  {comp.description || '—'}
-                                </span>
-                              </td>
-                              <td className="px-3 py-2">
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  className="border-cyan-500 text-cyan-400 hover:bg-cyan-500/20 text-xs"
-                                  disabled={applyingComp}
-                                  onClick={() => onUseComp(comp, result.itemDescription || undefined)}
-                                >
-                                  {applyingComp ? 'Applying…' : 'Use this'}
-                                </Button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                  </div>
+                  {/* Price comparison sidebar */}
+                  <div className="lg:col-span-1 rounded-2xl border border-cyan-500/30 bg-black/30 p-4 lg:sticky lg:top-24">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center text-cyan-400">
+                        <BarChart3 size={22} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-cyan-400">Price Comparison</p>
+                        <p className="text-xs text-muted-foreground">Similar FSBD listings</p>
+                      </div>
+                    </div>
+                    <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
+                      {result.comps.map((comp) => (
+                        <div
+                          key={comp.id}
+                          className="group p-3 rounded-xl border border-cyan-500/20 bg-black/30 hover:border-cyan-500/40 hover:bg-cyan-500/5 transition-all"
+                        >
+                          <div className="flex gap-3">
+                            <div className="w-12 h-12 rounded-lg bg-muted overflow-hidden flex-shrink-0">
+                              {imageUrl(comp) ? (
+                                <img src={imageUrl(comp)!} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-[10px] text-muted-foreground">—</div>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate" title={comp.title || ''}>
+                                {comp.title || 'Untitled'}
+                              </p>
+                              <p className="text-xs text-cyan-400">{formatPrice(comp)}</p>
+                            </div>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="mt-2 w-full border-cyan-500 text-cyan-400 hover:bg-cyan-500/20 text-xs"
+                            disabled={applyingComp}
+                            onClick={() => onUseComp(comp, result.itemDescription || undefined)}
+                          >
+                            {applyingComp ? 'Applying…' : 'Use this'}
+                          </Button>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
