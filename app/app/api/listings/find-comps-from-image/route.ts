@@ -133,6 +133,44 @@ async function runGeminiWithGoogleSearch(
   }
 }
 
+/** Fallback: Gemini with image, no Google Search (works on free tier, no billing). */
+async function runGeminiImageOnly(
+  base64: string,
+  mimeType: string,
+  geminiKey: string
+): Promise<string | null> {
+  const prompt = `You are helping a user list an item for sale. Look at this image and respond with a JSON object (no markdown) with these exact keys:
+- "itemDescription": A 1-2 sentence description (condition, key features).
+- "category": One of: ${CATEGORIES.join(', ')}. Usually "for-sale".
+- "subcategory": For for-sale use one of: ${SUBCATEGORIES_FOR_SALE.join(', ')}. Otherwise "other".
+- "searchKeywords": An array of 3-6 search terms, e.g. ["vintage lamp", "brass", "table lamp"].`
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                { inline_data: { mime_type: mimeType, data: base64 } },
+                { text: prompt },
+              ],
+            },
+          ],
+          generationConfig: { maxOutputTokens: 500 },
+        }),
+      }
+    )
+    if (!res.ok) return null
+    const data = (await res.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] }
+    return data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? null
+  } catch {
+    return null
+  }
+}
+
 export async function POST(request: NextRequest) {
   if (!GEMINI_API_KEY) {
     return NextResponse.json(
@@ -179,20 +217,34 @@ export async function POST(request: NextRequest) {
     const mimeMatch = dataUrl.match(/^data:(image\/[a-z]+);base64,/i)
     const mimeType = mimeMatch?.[1] ?? 'image/jpeg'
 
-    // ListingGenius: Gemini + Google Search grounding (only AI pipeline)
+    // Try ListingGenius first (Gemini + Google Search grounding — may require billing)
+    let rawContent = ''
+    let groundingSources: GroundingSource[] = []
     const groundingResult = await runGeminiWithGoogleSearch(base64, mimeType, GEMINI_API_KEY)
 
-    if (groundingResult && 'error' in groundingResult) {
-      return NextResponse.json({ error: groundingResult.error }, { status: 502 })
+    if (groundingResult && 'rawContent' in groundingResult) {
+      rawContent = groundingResult.rawContent
+      groundingSources = groundingResult.groundingSources
+    } else if (groundingResult && 'error' in groundingResult) {
+      // Grounding failed (e.g. billing) — try fallback without Google Search (free tier)
+      const fallback = await runGeminiImageOnly(base64, mimeType, GEMINI_API_KEY)
+      if (fallback) {
+        rawContent = fallback
+      } else {
+        return NextResponse.json({ error: groundingResult.error }, { status: 502 })
+      }
+    } else {
+      // Grounding returned null — try fallback
+      const fallback = await runGeminiImageOnly(base64, mimeType, GEMINI_API_KEY)
+      if (fallback) {
+        rawContent = fallback
+      } else {
+        return NextResponse.json(
+          { error: 'Image analysis failed. Try a clearer photo or use keyword search below.' },
+          { status: 502 }
+        )
+      }
     }
-    if (!groundingResult) {
-      return NextResponse.json(
-        { error: 'Image analysis failed. Try a clearer photo or use keyword search below.' },
-        { status: 502 }
-      )
-    }
-
-    const { rawContent, groundingSources } = groundingResult
 
     let parsed: { itemDescription?: string; category?: string; subcategory?: string; searchKeywords?: string[] }
     try {
