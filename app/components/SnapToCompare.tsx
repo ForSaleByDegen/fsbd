@@ -213,26 +213,29 @@ export default function SnapToCompare({ onUseComp, onUseSuggested, applyingComp 
       )}
 
       <div className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={loading}
-          onClick={() => setCameraOpen(true)}
-          className="border-cyan-500 text-cyan-400 hover:bg-cyan-500/20"
-        >
-          Use camera
-        </Button>
         <ImageFileButton
           onChange={handleFile}
           disabled={loading}
           className={buttonVariants({ variant: 'outline', size: 'sm', className: 'border-cyan-500 text-cyan-400 hover:bg-cyan-500/20' })}
         >
           <span className="pointer-events-none">
-            {loading ? 'Analyzing…' : 'Upload image'}
+            {loading ? 'Analyzing…' : 'Take photo / Upload image'}
           </span>
         </ImageFileButton>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={loading}
+          onClick={() => setCameraOpen(true)}
+          className="border-cyan-500/50 text-cyan-400/80 hover:bg-cyan-500/10"
+        >
+          Use live camera
+        </Button>
       </div>
+      <p className="text-xs text-muted-foreground mt-2">
+        In wallet apps (Backpack, Phantom), use &quot;Take photo / Upload image&quot; — it opens your camera or gallery.
+      </p>
 
       {cameraOpen && (
         <CameraCapture

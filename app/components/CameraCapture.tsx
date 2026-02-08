@@ -31,7 +31,7 @@ export default function CameraCapture({ onCapture, onCancel }: CameraCaptureProp
     } catch (err: unknown) {
       const e = err as { name?: string; message?: string }
       if (e?.name === 'NotAllowedError' || e?.message?.includes('dismissed')) {
-        setError('Camera permission was denied. Enable camera access in your browser settings.')
+        setError('Camera access was denied. In wallet apps (Backpack, Phantom), use "Upload image" instead — it opens your camera or gallery via the system picker.')
       } else {
         setError('Could not access camera. Make sure no other app is using it.')
       }
@@ -98,7 +98,7 @@ export default function CameraCapture({ onCapture, onCancel }: CameraCaptureProp
                 onClick={onCancel}
                 className="w-full border-neutral-600 text-neutral-300 hover:bg-neutral-800"
               >
-                Cancel
+                Back — use Upload image
               </Button>
             </div>
           </div>
