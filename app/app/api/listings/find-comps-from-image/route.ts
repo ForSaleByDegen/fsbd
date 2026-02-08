@@ -44,7 +44,9 @@ function parseGeminiError(err: string): string {
   try {
     const j = JSON.parse(err) as { error?: { status?: string; message?: string } }
     const msg = j?.error?.message ?? ''
-    if (/API_KEY_INVALID|invalid.*key/i.test(msg)) return 'Gemini API key is invalid. Get a free key at aistudio.google.com/apikey'
+    if (/API_KEY_INVALID|invalid.*key|expired|renew/i.test(msg)) {
+      return 'Gemini API key is invalid or expired. Create a new key at aistudio.google.com/apikey and update GOOGLE_GEMINI_API_KEY in Vercel.'
+    }
     if (/RESOURCE_EXHAUSTED|429|quota/i.test(msg)) return 'Gemini rate limit reached. Try again in a minute.'
     if (/SAFETY|blocked|harmful/i.test(msg)) return 'Image was blocked by safety filters. Try a different photo.'
     if (msg) return msg.slice(0, 150)
@@ -313,13 +315,17 @@ export async function POST(request: NextRequest) {
       if (!geminiRes.ok) {
         const err = await geminiRes.text()
         console.error('[find-comps-from-image] Gemini error:', err)
-        const msg = parseGeminiError(err)
-        return NextResponse.json({ error: msg }, { status: 502 })
+        // If Gemini fails (e.g. expired key) but we have OpenAI, fall through to try it
+        if (!OPENAI_API_KEY) {
+          const msg = parseGeminiError(err)
+          return NextResponse.json({ error: msg }, { status: 502 })
+        }
+      } else {
+        const geminiData = (await geminiRes.json()) as {
+          candidates?: { content?: { parts?: { text?: string }[] } }[]
+        }
+        rawContent = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
       }
-      const geminiData = (await geminiRes.json()) as {
-        candidates?: { content?: { parts?: { text?: string }[] } }[]
-      }
-      rawContent = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
     }
 
     if (!rawContent && OPENAI_API_KEY) {
