@@ -5,6 +5,7 @@ import { useWallet } from '@solana/wallet-adapter-react'
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import PrivyConnectButton from './PrivyConnectButton'
+import MobilePhantomHint from './MobilePhantomHint'
 import NotificationBadge from './NotificationBadge'
 import { isAdmin } from '@/lib/admin'
 
@@ -131,11 +132,12 @@ export default function Header() {
           </nav>
 
           {/* Mobile Menu Button */}
-          <div className="md:hidden flex items-center gap-2">
-            <div className="touch-manipulation">
-              <PrivyConnectButton />
-            </div>
-            <button
+          <div className="md:hidden flex flex-col items-stretch gap-1">
+            <div className="flex items-center gap-2">
+              <div className="touch-manipulation">
+                <PrivyConnectButton />
+              </div>
+              <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="touch-manipulation p-2 border-2 border-[#660099] text-[#00ff00] font-pixel-alt"
               style={{ fontFamily: 'var(--font-pixel-alt)' }}
@@ -143,12 +145,15 @@ export default function Header() {
             >
               {mobileMenuOpen ? '✕' : '☰'}
             </button>
+            </div>
+            <MobilePhantomHint />
           </div>
         </div>
 
         {/* Mobile Navigation Menu */}
         {mobileMenuOpen && (
           <nav className="md:hidden mt-3 pb-2 border-t-2 border-[#660099]">
+            {!connected && <div className="pt-2"><MobilePhantomHint /></div>}
             <div className="flex flex-col gap-2 pt-2">
               {!isBetaMode && (
                 <>

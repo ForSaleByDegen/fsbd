@@ -26,6 +26,30 @@ function extractBase64(dataUrlOrBase64: string): string {
   return trimmed
 }
 
+function parseOpenAIError(err: string): string {
+  try {
+    const j = JSON.parse(err) as { error?: { code?: string; message?: string } }
+    const msg = j?.error?.message ?? ''
+    if (/invalid_api_key|incorrect_api_key|authentication/i.test(msg)) return 'OpenAI API key is invalid. Check your OPENAI_API_KEY.'
+    if (/rate_limit|quota|overloaded/i.test(msg)) return 'OpenAI is busy. Please try again in a minute.'
+    if (/content_policy|safety/i.test(msg)) return 'Image was blocked. Try a different photo.'
+    if (msg) return msg.slice(0, 150)
+  } catch { /* ignore */ }
+  return 'Image analysis failed. Try a clearer photo or use keyword search below.'
+}
+
+function parseGeminiError(err: string): string {
+  try {
+    const j = JSON.parse(err) as { error?: { status?: string; message?: string } }
+    const msg = j?.error?.message ?? ''
+    if (/API_KEY_INVALID|invalid.*key/i.test(msg)) return 'Gemini API key is invalid. Get a free key at aistudio.google.com/apikey'
+    if (/RESOURCE_EXHAUSTED|429|quota/i.test(msg)) return 'Gemini rate limit reached. Try again in a minute.'
+    if (/SAFETY|blocked|harmful/i.test(msg)) return 'Image was blocked by safety filters. Try a different photo.'
+    if (msg) return msg.slice(0, 150)
+  } catch { /* ignore */ }
+  return 'Image analysis failed. Try a clearer photo or use keyword search below.'
+}
+
 export async function POST(request: NextRequest) {
   if (!OPENAI_API_KEY && !GEMINI_API_KEY) {
     return NextResponse.json(
@@ -103,10 +127,8 @@ export async function POST(request: NextRequest) {
       if (!openaiRes.ok) {
         const err = await openaiRes.text()
         console.error('[find-comps-from-image] OpenAI error:', err)
-        return NextResponse.json(
-          { error: 'Image analysis failed. Please try a clearer photo.' },
-          { status: 502 }
-        )
+        const msg = parseOpenAIError(err)
+        return NextResponse.json({ error: msg }, { status: 502 })
       }
       const openaiData = (await openaiRes.json()) as { choices?: { message?: { content?: string } }[] }
       rawContent = openaiData?.choices?.[0]?.message?.content ?? ''
@@ -134,10 +156,8 @@ export async function POST(request: NextRequest) {
       if (!geminiRes.ok) {
         const err = await geminiRes.text()
         console.error('[find-comps-from-image] Gemini error:', err)
-        return NextResponse.json(
-          { error: 'Image analysis failed. Please try a clearer photo.' },
-          { status: 502 }
-        )
+        const msg = parseGeminiError(err)
+        return NextResponse.json({ error: msg }, { status: 502 })
       }
       const geminiData = (await geminiRes.json()) as {
         candidates?: { content?: { parts?: { text?: string }[] } }[]

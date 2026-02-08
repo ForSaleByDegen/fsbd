@@ -2,10 +2,12 @@
 
 import { useState } from 'react'
 import { Button, buttonVariants } from './ui/button'
+import { Input } from './ui/input'
 import ImageFileButton from './ImageFileButton'
 import { formatPriceToken } from '@/lib/utils'
 import { getCategoryLabel, getSubcategoryLabel } from '@/lib/categories'
 import { getIPFSGatewayURL } from '@/lib/pinata'
+import { enhanceImageForAnalysis } from '@/lib/enhance-image'
 
 export type CompListing = {
   id: string
@@ -42,30 +44,21 @@ export default function SnapToCompare({ onUseComp, onUseSuggested, applyingComp 
   const [snappedPhoto, setSnappedPhoto] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
   const [error, setError] = useState<string | null>(null)
+  const [lastFailedImage, setLastFailedImage] = useState<string | null>(null)
+  const [keywordFallback, setKeywordFallback] = useState('')
   const [rateLimitInfo, setRateLimitInfo] = useState<{
     remaining: number
     limit: number
     resetIn: number
     tier: string
   } | null>(null)
-  const handleFile = async (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      setError('Please select an image file (JPEG, PNG, etc.)')
-      return
-    }
+
+  const runAnalysis = async (dataUrl: string) => {
     setError(null)
     setResult(null)
-    setSnappedPhoto(null)
     setRateLimitInfo(null)
     setLoading(true)
     try {
-      const reader = new FileReader()
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        reader.onload = () => resolve(reader.result as string)
-        reader.onerror = reject
-        reader.readAsDataURL(file)
-      })
-
       const res = await fetch('/api/listings/find-comps-from-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -74,14 +67,13 @@ export default function SnapToCompare({ onUseComp, onUseSuggested, applyingComp 
           ...(wallet ? { wallet } : {}),
         }),
       })
-
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
         const msg = data.error || 'Failed to analyze image'
         const retry = data.retryAfter
         throw new Error(retry ? `${msg} Try again in ${retry} seconds.` : msg)
       }
-
+      setLastFailedImage(null)
       setResult({
         itemDescription: data.itemDescription ?? '',
         suggestedCategory: data.suggestedCategory ?? 'for-sale',
@@ -101,9 +93,64 @@ export default function SnapToCompare({ onUseComp, onUseSuggested, applyingComp 
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
+      setLastFailedImage(dataUrl)
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleKeywordSearch = async () => {
+    const kw = keywordFallback.trim()
+    if (!kw) return
+    setError(null)
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/listings?q=${encodeURIComponent(kw)}&sort=newest`)
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error ?? 'Search failed')
+      const listings = Array.isArray(data) ? data : data?.listings ?? []
+      const comps: CompListing[] = listings.slice(0, 12).map((l: { id: string; title?: string; description?: string; price?: number; price_token?: string; category?: string; subcategory?: string; images?: string[] }) => ({
+        id: l.id,
+        title: l.title ?? null,
+        description: l.description ?? null,
+        price: l.price ?? null,
+        price_token: l.price_token ?? null,
+        category: l.category ?? null,
+        subcategory: l.subcategory ?? null,
+        images: l.images ?? null,
+      }))
+      setLastFailedImage(null)
+      setResult({
+        itemDescription: '',
+        suggestedCategory: 'for-sale',
+        suggestedSubcategory: 'other',
+        searchKeywords: kw.split(/\s+/).filter(Boolean),
+        comps,
+      })
+      setSnappedPhoto(null)
+      setViewMode('grid')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Keyword search failed')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleFile = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      setError('Please select an image file (JPEG, PNG, etc.)')
+      return
+    }
+    setSnappedPhoto(null)
+    const reader = new FileReader()
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+    setSnappedPhoto(dataUrl)
+    const enhanced = await enhanceImageForAnalysis(dataUrl)
+    await runAnalysis(enhanced)
   }
 
   const formatPrice = (comp: CompListing) => {
@@ -161,7 +208,44 @@ export default function SnapToCompare({ onUseComp, onUseSuggested, applyingComp 
       </div>
 
       {error && (
-        <p className="mt-2 text-sm text-red-400">{error}</p>
+        <div className="mt-3 p-3 rounded-lg border border-red-500/40 bg-red-500/5 space-y-2">
+          <p className="text-sm text-red-400">{error}</p>
+          <div className="flex flex-wrap gap-2 items-center">
+            {lastFailedImage && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="border-cyan-500 text-cyan-400 hover:bg-cyan-500/20"
+                disabled={loading}
+                onClick={() => runAnalysis(lastFailedImage)}
+              >
+                Try again
+              </Button>
+            )}
+            <span className="text-xs text-muted-foreground">or search by keywords:</span>
+            <div className="flex gap-2 flex-1 min-w-[200px]">
+              <Input
+                type="text"
+                placeholder="e.g. vintage lamp, brass"
+                value={keywordFallback}
+                onChange={(e) => setKeywordFallback(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleKeywordSearch()}
+                className="h-8 text-sm bg-black/50 border-cyan-500/40"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="border-cyan-500 text-cyan-400 hover:bg-cyan-500/20 shrink-0"
+                disabled={loading || !keywordFallback.trim()}
+                onClick={handleKeywordSearch}
+              >
+                Search
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
 
       {result && (

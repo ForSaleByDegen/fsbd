@@ -64,9 +64,9 @@ export default function HelpDocsPage() {
                 <p className="mt-2"><strong>Fix:</strong> Try a slightly different amount (e.g. 0.02 instead of 0.0200001), or refresh and retry. Report if it persists.</p>
               </div>
               <div className="p-4 border border-amber-600/40 rounded bg-amber-950/10">
-                <h3 className="font-pixel text-amber-400 mb-2 text-sm">Wallet won&apos;t connect / &quot;No wallet detected&quot;</h3>
-                <p><strong>Cause:</strong> In PWA or mobile, wallet extensions may not inject. Phantom/Solflare need to be installed and enabled.</p>
-                <p className="mt-2"><strong>Fix:</strong> Open fsbd.fun in a regular browser tab (not PWA). On mobile, open inside Phantom&apos;s in-app browser so the wallet is available.</p>
+                <h3 className="font-pixel text-amber-400 mb-2 text-sm">Wallet won&apos;t connect / &quot;Download Phantom&quot; on mobile</h3>
+                <p><strong>Cause:</strong> Phantom is an app, not a browser extension. In Safari/Chrome on mobile, the wallet isn&apos;t available.</p>
+                <p className="mt-2"><strong>Fix:</strong> On mobile, tap the purple &quot;Phantom user? Tap to open in Phantom&quot; link in the header. This opens fsbd.fun inside Phantom&apos;s in-app browser where connect works. Or: Open Phantom → tap Browser → go to fsbd.fun.</p>
               </div>
               <div className="p-4 border border-amber-600/40 rounded bg-amber-950/10">
                 <h3 className="font-pixel text-amber-400 mb-2 text-sm">Chat stuck on &quot;Loading chat...&quot;</h3>
