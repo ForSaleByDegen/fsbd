@@ -128,6 +128,8 @@ export async function getUserTier(
 
   try {
     const balance = await getUserTokenBalance(walletAddress, connection, mintOverride)
+    const platinumThreshold = th.platinum ?? 10_000_000
+    if (balance >= platinumThreshold) return 'platinum'
     if (balance >= th.gold) return 'gold'
     if (balance >= th.silver) return 'silver'
     if (balance >= th.bronze) return 'bronze'
@@ -165,6 +167,7 @@ export function getTierBenefits(tier: Tier): string[] {
   const listingFeeStr = formatPrice(listingFee, 4)
   const maxListings = getMaxListingsForTier(tier)
   const maxImages = getMaxImagesForTier(tier)
+  const snapLimits = getSnapToCompareLimits(tier)
 
   const benefits: Record<Tier, string[]> = {
     free: [
@@ -173,6 +176,7 @@ export function getTierBenefits(tier: Tier): string[] {
       `Up to ${maxListings} active listing`,
       `${maxImages} images per listing`,
       `Token launch fee: ${listingFeeStr} SOL (full price)`,
+      `Snap to Compare: ${snapLimits.maxPerMin} lookups/min, ${snapLimits.maxComps} comps`,
     ],
     bronze: [
       'Free listings (message signing only)',
@@ -181,6 +185,7 @@ export function getTierBenefits(tier: Tier): string[] {
       `${maxImages} images per listing`,
       `Token launch fee: ${listingFeeStr} SOL (20% off)`,
       'Socials & banner in token metadata when launching',
+      `Snap to Compare: ${snapLimits.maxPerMin} lookups/min, ${snapLimits.maxComps} comps`,
     ],
     silver: [
       'Free listings (message signing only)',
@@ -190,6 +195,7 @@ export function getTierBenefits(tier: Tier): string[] {
       `Token launch fee: ${listingFeeStr} SOL (40% off)`,
       'Socials & banner in token metadata when launching',
       'Priority visibility',
+      `Snap to Compare: ${snapLimits.maxPerMin} lookups/min, ${snapLimits.maxComps} comps`,
     ],
     gold: [
       'Free listings (message signing only)',
@@ -200,6 +206,7 @@ export function getTierBenefits(tier: Tier): string[] {
       'Socials & banner in token metadata when launching',
       'Priority visibility',
       'Auction creation',
+      `Snap to Compare: ${snapLimits.maxPerMin} lookups/min, ${snapLimits.maxComps} comps`,
     ],
     platinum: [
       'Free listings (message signing only)',
@@ -211,6 +218,7 @@ export function getTierBenefits(tier: Tier): string[] {
       'Priority visibility',
       'Auction creation',
       'Governance voting',
+      `Snap to Compare: ${snapLimits.maxPerMin} lookups/min, ${snapLimits.maxComps} comps`,
     ],
   }
   return benefits[tier] || benefits.free
@@ -287,6 +295,23 @@ export function canCreateAuction(tier: Tier): boolean {
  */
 export function canCreateAuctionWithBalance(balance: number, auctionMinTokens: number): boolean {
   return balance >= auctionMinTokens
+}
+
+/** Snap to Compare limits per tier - used by getTierBenefits and API */
+export const SNAP_TO_COMPARE_LIMITS: Record<Tier, { maxPerMin: number; maxComps: number }> = {
+  free: { maxPerMin: 3, maxComps: 5 },
+  bronze: { maxPerMin: 6, maxComps: 8 },
+  silver: { maxPerMin: 10, maxComps: 10 },
+  gold: { maxPerMin: 15, maxComps: 12 },
+  platinum: { maxPerMin: 25, maxComps: 12 },
+}
+
+/**
+ * Snap to Compare limits per tier (lookups per minute, max comps per response)
+ * Higher tiers get more lookups and more comp results
+ */
+export function getSnapToCompareLimits(tier: Tier): { maxPerMin: number; maxComps: number } {
+  return SNAP_TO_COMPARE_LIMITS[tier] ?? SNAP_TO_COMPARE_LIMITS.free
 }
 
 /**

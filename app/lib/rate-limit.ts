@@ -41,6 +41,7 @@ export const RATE_LIMITS = {
   sellerVerifications: { max: 30, windowSec: 60 },
   verifyOAuth: { max: 15, windowSec: 60 },
   verifyCode: { max: 10, windowSec: 60 },
+  findCompsFromImage: { max: 10, windowSec: 60 }, // base/fallback; use checkTieredFindCompsRateLimit for tier-based
   general: { max: 60, windowSec: 60 },
 } as const
 
@@ -113,4 +114,43 @@ export function checkRateLimit(
     )
   }
   return null
+}
+
+/**
+ * Tier-based rate limit for Snap to Compare. Uses wallet or IP as key.
+ * Returns null if allowed, or NextResponse with 429 if rate limited.
+ * Also returns headers object for successful responses (X-RateLimit-Remaining, etc.)
+ */
+export function checkTieredFindCompsRateLimit(
+  request: Request,
+  rateLimitKey: string,
+  config: RateLimitConfig
+): { response: NextResponse | null; headers: Record<string, string> } {
+  const key = `findCompsFromImage:${rateLimitKey}`
+  const result = rateLimit(key, config)
+  const headers: Record<string, string> = {
+    'X-RateLimit-Limit': String(config.max),
+    'X-RateLimit-Remaining': String(result.remaining),
+    'X-RateLimit-Reset': String(result.resetIn),
+  }
+  if (!result.allowed) {
+    return {
+      response: new NextResponse(
+        JSON.stringify({
+          error: 'Snap to Compare rate limit exceeded. Higher tiers get more lookups per minute.',
+          retryAfter: result.resetIn,
+        }),
+        {
+          status: 429,
+          headers: {
+            'Content-Type': 'application/json',
+            'Retry-After': String(result.resetIn),
+            ...headers,
+          },
+        }
+      ),
+      headers,
+    }
+  }
+  return { response: null, headers }
 }

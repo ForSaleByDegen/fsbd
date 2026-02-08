@@ -28,6 +28,7 @@ import {
 import { CATEGORIES, getSubcategories, getSubcategoryLabel } from '@/lib/categories'
 import BuyListingSlotButton from './BuyListingSlotButton'
 import TokenPreviewCard from './TokenPreviewCard'
+import SnapToCompare, { type CompListing } from './SnapToCompare'
 import { useTier } from './providers/TierProvider'
 
 const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/
@@ -211,6 +212,7 @@ export default function CreateListingForm() {
     subcategory: true,
   })
   const [applyingImport, setApplyingImport] = useState(false)
+  const [applyingComp, setApplyingComp] = useState(false)
   const [tokenLaunchRecovery, setTokenLaunchRecovery] = useState<{ listingId: string; listingUrl: string } | null>(null)
 
   const { keypair: vanityKeypair, generating: vanityGenerating, consume: consumeVanity } = useVanityGrind(
@@ -353,7 +355,7 @@ export default function CreateListingForm() {
       alert('Please connect your wallet')
       return
     }
-    
+
     if (formData.category === 'digital-assets') {
       if (!formData.subcategory || !formData.assetMint) {
         alert('Select a subcategory and enter the token/wallet address.')
@@ -530,10 +532,10 @@ export default function CreateListingForm() {
 
         try {
           tokenMint = await createPumpFunToken(
-            publicKey,
-            signTransaction!,
-            connection,
-            formData.tokenName,
+          publicKey,
+          signTransaction!,
+          connection,
+          formData.tokenName,
             formData.tokenSymbol,
             {
               devBuySol: devBuy,
@@ -568,14 +570,14 @@ export default function CreateListingForm() {
         }
 
         // Pay listing fee only when launching token
-        const appWallet = new PublicKey(
-          process.env.NEXT_PUBLIC_APP_WALLET || '11111111111111111111111111111111'
-        )
-        
-        const transaction = new Transaction().add(
-          SystemProgram.transfer({
-            fromPubkey: publicKey,
-            toPubkey: appWallet,
+      const appWallet = new PublicKey(
+        process.env.NEXT_PUBLIC_APP_WALLET || '11111111111111111111111111111111'
+      )
+      
+      const transaction = new Transaction().add(
+        SystemProgram.transfer({
+          fromPubkey: publicKey,
+          toPubkey: appWallet,
             lamports: Math.floor(fee * LAMPORTS_PER_SOL),
           })
         )
@@ -586,7 +588,7 @@ export default function CreateListingForm() {
         transaction.feePayer = publicKey
 
         // Sign and send payment (with Helius rebate when available, fallback on fetch failure)
-        const signed = await signTransaction!(transaction)
+      const signed = await signTransaction!(transaction)
         const serialized = signed.serialize()
         const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL
         let signature: string
@@ -605,7 +607,7 @@ export default function CreateListingForm() {
         } else {
           signature = await connection.sendRawTransaction(serialized)
         }
-        await connection.confirmTransaction(signature)
+      await connection.confirmTransaction(signature)
 
         // Update user profile stats (skip increment if listing was created in step 1)
         try {
@@ -705,9 +707,9 @@ export default function CreateListingForm() {
       console.log('Creating listing with images:', imageUrls)
 
       // Always use API route - validates wallet_address server-side and uses service role for reliable insert
-      const response = await fetch('/api/listings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        const response = await fetch('/api/listings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(listingData),
       })
 
@@ -716,7 +718,7 @@ export default function CreateListingForm() {
         throw new Error(errorData.error || `HTTP ${response.status}: Failed to create listing`)
       }
 
-      const data = await response.json()
+        const data = await response.json()
       if (!data || !data.id) {
         throw new Error('Listing created but no ID returned')
       }
@@ -941,6 +943,56 @@ export default function CreateListingForm() {
         )}
       </div>
 
+      <SnapToCompare
+        wallet={publicKey?.toString()}
+        applyingComp={applyingComp}
+        onUseSuggested={(itemDescription, category, subcategory) => {
+          setFormData((prev) => ({
+            ...prev,
+            description: itemDescription,
+            category,
+            subcategory,
+          }))
+        }}
+        onUseComp={async (comp: CompListing, itemDescription) => {
+          setApplyingComp(true)
+          try {
+            const updates: Partial<typeof formData> = {
+              title: (comp.title ?? '').slice(0, 200),
+              description: comp.description ?? itemDescription ?? '',
+              category: comp.category ?? 'for-sale',
+              subcategory: comp.subcategory ?? '',
+              priceToken: comp.price_token === 'USDC' ? 'USDC' : 'SOL',
+            }
+            if (comp.price != null && comp.price !== '') {
+              updates.price = String(comp.price)
+            }
+            let importedUrl: string | null = null
+            const imgs = Array.isArray(comp.images) ? comp.images : []
+            if (imgs[0]) {
+              try {
+                const res = await fetch('/api/upload-image-from-url', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ imageUrl: imgs[0] }),
+                })
+                const data = await res.json().catch(() => ({}))
+                if (res.ok && data.url) importedUrl = data.url
+              } catch {
+                /* ignore */
+              }
+            }
+            setFormData((prev) => ({
+              ...prev,
+              ...updates,
+              ...(importedUrl ? { importedImageUrls: [...(prev.importedImageUrls || []), importedUrl] } : {}),
+            }))
+          } finally {
+            setApplyingComp(false)
+          }
+        }}
+      />
+
       <div>
         <label className="block text-sm font-medium mb-2">Title *</label>
         <Input
@@ -1057,14 +1109,14 @@ export default function CreateListingForm() {
           <p className="text-sm text-purple-muted font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
             List a token, whole token (project sale), NFT, wallet, or meme coin. Verify ownership below.
           </p>
-          <div>
+      <div>
             <label className="block text-sm font-medium mb-2">
               {formData.subcategory === 'wallet' ? 'Wallet Address *' : formData.subcategory === 'nft' ? 'NFT Mint Address *' : 'Token Mint Address *'}
             </label>
-            <Input
+        <Input
               placeholder={formData.subcategory === 'wallet' ? 'Solana wallet you are selling' : 'e.g. 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU'}
               value={formData.assetMint}
-              onChange={(e) => {
+          onChange={(e) => {
                 setFormData(prev => ({ ...prev, assetMint: e.target.value.trim() }))
                 setAssetVerified(null)
               }}
@@ -1392,8 +1444,8 @@ export default function CreateListingForm() {
                     }}
                     className="w-20 px-2 py-1 text-xs bg-black border border-[#660099] text-[#00ff00] rounded"
                   />
-                </div>
-              )}
+          </div>
+        )}
             </div>
             <div className="col-span-2">
               <label className="block text-sm font-medium mb-2">Dev buy (SOL) — initial buy on pump.fun</label>
