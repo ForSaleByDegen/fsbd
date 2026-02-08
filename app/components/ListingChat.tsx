@@ -22,6 +22,7 @@ import {
 import { uploadImageToIPFS } from '@/lib/pinata'
 import { parseChatContent } from '@/lib/chat-utils'
 import { Button } from './ui/button'
+import ImageFileButton from './ImageFileButton'
 
 interface ListingChatProps {
   listing: { id: string; wallet_address: string }
@@ -46,7 +47,6 @@ export default function ListingChat({
   const [pendingImage, setPendingImage] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [sending, setSending] = useState(false)
-  const imageInputRef = useRef<HTMLInputElement>(null)
   const [showPinModal, setShowPinModal] = useState(false)
   const [pinInput, setPinInput] = useState('')
   const [loadingAddress, setLoadingAddress] = useState(false)
@@ -381,26 +381,15 @@ export default function ListingChat({
         <div ref={messagesEndRef} />
       </div>
       <div className="p-2 border-t border-[#660099] flex gap-2 items-end">
-        <input
-          ref={imageInputRef}
-          type="file"
-          accept="image/png,image/jpeg,image/webp,image/gif"
-          className="hidden"
-          onChange={(e) => {
-            const f = e.target.files?.[0]
-            if (f && f.size <= 4.5 * 1024 * 1024) setPendingImage(f)
-            else if (f) alert('Image must be under 4.5MB')
-            e.target.value = ''
+        <ImageFileButton
+          onChange={(f) => {
+            if (f.size <= 4.5 * 1024 * 1024) setPendingImage(f)
+            else alert('Image must be under 4.5MB')
           }}
-        />
-        <button
-          type="button"
-          onClick={() => imageInputRef.current?.click()}
-          className="p-2 border-2 border-[#660099] text-purple-readable hover:border-[#00ff00] hover:text-[#00ff00] rounded shrink-0"
-          title="Attach image"
+          className="p-2 border-2 border-[#660099] text-purple-readable hover:border-[#00ff00] hover:text-[#00ff00] rounded shrink-0 flex items-center justify-center"
         >
-          📷
-        </button>
+          <span className="pointer-events-none text-lg" aria-hidden>📷</span>
+        </ImageFileButton>
         <input
           type="text"
           value={input}

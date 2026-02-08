@@ -9,6 +9,7 @@ import { hashWalletAddress } from '@/lib/supabase'
 import { uploadImageToIPFS } from '@/lib/pinata'
 import { createAuctionToken, simulateDevBuy } from '@/lib/auction-utils'
 import { Button } from './ui/button'
+import ImageFileButton from './ImageFileButton'
 import { Input } from './ui/input'
 import { Textarea } from './ui/textarea'
 import {
@@ -55,6 +56,10 @@ export default function AuctionForm() {
     
     if (!publicKey || !connection || !signTransaction) {
       alert('Please connect your wallet')
+      return
+    }
+    if (!formData.image) {
+      alert('Please add an item image')
       return
     }
 
@@ -299,16 +304,13 @@ export default function AuctionForm() {
 
         <div>
           <label className="block text-sm font-medium mb-2">Item Image (IPFS) *</label>
-          <Input
-            type="file"
-            accept="image/*"
-            onChange={(e) => {
-              const file = e.target.files?.[0]
-              if (file) setFormData(prev => ({ ...prev, image: file }))
-            }}
-            required
+          <ImageFileButton
+            onChange={(file) => setFormData(prev => ({ ...prev, image: file }))}
             disabled={!canCreateAuction}
-          />
+            className="flex w-full min-h-[44px] items-center justify-center rounded-md border border-input bg-black/30 px-3 py-2 text-sm text-muted-foreground"
+          >
+            <span className="pointer-events-none">Tap to add image</span>
+          </ImageFileButton>
           <p className="text-xs text-muted-foreground mt-1">
             Image will be uploaded to IPFS via Pinata in original quality (no compression)
           </p>

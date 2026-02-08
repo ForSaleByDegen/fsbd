@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useRef } from 'react'
-import { Button } from './ui/button'
+import { useState } from 'react'
+import { Button, buttonVariants } from './ui/button'
+import ImageFileButton from './ImageFileButton'
 import { formatPriceToken } from '@/lib/utils'
 import { getCategoryLabel, getSubcategoryLabel } from '@/lib/categories'
 import { getIPFSGatewayURL } from '@/lib/pinata'
@@ -47,8 +48,6 @@ export default function SnapToCompare({ onUseComp, onUseSuggested, applyingComp 
     resetIn: number
     tier: string
   } | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-
   const handleFile = async (file: File) => {
     if (!file.type.startsWith('image/')) {
       setError('Please select an image file (JPEG, PNG, etc.)')
@@ -107,12 +106,6 @@ export default function SnapToCompare({ onUseComp, onUseSuggested, applyingComp 
     }
   }
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) handleFile(file)
-    e.target.value = ''
-  }
-
   const formatPrice = (comp: CompListing) => {
     const p = comp.price
     if (p == null || p === '') return '—'
@@ -156,24 +149,15 @@ export default function SnapToCompare({ onUseComp, onUseSuggested, applyingComp 
       )}
 
       <div className="flex flex-wrap gap-2">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          className="hidden"
-          onChange={handleInputChange}
-        />
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="border-cyan-500 text-cyan-400 hover:bg-cyan-500/20"
+        <ImageFileButton
+          onChange={handleFile}
           disabled={loading}
-          onClick={() => fileInputRef.current?.click()}
+          className={buttonVariants({ variant: 'outline', size: 'sm', className: 'border-cyan-500 text-cyan-400 hover:bg-cyan-500/20' })}
         >
-          {loading ? 'Analyzing…' : '📷 Take photo / Upload image'}
-        </Button>
+          <span className="pointer-events-none">
+            {loading ? 'Analyzing…' : '📷 Take photo / Upload image'}
+          </span>
+        </ImageFileButton>
       </div>
 
       {error && (

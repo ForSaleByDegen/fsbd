@@ -29,6 +29,7 @@ import { CATEGORIES, getSubcategories, getSubcategoryLabel } from '@/lib/categor
 import BuyListingSlotButton from './BuyListingSlotButton'
 import TokenPreviewCard from './TokenPreviewCard'
 import SnapToCompare, { type CompListing } from './SnapToCompare'
+import ImageFileButton from './ImageFileButton'
 import { useTier } from './providers/TierProvider'
 
 const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/
@@ -1286,13 +1287,9 @@ export default function CreateListingForm() {
             </button>
           )}
         </div>
-        <Input
-          type="file"
+        <ImageFileButton
           multiple={maxImages > 1}
-          accept="image/png,image/jpeg,image/webp,image/gif"
-          className="min-h-[44px] text-base sm:text-sm w-full"
-          onChange={async (e) => {
-            const files = Array.from(e.target.files || [])
+          onFiles={async (files) => {
             const limited = files.slice(0, maxImages)
             if (files.length > maxImages) {
               alert(`Your tier allows up to ${maxImages} image(s) per listing. Only the first ${maxImages} will be used.`)
@@ -1313,7 +1310,12 @@ export default function CreateListingForm() {
             }
             setFormData(prev => ({ ...prev, images: limited }))
           }}
-        />
+          className="flex w-full min-h-[44px] items-center justify-center rounded-md border border-input bg-black/30 px-3 py-2 text-sm text-[#00ff00] ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-purple-readable focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00ff00] focus-visible:ring-offset-2"
+        >
+          <span className="pointer-events-none text-purple-muted">
+            Tap to add image{maxImages > 1 ? 's' : ''} (PNG, JPG, WebP, GIF)
+          </span>
+        </ImageFileButton>
         <p className="text-sm text-purple-muted font-pixel-alt mt-1">
           Up to {maxImages} image{maxImages > 1 ? 's' : ''} per listing. Icon (1st image): 1:1 square, min 100px, max 4.5MB. PNG/JPG/WebP/GIF.
         </p>

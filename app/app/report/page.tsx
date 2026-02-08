@@ -5,6 +5,7 @@ import { useWallet } from '@solana/wallet-adapter-react'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import { Button } from '@/components/ui/button'
+import ImageFileButton from '@/components/ImageFileButton'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { uploadMultipleImagesToIPFS } from '@/lib/pinata'
@@ -113,13 +114,13 @@ export default function ReportPage() {
 
               <div>
                 <label className="block text-sm font-pixel-alt text-[#00ff00] mb-1">Screenshots (optional)</label>
-                <Input
-                  type="file"
-                  accept="image/*"
+                <ImageFileButton
                   multiple
-                  onChange={(e) => setScreenshots(Array.from(e.target.files || []))}
-                  className="bg-black border-2 border-[#660099] text-purple-muted"
-                />
+                  onFiles={(files) => setScreenshots(files)}
+                  className="flex w-full min-h-[44px] items-center justify-center rounded border-2 border-[#660099] bg-black px-3 py-2 text-purple-muted"
+                >
+                  <span className="pointer-events-none">Tap to add screenshots</span>
+                </ImageFileButton>
                 <p className="text-xs text-purple-muted mt-1">Upload screenshots of the error or failed transaction</p>
               </div>
 
