@@ -122,6 +122,9 @@ export default function Header() {
             </Link>
             {userIsAdmin && (
               <>
+                <Link href="/validators" className={navLinkClass('/validators')} style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                  Validators
+                </Link>
                 <Link href="/admin" className={`text-xs md:text-sm font-pixel-alt transition-colors touch-manipulation px-2 py-1 border-2 ${isActive('/admin') ? 'text-[#00ff00] border-[#00ff00]' : 'text-[#ff00ff] border-[#ff00ff] hover:text-[#00ff00] hover:border-[#00ff00]'}`} style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                   Admin
                 </Link>
@@ -244,6 +247,14 @@ export default function Header() {
               </Link>
               {userIsAdmin && (
                 <>
+                  <Link 
+                    href="/validators" 
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={mobileNavLinkClass('/validators')}
+                    style={{ fontFamily: 'var(--font-pixel-alt)' }}
+                  >
+                    Validators
+                  </Link>
                   <Link 
                     href="/admin" 
                     onClick={() => setMobileMenuOpen(false)}
