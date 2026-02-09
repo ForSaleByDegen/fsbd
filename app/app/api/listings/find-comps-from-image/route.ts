@@ -88,8 +88,9 @@ async function runGeminiWithGoogleSearch(
     }
     const cand = searchData?.candidates?.[0]
     const identifiedText = cand?.content?.parts?.[0]?.text ?? ''
-    const meta = cand?.groundingMetadata ?? (cand as { grounding_metadata?: { grounding_chunks?: unknown[] } })?.grounding_metadata
-    const chunks = (meta?.groundingChunks ?? (meta as { grounding_chunks?: unknown[] })?.grounding_chunks ?? []) as { web?: { title?: string; uri?: string } }[]
+    const meta = cand?.groundingMetadata ?? (cand as Record<string, unknown>)?.grounding_metadata
+    const metaObj = meta as Record<string, unknown> | undefined
+    const chunks = (metaObj?.groundingChunks ?? metaObj?.grounding_chunks ?? []) as { web?: { title?: string; uri?: string } }[]
     let groundingSources: GroundingSource[] = chunks
       .filter((c) => c?.web?.uri)
       .map((c) => ({ title: c.web?.title, uri: c.web?.uri }))
@@ -118,9 +119,9 @@ async function runGeminiWithGoogleSearch(
         const textData = (await textSearchRes.json()) as {
           candidates?: { groundingMetadata?: { groundingChunks?: { web?: { title?: string; uri?: string } }[] }; grounding_metadata?: { grounding_chunks?: { web?: { title?: string; uri?: string } }[] } }[]
         }
-        const tc = textData?.candidates?.[0]
-        const tMeta = tc?.groundingMetadata ?? (tc as { grounding_metadata?: { grounding_chunks?: unknown[] } })?.grounding_metadata
-        const tChunks = (tMeta?.groundingChunks ?? (tMeta as { grounding_chunks?: unknown[] })?.grounding_chunks ?? []) as { web?: { title?: string; uri?: string } }[]
+        const tc = textData?.candidates?.[0] as Record<string, unknown> | undefined
+        const tMeta = (tc?.groundingMetadata ?? tc?.grounding_metadata) as Record<string, unknown> | undefined
+        const tChunks = (tMeta?.groundingChunks ?? tMeta?.grounding_chunks ?? []) as { web?: { title?: string; uri?: string } }[]
         const extra = tChunks
           .filter((c) => c?.web?.uri)
           .map((c) => ({ title: c.web?.title, uri: c.web?.uri }))
