@@ -64,7 +64,7 @@ async function runGeminiWithGoogleSearch(
               parts: [
                 { inline_data: { mime_type: mimeType, data: base64 } },
                 {
-                  text: `Identify this item precisely. Use Google Search to find current active listings for similar items on platforms like eBay, Amazon, or specialized marketplaces. Return a brief summary of what you found.`,
+                  text: `Identify this item precisely. You MUST use Google Search to find current active listings for similar items on eBay, Amazon, Etsy, or other marketplaces. Do not answer from the image alone—always search the web for real listings and prices. Return a brief summary of what you found, including any relevant listing URLs or prices.`,
                 },
               ],
             },
@@ -82,18 +82,52 @@ async function runGeminiWithGoogleSearch(
     const searchData = (await searchRes.json()) as {
       candidates?: {
         content?: { parts?: { text?: string }[] }
-        groundingMetadata?: {
-          groundingChunks?: { web?: { title?: string; uri?: string } }[]
-        }
+        groundingMetadata?: { groundingChunks?: { web?: { title?: string; uri?: string } }[] }
+        grounding_metadata?: { grounding_chunks?: { web?: { title?: string; uri?: string } }[] }
       }[]
     }
     const cand = searchData?.candidates?.[0]
     const identifiedText = cand?.content?.parts?.[0]?.text ?? ''
-    const chunks = cand?.groundingMetadata?.groundingChunks ?? []
-    const groundingSources: GroundingSource[] = chunks
+    const meta = cand?.groundingMetadata ?? (cand as { grounding_metadata?: { grounding_chunks?: unknown[] } })?.grounding_metadata
+    const chunks = (meta?.groundingChunks ?? (meta as { grounding_chunks?: unknown[] })?.grounding_chunks ?? []) as { web?: { title?: string; uri?: string } }[]
+    let groundingSources: GroundingSource[] = chunks
       .filter((c) => c?.web?.uri)
       .map((c) => ({ title: c.web?.title, uri: c.web?.uri }))
       .slice(0, 10)
+
+    // If image+search returned no grounding, try a text-only search for the identified item
+    if (groundingSources.length === 0 && identifiedText.trim()) {
+      const searchQuery = identifiedText.slice(0, 120).replace(/\n/g, ' ')
+      const textSearchRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{
+                text: `Use Google Search to find current listings for: "${searchQuery}". Search eBay, Amazon, or similar marketplaces. Return a brief summary with links to real listings.`,
+              }],
+            }],
+            tools: [{ google_search: {} }],
+            generationConfig: { maxOutputTokens: 400 },
+          }),
+        }
+      )
+      if (textSearchRes.ok) {
+        const textData = (await textSearchRes.json()) as {
+          candidates?: { groundingMetadata?: { groundingChunks?: { web?: { title?: string; uri?: string } }[] }; grounding_metadata?: { grounding_chunks?: { web?: { title?: string; uri?: string } }[] } }[]
+        }
+        const tc = textData?.candidates?.[0]
+        const tMeta = tc?.groundingMetadata ?? (tc as { grounding_metadata?: { grounding_chunks?: unknown[] } })?.grounding_metadata
+        const tChunks = (tMeta?.groundingChunks ?? (tMeta as { grounding_chunks?: unknown[] })?.grounding_chunks ?? []) as { web?: { title?: string; uri?: string } }[]
+        const extra = tChunks
+          .filter((c) => c?.web?.uri)
+          .map((c) => ({ title: c.web?.title, uri: c.web?.uri }))
+          .slice(0, 10)
+        if (extra.length > 0) groundingSources = extra
+      }
+    }
 
     // Step 2: Generate listing JSON from identified item + search results
     const sourcesStr =
