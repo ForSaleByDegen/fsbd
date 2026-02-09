@@ -16,6 +16,7 @@ export default function ValidatorsPage() {
   const wallet = publicKey?.toString() ?? null
 
   const [whitelisted, setWhitelisted] = useState<boolean | null>(null)
+  const [userIsAdmin, setUserIsAdmin] = useState(false)
   const [poolStats, setPoolStats] = useState<PoolStats>({ totalValidators: 0, totalStaked: 0 })
   const [myStatus, setMyStatus] = useState<MyStatus | null>(null)
   const [endpointUrl, setEndpointUrl] = useState('')
@@ -31,16 +32,19 @@ export default function ValidatorsPage() {
     if (!wallet) {
       setWhitelisted(null)
       setMyStatus(null)
+      setUserIsAdmin(false)
       return
     }
     let cancelled = false
     Promise.all([
       fetch(`/api/validators/check-whitelist?wallet=${encodeURIComponent(wallet)}`).then((r) => r.json()),
       fetch(`/api/validators/me?wallet=${encodeURIComponent(wallet)}`).then((r) => r.json()),
-    ]).then(([whitelistRes, meRes]) => {
+      fetch(`/api/admin/check?wallet=${encodeURIComponent(wallet)}`).then((r) => r.json()),
+    ]).then(([whitelistRes, meRes, adminRes]) => {
       if (cancelled) return
       setWhitelisted(!!whitelistRes.whitelisted)
       setMyStatus({ registered: !!meRes.registered, endpoint_url: meRes.endpoint_url, stake_amount: meRes.stake_amount, status: meRes.status })
+      setUserIsAdmin(!!adminRes?.isAdmin)
     })
     return () => { cancelled = true }
   }, [wallet])
@@ -121,7 +125,7 @@ export default function ValidatorsPage() {
 
   const formatNum = (n: number) => (n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1_000 ? `${(n / 1_000).toFixed(1)}k` : String(n))
 
-  const showFullPage = connected && whitelisted === true
+  const showFullPage = connected && (whitelisted === true || userIsAdmin)
 
   return (
     <div className="min-h-screen bg-background w-full overflow-x-hidden">
@@ -134,7 +138,7 @@ export default function ValidatorsPage() {
         {!showFullPage && (
           <div className="p-6 border-2 border-cyan-500/50 rounded-lg bg-cyan-500/5 font-pixel-alt text-purple-muted">
             <p className="text-lg mb-4">Coming soon.</p>
-            <p>The validator pool is in private testing. Connect your wallet — if you&apos;re whitelisted, you&apos;ll see the full page.</p>
+            <p>The validator pool is in private testing. Connect your wallet — if you&apos;re whitelisted or an admin, you&apos;ll see the full page.</p>
             {!connected && (
               <div className="mt-4">
                 <PwaWalletHint />
