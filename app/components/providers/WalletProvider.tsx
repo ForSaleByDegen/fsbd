@@ -5,7 +5,7 @@ import { WalletAdapterNetwork } from '@solana/wallet-adapter-base'
 import { initSuppressWalletWarnings } from '@/lib/suppress-wallet-warnings'
 import { ConnectionProvider, WalletProvider as SolanaWalletProvider } from '@solana/wallet-adapter-react'
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui'
-import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets'
+import { PhantomWalletAdapter, SolflareWalletAdapter, CoinbaseWalletAdapter } from '@solana/wallet-adapter-wallets'
 import { clusterApiUrl } from '@solana/web3.js'
 import { useMemo } from 'react'
 import TierProvider from './TierProvider'
@@ -21,7 +21,11 @@ export default function WalletProvider({ children }: { children: React.ReactNode
   const config = useMemo(() => ({ commitment: 'confirmed' as const }), [])
 
   const wallets = useMemo(
-    () => [new PhantomWalletAdapter(), new SolflareWalletAdapter()],
+    () => [
+      new PhantomWalletAdapter(),
+      new SolflareWalletAdapter(),
+      new CoinbaseWalletAdapter(),
+    ],
     []
   )
 
