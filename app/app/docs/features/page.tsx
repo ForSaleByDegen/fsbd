@@ -99,6 +99,43 @@ export default function FeaturesDocsPage() {
             </p>
           </section>
 
+          {/* AI Listing & Snap to Compare */}
+          <section>
+            <h2 className="text-lg sm:text-xl font-pixel text-[#ff00ff] mb-3" style={{ fontFamily: 'var(--font-pixel)' }}>
+              AI Listing & Snap to Compare
+            </h2>
+            <p className="mb-3">
+              When creating a listing you can choose <strong className="text-[#00ff00]">AI Listing</strong> or <strong className="text-[#00ff00]">Manual Listing</strong>. 
+              In AI mode, use <strong className="text-cyan-400">Snap to Compare</strong>: take a photo or upload an image of your item. Our AI (Gemini) analyzes it, identifies the item, and optionally searches the web for similar listings. We then suggest a title, description, price, category, subcategory, and search keywords, and show comparable FSBD listings. We also suggest token name, symbol, and description if you plan to launch a token with the listing.
+            </p>
+            <p className="mb-3">
+              Click <strong className="text-cyan-400">Apply all AI suggestions</strong> to fill the create form in one step. Review and edit before submitting. You can still use Snap to Compare in Manual mode for suggestions without committing to AI prefill.
+            </p>
+            <p>
+              Snap to Compare is also available on <Link href="/listinggenius" className="text-[#ff00ff] hover:text-[#00ff00] underline">ListingGenius</Link> (Snap, Search, Sell). Keyword search in Snap to Compare (no photo) is always available and is not counted toward the AI daily limit.
+            </p>
+          </section>
+
+          {/* Search Keywords */}
+          <section>
+            <h2 className="text-lg sm:text-xl font-pixel text-[#ff00ff] mb-3" style={{ fontFamily: 'var(--font-pixel)' }}>
+              Search Keywords on Listings
+            </h2>
+            <p>
+              Listings can store <strong className="text-[#00ff00]">search_keywords</strong> (a list of tags). AI Listing suggests keywords from the image and web search; you can edit or add your own. Keywords are shown as small tag chips on the listing detail page and help buyers find your item.
+            </p>
+          </section>
+
+          {/* AI Listing Daily Limit */}
+          <section>
+            <h2 className="text-lg sm:text-xl font-pixel text-[#ff00ff] mb-3" style={{ fontFamily: 'var(--font-pixel)' }}>
+              AI Listing Daily Limit
+            </h2>
+            <p>
+              To keep costs sustainable until we run AI in-house, each connected wallet gets <strong className="text-cyan-400">1 AI listing per day</strong>. That means one Snap-to-Compare image analysis per 24 hours per user. The create form and Snap to Compare show a usage tracker: &quot;1/1 used today&quot; and when it resets, or &quot;1 remaining today&quot;. When you&apos;ve used your daily allocation, the Snap/camera buttons are disabled until the next day. Keyword-only search in Snap to Compare does not count toward this limit.
+            </p>
+          </section>
+
           {/* Verified Seller */}
           <section>
             <h2 className="text-lg sm:text-xl font-pixel text-[#ff00ff] mb-3" style={{ fontFamily: 'var(--font-pixel)' }}>
@@ -157,13 +194,16 @@ export default function FeaturesDocsPage() {
             </h2>
             <p>
               API endpoints are rate limited per IP to prevent abuse (e.g. Import from URL, image upload, listing creation, balance checks). 
-              If you hit a limit, wait a minute and try again.
+              <strong className="text-cyan-400"> Snap to Compare</strong> has two limits: (1) <strong>per minute</strong> (tier-based: free tier 3/min, higher tiers get more) and (2) <strong>per day</strong> (1 AI listing per wallet per 24 hours). Keyword search in Snap to Compare is not counted for the daily limit. If you hit a limit, wait and try again; the UI shows remaining lookups and when your daily limit resets.
             </p>
           </section>
 
           {/* Links */}
           <section className="pt-4 border-t border-[#660099]/50">
             <div className="flex flex-wrap gap-3">
+              <Link href="/docs/how-it-works" className="px-4 py-2 border-2 border-[#660099] text-[#00ff00] hover:bg-[#660099]/20 font-pixel-alt text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                How It Works
+              </Link>
               <Link href="/tiers" className="px-4 py-2 border-2 border-[#660099] text-[#00ff00] hover:bg-[#660099]/20 font-pixel-alt text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                 View Tiers
               </Link>

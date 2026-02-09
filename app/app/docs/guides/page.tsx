@@ -62,6 +62,9 @@ export default function GuidesPage() {
                 <Link href="/docs/features" className="text-[#ff00ff] hover:text-[#00ff00] underline">Features &amp; Tiers</Link>.
               </p>
               <p>
+                <strong className="text-[#00ff00]">AI Listing &amp; Snap to Compare:</strong> Choose AI Listing on create to snap a photo or upload an image; we suggest title, description, price, category, keywords, and show similar FSBD listings. Apply all suggestions, review, and submit. Limited to 1 AI listing per day per wallet—see <Link href="/docs/how-it-works" className="text-[#ff00ff] hover:text-[#00ff00] underline">How It Works</Link>.
+              </p>
+              <p>
                 <strong className="text-[#00ff00]">Import from URL:</strong> Paste a link from Amazon, eBay, or Etsy to prefill title, description, price, image, and category. Review the preview and edit before publishing.
               </p>
               <p>
@@ -79,6 +82,9 @@ export default function GuidesPage() {
           {/* Links */}
           <section className="pt-4 border-t border-[#660099]/50">
             <div className="flex flex-wrap gap-3">
+              <Link href="/docs/how-it-works" className="px-4 py-2 border-2 border-[#660099] text-[#00ff00] hover:bg-[#660099]/20 font-pixel-alt text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                How It Works
+              </Link>
               <Link href="/docs/features" className="px-4 py-2 border-2 border-[#660099] text-[#00ff00] hover:bg-[#660099]/20 font-pixel-alt text-sm" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                 Features &amp; Tiers
               </Link>

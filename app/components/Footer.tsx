@@ -45,6 +45,13 @@ export default function Footer() {
             </Link>
             <span className="text-purple-readable">|</span>
             <Link 
+              href="/docs/how-it-works" 
+              className="text-[#00ff00] hover:text-[#ff00ff] underline font-pixel-alt transition-colors"
+            >
+              How It Works
+            </Link>
+            <span className="text-purple-readable">|</span>
+            <Link 
               href="/docs/features" 
               className="text-[#00ff00] hover:text-[#ff00ff] underline font-pixel-alt transition-colors"
             >

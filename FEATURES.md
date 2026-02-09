@@ -25,6 +25,14 @@ A **privacy-first, anonymous decentralized marketplace** on Solana with the foll
    - Automatic fee reduction based on tier
    - Tier display page with benefits
 
+4. **AI Listing & Snap to Compare**
+   - **AI Listing** vs **Manual Listing** mode on create: choose to have AI prefill or fill everything yourself.
+   - **Snap to Compare**: take a photo or upload an image; AI (Gemini) analyzes the item, suggests title, description, price, category, subcategory, and search keywords; finds similar FSBD listings as comps; suggests token name/symbol/description for token launch.
+   - **Apply all AI suggestions**: one click to fill the create form from AI output. Review and edit before submitting.
+   - **Search keywords**: listings store `search_keywords` (array); AI suggests keywords; displayed as tag chips on listing detail.
+   - **Daily limit**: 1 AI listing per user per day (per wallet) until in-house AI; usage tracker shows "1/1 used" and when it resets; Snap/camera disabled when limit used. Keyword search in Snap to Compare is always allowed and not counted.
+   - Clean formatting: AI description text is stripped of markdown/code fences before display.
+
 4. **Token Launching**
    - Optional SPL token creation for listings
    - Basic token minting (1B supply)
@@ -80,7 +88,10 @@ app/
 ### 🔧 Key Files
 
 - **`lib/tier-check.ts`**: Core tier system logic with on-chain balance checks
-- **`components/CreateListingForm.tsx`**: Full listing creation with IPFS and token launching
+- **`components/CreateListingForm.tsx`**: Full listing creation with IPFS, token launching, AI vs Manual mode, Snap to Compare
+- **`components/SnapToCompare.tsx`**: Snap/upload image → AI analysis, comps, Apply all suggestions, daily usage tracker
+- **`app/api/listings/find-comps-from-image/route.ts`**: AI image analysis (Gemini), daily limit check, comps from FSBD
+- **`app/api/listings/ai-usage/route.ts`**: GET daily AI listing usage (usedToday, resetsAt)
 - **`app/page.tsx`**: Home feed with search and filtering
 - **`components/TierDisplay.tsx`**: Visual tier information
 
@@ -96,6 +107,7 @@ app/
 - [ ] Implement proper escrow Solana program (currently simplified)
 - [x] Add Solana Pay QR codes (listing detail: "Scan QR" next to wallet link)
 - [ ] Optional: Pump.fun integration
+- [ ] Build in-house AI for Snap to Compare to relax daily limit
 
 ### 🔒 Privacy Features
 
