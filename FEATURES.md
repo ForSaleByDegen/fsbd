@@ -94,7 +94,7 @@ app/
 
 - [ ] Replace `FBSD_TOKEN_MINT_PLACEHOLDER` with actual token address after launch
 - [ ] Implement proper escrow Solana program (currently simplified)
-- [ ] Add Solana Pay QR codes
+- [x] Add Solana Pay QR codes (listing detail: "Scan QR" next to wallet link)
 - [ ] Optional: Pump.fun integration
 
 ### 🔒 Privacy Features

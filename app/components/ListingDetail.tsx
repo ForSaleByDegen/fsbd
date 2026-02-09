@@ -131,41 +131,42 @@ function RecordPurchaseButton({
   )
 }
 
-/** Solana Pay link - alternative when in-app transaction fails */
+/** Solana Pay link - alternative when in-app transaction fails. Includes QR for mobile scan. */
 function SolanaPayLink({ listingId }: { listingId: string }) {
   const [url, setUrl] = useState<string | null>(null)
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
+  const [showQr, setShowQr] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const handleClick = async () => {
-    if (url) {
-      window.open(url, '_blank')
-      return
+  const fetchPaymentUrl = async (): Promise<string> => {
+    const res = await fetch(`/api/listings/${listingId}/purchase-params`, { cache: 'no-store' })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error || 'Could not load payment details')
     }
+    const p = await res.json() as { recipient: string; amount: number; token: string; mint?: string }
+    const base = `solana:${p.recipient}`
+    const params = new URLSearchParams()
+    params.set('label', 'FSBD Purchase (Degen - Direct)')
+    if (p.token === 'SOL') {
+      params.set('amount', String(Math.ceil(p.amount * LAMPORTS_PER_SOL)))
+    } else if (p.mint) {
+      const decimals = 6
+      params.set('amount', String(Math.ceil(p.amount * 10 ** decimals)))
+      params.set('spl-token', p.mint)
+    } else {
+      throw new Error('Token not supported for link payment')
+    }
+    return `${base}?${params.toString()}`
+  }
+
+  const handleOpenLink = async () => {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`/api/listings/${listingId}/purchase-params`, { cache: 'no-store' })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err.error || 'Could not load payment details')
-      }
-      const p = await res.json() as { recipient: string; amount: number; token: string; mint?: string }
-      const base = `solana:${p.recipient}`
-      const params = new URLSearchParams()
-      params.set('label', 'FSBD Purchase (Degen - Direct)')
-      if (p.token === 'SOL') {
-        params.set('amount', String(Math.ceil(p.amount * LAMPORTS_PER_SOL)))
-      } else if (p.mint) {
-        // SPL: amount in smallest unit (USDC=6 decimals)
-        const decimals = 6
-        params.set('amount', String(Math.ceil(p.amount * 10 ** decimals)))
-        params.set('spl-token', p.mint)
-      } else {
-        throw new Error('Token not supported for link payment')
-      }
-      const fullUrl = `${base}?${params.toString()}`
-      setUrl(fullUrl)
+      const fullUrl = url ?? await fetchPaymentUrl()
+      if (!url) setUrl(fullUrl)
       window.open(fullUrl, '_blank')
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed')
@@ -174,16 +175,93 @@ function SolanaPayLink({ listingId }: { listingId: string }) {
     }
   }
 
+  const handleShowQr = async () => {
+    if (qrDataUrl) {
+      setShowQr(true)
+      return
+    }
+    if (url) {
+      try {
+        const qrcode = await import('qrcode')
+        const dataUrl = await qrcode.toDataURL(url, {
+          width: 220,
+          margin: 2,
+          color: { dark: '#000000', light: '#ffffff' },
+        })
+        setQrDataUrl(dataUrl)
+        setShowQr(true)
+      } catch {
+        setError('Failed to generate QR')
+      }
+      return
+    }
+    setLoading(true)
+    setError(null)
+    try {
+      const fullUrl = await fetchPaymentUrl()
+      setUrl(fullUrl)
+      const qrcode = await import('qrcode')
+      const dataUrl = await qrcode.toDataURL(fullUrl, {
+        width: 220,
+        margin: 2,
+        color: { dark: '#000000', light: '#ffffff' },
+      })
+      setQrDataUrl(dataUrl)
+      setShowQr(true)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
-    <button
-      type="button"
-      onClick={handleClick}
-      disabled={loading}
-      className="text-xs sm:text-sm text-purple-readable hover:text-[#ff00ff] underline font-pixel-alt disabled:opacity-50"
-      style={{ fontFamily: 'var(--font-pixel-alt)' }}
-    >
-      {loading ? 'Loading...' : error ? `Error: ${error}` : 'Having trouble? Pay via wallet link'}
-    </button>
+    <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
+      <button
+        type="button"
+        onClick={handleOpenLink}
+        disabled={loading}
+        className="text-xs sm:text-sm text-purple-readable hover:text-[#ff00ff] underline font-pixel-alt disabled:opacity-50"
+        style={{ fontFamily: 'var(--font-pixel-alt)' }}
+      >
+        {loading ? 'Loading...' : error ? `Error: ${error}` : 'Having trouble? Pay via wallet link'}
+      </button>
+      <button
+        type="button"
+        onClick={handleShowQr}
+        disabled={loading}
+        className="text-xs sm:text-sm text-purple-readable hover:text-[#ff00ff] font-pixel-alt disabled:opacity-50"
+        style={{ fontFamily: 'var(--font-pixel-alt)' }}
+        title="Scan with wallet app"
+      >
+        · Scan QR
+      </button>
+      {showQr && qrDataUrl && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setShowQr(false)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === 'Escape' && setShowQr(false)}
+          aria-label="Close QR"
+        >
+          <div
+            className="bg-black border-2 border-[#660099] rounded-lg p-4 flex flex-col items-center gap-2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-[#00ff00] font-pixel-alt text-sm">Scan with wallet app</p>
+            <img src={qrDataUrl} alt="Solana Pay QR code" className="rounded" width={220} height={220} />
+            <button
+              type="button"
+              onClick={() => setShowQr(false)}
+              className="text-purple-readable hover:text-[#ff00ff] text-sm font-pixel-alt"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+    </span>
   )
 }
 
