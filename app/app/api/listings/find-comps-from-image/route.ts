@@ -212,6 +212,16 @@ export async function POST(request: NextRequest) {
     )
     if (rateLimitResponse) return rateLimitResponse
 
+    if (!GEMINI_API_KEY?.trim()) {
+      return NextResponse.json(
+        {
+          error:
+            'Gemini API key is not configured. Set GOOGLE_GEMINI_API_KEY in Vercel. Get a free key at aistudio.google.com/apikey',
+        },
+        { status: 503 }
+      )
+    }
+
     const base64 = extractBase64(imageBase64)
     const dataUrl = imageBase64.includes(',') ? imageBase64 : `data:image/jpeg;base64,${base64}`
     const mimeMatch = dataUrl.match(/^data:(image\/[a-z]+);base64,/i)
