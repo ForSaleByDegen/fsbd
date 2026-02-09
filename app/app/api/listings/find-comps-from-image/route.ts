@@ -136,10 +136,15 @@ async function runGeminiWithGoogleSearch(
         ? JSON.stringify(groundingSources.slice(0, 5).map((s) => ({ title: s.title, uri: s.uri })))
         : 'No direct market matches'
     const genPrompt = `Based on the item identified as "${identifiedText.slice(0, 300)}" and these search results: ${sourcesStr}, create a JSON object (no markdown) with these exact keys:
-- "itemDescription": A 1-2 sentence listing description (condition, key features).
+- "suggestedTitle": A short listing title (max 80 chars), e.g. "Vintage Brass Table Lamp".
+- "itemDescription": A 1-2 sentence listing description (condition, key features). Plain text, no code.
+- "suggestedPrice": A price string in SOL or USD based on similar listings (e.g. "0.5" or "25").
 - "category": One of: ${CATEGORIES.join(', ')}. Usually "for-sale" for physical items.
 - "subcategory": For for-sale use one of: ${SUBCATEGORIES_FOR_SALE.join(', ')}. For other categories use "other".
-- "searchKeywords": An array of 3-6 search terms, e.g. ["vintage lamp", "brass", "table lamp"]. Use specific descriptive terms.`
+- "searchKeywords": An array of 3-6 search terms, e.g. ["vintage lamp", "brass", "table lamp"]. Use specific descriptive terms.
+- "suggestedTokenName": A token name for the item, e.g. "Vintage Lamp Token".
+- "suggestedTokenSymbol": 3-6 char ticker, e.g. "VLAMP".
+- "suggestedTokenDescription": A 1-sentence marketing blurb for token metadata.`
 
     const genRes = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
@@ -148,7 +153,7 @@ async function runGeminiWithGoogleSearch(
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: genPrompt }] }],
-          generationConfig: { maxOutputTokens: 500 },
+          generationConfig: { maxOutputTokens: 600 },
         }),
       }
     )
@@ -175,10 +180,15 @@ async function runGeminiImageOnly(
   geminiKey: string
 ): Promise<string | null> {
   const prompt = `You are helping a user list an item for sale. Look at this image and respond with a JSON object (no markdown) with these exact keys:
-- "itemDescription": A 1-2 sentence description (condition, key features).
+- "suggestedTitle": A short listing title (max 80 chars).
+- "itemDescription": A 1-2 sentence description (condition, key features). Plain text, no code.
+- "suggestedPrice": A price string in SOL (e.g. "0.5") or USD (e.g. "25") — estimate from typical market value.
 - "category": One of: ${CATEGORIES.join(', ')}. Usually "for-sale".
 - "subcategory": For for-sale use one of: ${SUBCATEGORIES_FOR_SALE.join(', ')}. Otherwise "other".
-- "searchKeywords": An array of 3-6 search terms, e.g. ["vintage lamp", "brass", "table lamp"].`
+- "searchKeywords": An array of 3-6 search terms, e.g. ["vintage lamp", "brass", "table lamp"].
+- "suggestedTokenName": A token name for the item, e.g. "Vintage Lamp Token".
+- "suggestedTokenSymbol": 3-6 char ticker, e.g. "VLAMP".
+- "suggestedTokenDescription": A 1-sentence marketing blurb for token metadata.`
   try {
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
@@ -194,7 +204,7 @@ async function runGeminiImageOnly(
               ],
             },
           ],
-          generationConfig: { maxOutputTokens: 500 },
+          generationConfig: { maxOutputTokens: 600 },
         }),
       }
     )
@@ -291,7 +301,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    let parsed: { itemDescription?: string; category?: string; subcategory?: string; searchKeywords?: string[] }
+    let parsed: {
+      itemDescription?: string
+      category?: string
+      subcategory?: string
+      searchKeywords?: string[]
+      suggestedTitle?: string
+      suggestedPrice?: string
+      suggestedTokenName?: string
+      suggestedTokenSymbol?: string
+      suggestedTokenDescription?: string
+    }
     try {
       const cleaned = rawContent.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim()
       parsed = JSON.parse(cleaned) as typeof parsed
@@ -346,12 +366,33 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Fallback suggestedPrice from comps if Gemini did not provide it
+    let suggestedPrice = parsed.suggestedPrice?.trim()
+    if (!suggestedPrice && Array.isArray(comps) && comps.length > 0) {
+      const prices = (comps as { price?: number }[]).map((c) => c.price).filter((p): p is number => typeof p === 'number' && p > 0)
+      if (prices.length > 0) {
+        prices.sort((a, b) => a - b)
+        const median = prices.length % 2 === 0
+          ? (prices[prices.length / 2 - 1]! + prices[prices.length / 2]!) / 2
+          : prices[Math.floor(prices.length / 2)]!
+        suggestedPrice = String(median)
+      } else if ((comps[0] as { price?: number })?.price != null) {
+        suggestedPrice = String((comps[0] as { price: number }).price)
+      }
+    }
+    if (!suggestedPrice) suggestedPrice = ''
+
     return NextResponse.json(
       {
         itemDescription: parsed.itemDescription ?? '',
+        suggestedTitle: (parsed.suggestedTitle ?? '').slice(0, 200),
+        suggestedPrice,
         suggestedCategory,
         suggestedSubcategory,
         searchKeywords: keywords,
+        suggestedTokenName: (parsed.suggestedTokenName ?? '').slice(0, 100),
+        suggestedTokenSymbol: (parsed.suggestedTokenSymbol ?? '').slice(0, 10),
+        suggestedTokenDescription: (parsed.suggestedTokenDescription ?? '').slice(0, 500),
         comps,
         groundingSources: groundingSources.length > 0 ? groundingSources : undefined,
         tier,

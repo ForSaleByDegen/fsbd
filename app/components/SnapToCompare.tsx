@@ -10,6 +10,7 @@ import { formatPriceToken } from '@/lib/utils'
 import { getCategoryLabel, getSubcategoryLabel } from '@/lib/categories'
 import { getIPFSGatewayURL } from '@/lib/pinata'
 import { enhanceImageForAnalysis } from '@/lib/enhance-image'
+import { cleanListingText } from '@/lib/clean-listing-text'
 
 export type CompListing = {
   id: string
@@ -26,25 +27,41 @@ export type GroundingSource = { title?: string; uri?: string }
 
 export type SnapResult = {
   itemDescription: string
+  suggestedTitle?: string
+  suggestedPrice?: string
   suggestedCategory: string
   suggestedSubcategory: string
   searchKeywords: string[]
+  suggestedTokenName?: string
+  suggestedTokenSymbol?: string
+  suggestedTokenDescription?: string
   comps: CompListing[]
-  /** External market links from Google Search grounding (eBay, Amazon, etc.) */
   groundingSources?: GroundingSource[]
+}
+
+export type FullAISuggestions = {
+  title: string
+  description: string
+  price: string
+  category: string
+  subcategory: string
+  searchKeywords: string[]
+  tokenName: string
+  tokenSymbol: string
+  tokenDescription: string
 }
 
 type Props = {
   onUseComp: (comp: CompListing, itemDescription?: string) => void
   onUseSuggested?: (itemDescription: string, category: string, subcategory: string) => void
+  onApplyAllSuggestions?: (data: FullAISuggestions) => void
   applyingComp?: boolean
-  /** Wallet address for tier-based rate limits (connect wallet for higher limits) */
   wallet?: string | null
 }
 
 type ViewMode = 'grid' | 'compare'
 
-export default function SnapToCompare({ onUseComp, onUseSuggested, applyingComp = false, wallet }: Props) {
+export default function SnapToCompare({ onUseComp, onUseSuggested, onApplyAllSuggestions, applyingComp = false, wallet }: Props) {
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<SnapResult | null>(null)
   const [snappedPhoto, setSnappedPhoto] = useState<string | null>(null)
@@ -83,9 +100,14 @@ export default function SnapToCompare({ onUseComp, onUseSuggested, applyingComp 
       setLastFailedImage(null)
       setResult({
         itemDescription: data.itemDescription ?? '',
+        suggestedTitle: data.suggestedTitle ?? '',
+        suggestedPrice: data.suggestedPrice ?? '',
         suggestedCategory: data.suggestedCategory ?? 'for-sale',
         suggestedSubcategory: data.suggestedSubcategory ?? 'other',
         searchKeywords: Array.isArray(data.searchKeywords) ? data.searchKeywords : [],
+        suggestedTokenName: data.suggestedTokenName ?? '',
+        suggestedTokenSymbol: data.suggestedTokenSymbol ?? '',
+        suggestedTokenDescription: data.suggestedTokenDescription ?? '',
         comps: Array.isArray(data.comps) ? data.comps : [],
         groundingSources: Array.isArray(data.groundingSources) ? data.groundingSources : undefined,
       })
@@ -288,16 +310,56 @@ export default function SnapToCompare({ onUseComp, onUseSuggested, applyingComp 
       {result && (
         <div className="mt-4 space-y-4">
           {/* AI-suggested description & category */}
-          {(result.itemDescription || onUseSuggested) && (
+          {(result.itemDescription || onUseSuggested || onApplyAllSuggestions) && (
             <div className="p-3 rounded-lg border border-cyan-500/40 bg-cyan-500/5">
               <p className="text-xs text-cyan-400 font-medium mb-1">AI analysis</p>
+              {result.suggestedTitle && (
+                <p className="text-sm font-medium text-foreground mb-1">{result.suggestedTitle}</p>
+              )}
               {result.itemDescription && (
                 <p className="text-sm text-muted-foreground mb-2">{result.itemDescription}</p>
+              )}
+              {(result.suggestedPrice || result.searchKeywords.length > 0) && (
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  {result.suggestedPrice && (
+                    <span className="text-sm text-[#00ff00] font-medium">{result.suggestedPrice} (suggested price)</span>
+                  )}
+                  {result.searchKeywords.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {result.searchKeywords.map((kw, i) => (
+                        <span key={i} className="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 text-xs">
+                          {kw}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
               )}
               <p className="text-xs text-muted-foreground">
                 Category: {getCategoryLabel(result.suggestedCategory)} → {getSubcategoryLabel(result.suggestedCategory, result.suggestedSubcategory)}
               </p>
-              {onUseSuggested && result.itemDescription && (
+              {onApplyAllSuggestions && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-2 mr-2 border-cyan-500 text-cyan-400 hover:bg-cyan-500/20"
+                  onClick={() => onApplyAllSuggestions({
+                    title: result.suggestedTitle || result.searchKeywords[0] || 'Item',
+                    description: cleanListingText(result.itemDescription),
+                    price: result.suggestedPrice || '',
+                    category: result.suggestedCategory,
+                    subcategory: result.suggestedSubcategory,
+                    searchKeywords: result.searchKeywords,
+                    tokenName: result.suggestedTokenName || result.suggestedTitle || result.searchKeywords[0] || 'Item Token',
+                    tokenSymbol: result.suggestedTokenSymbol || (result.suggestedTitle?.slice(0, 6).replace(/\s/g, '') || 'ITEM').toUpperCase(),
+                    tokenDescription: result.suggestedTokenDescription || cleanListingText(result.itemDescription),
+                  })}
+                >
+                  Apply all AI suggestions
+                </Button>
+              )}
+              {onUseSuggested && result.itemDescription && !onApplyAllSuggestions && (
                 <Button
                   type="button"
                   variant="outline"
@@ -423,12 +485,33 @@ export default function SnapToCompare({ onUseComp, onUseSuggested, applyingComp 
                         <p className="text-xs text-muted-foreground mt-2">
                           {getCategoryLabel(result.suggestedCategory)} → {getSubcategoryLabel(result.suggestedCategory, result.suggestedSubcategory)}
                         </p>
-                        {onUseSuggested && result.itemDescription && (
+                        {onApplyAllSuggestions && (
                           <Button
                             type="button"
                             variant="outline"
                             size="sm"
                             className="mt-3 border-cyan-500 text-cyan-400 hover:bg-cyan-500/20"
+                            onClick={() => onApplyAllSuggestions({
+                              title: result.suggestedTitle || result.searchKeywords[0] || 'Item',
+                              description: cleanListingText(result.itemDescription),
+                              price: result.suggestedPrice || '',
+                              category: result.suggestedCategory,
+                              subcategory: result.suggestedSubcategory,
+                              searchKeywords: result.searchKeywords,
+                              tokenName: result.suggestedTokenName || result.suggestedTitle || result.searchKeywords[0] || 'Item Token',
+                              tokenSymbol: result.suggestedTokenSymbol || (result.suggestedTitle?.slice(0, 6).replace(/\s/g, '') || 'ITEM').toUpperCase(),
+                              tokenDescription: result.suggestedTokenDescription || cleanListingText(result.itemDescription),
+                            })}
+                          >
+                            Apply all AI suggestions
+                          </Button>
+                        )}
+                        {onUseSuggested && !onApplyAllSuggestions && result.itemDescription && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="mt-3 ml-2 border-cyan-500 text-cyan-400 hover:bg-cyan-500/20"
                             onClick={() => onUseSuggested(result.itemDescription, result.suggestedCategory, result.suggestedSubcategory)}
                           >
                             Use suggested

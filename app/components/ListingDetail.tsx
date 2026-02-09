@@ -736,6 +736,19 @@ export default function ListingDetail({ listingId }: ListingDetailProps) {
               ? getSubcategoryLabel(listing.category, listing.subcategory)
               : listing.category?.replace('-', ' ')}
           </span>
+          {Array.isArray(listing.search_keywords) && listing.search_keywords.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-1 sm:mt-0 sm:ml-2">
+              {listing.search_keywords.slice(0, 12).map((kw: string, i: number) => (
+                <span
+                  key={i}
+                  className="px-2 py-0.5 rounded text-xs bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 font-pixel-alt"
+                  style={{ fontFamily: 'var(--font-pixel-alt)' }}
+                >
+                  {kw}
+                </span>
+              ))}
+            </div>
+          )}
           {(listing.delivery_method === 'local_pickup' || listing.delivery_method === 'both') && (
             <span className="text-sm text-green-400 font-pixel-alt px-2 py-1 rounded border border-green-600 bg-green-900/40" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
               📍 Local pickup

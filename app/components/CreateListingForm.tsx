@@ -188,6 +188,7 @@ export default function CreateListingForm() {
     chatTokenGated: true,
     chatMinTokens: 1,
     vanitySuffix: 'pump',
+    searchKeywords: [] as string[],
   })
   const [assetVerified, setAssetVerified] = useState<{ verified: boolean; error?: string } | null>(null)
   const [createdListingForToken, setCreatedListingForToken] = useState<{
@@ -217,6 +218,7 @@ export default function CreateListingForm() {
   const [applyingImport, setApplyingImport] = useState(false)
   const [applyingComp, setApplyingComp] = useState(false)
   const [tokenLaunchRecovery, setTokenLaunchRecovery] = useState<{ listingId: string; listingUrl: string } | null>(null)
+  const [listingMode, setListingMode] = useState<'ai' | 'manual'>('ai')
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -322,6 +324,7 @@ export default function CreateListingForm() {
         chat_token_gated: formData.chatTokenGated,
         chat_min_tokens: Math.max(1, Math.floor(Number(formData.chatMinTokens) || 1)),
         price_token: formData.priceToken === 'LISTING_TOKEN' ? 'LISTING_TOKEN' : formData.priceToken,
+        search_keywords: (formData.searchKeywords && formData.searchKeywords.length > 0) ? formData.searchKeywords : [],
       }
       if (isDigitalAsset) {
         listingDataForCreate.asset_type = ['nft','token','whole_token','token_rights','wallet','meme_coin'].includes(formData.subcategory) ? formData.subcategory : (formData.subcategory === 'nft' ? 'nft' : 'meme_coin')
@@ -497,6 +500,7 @@ export default function CreateListingForm() {
             subcategory: formData.subcategory.trim() || null,
             chat_token_gated: formData.chatTokenGated,
             chat_min_tokens: Math.max(1, Math.floor(Number(formData.chatMinTokens) || 1)),
+            search_keywords: (formData.searchKeywords && formData.searchKeywords.length > 0) ? formData.searchKeywords : [],
           }
           if (isDigitalAsset) {
             listingDataForCreate.asset_type = ['nft','token','whole_token','token_rights','wallet','meme_coin'].includes(formData.subcategory) ? formData.subcategory : 'meme_coin'
@@ -717,6 +721,7 @@ export default function CreateListingForm() {
         subcategory: formData.subcategory.trim() || null,
         chat_token_gated: formData.chatTokenGated,
         chat_min_tokens: Math.max(1, Math.floor(Number(formData.chatMinTokens) || 1)),
+        search_keywords: (formData.searchKeywords?.length ?? 0) > 0 ? formData.searchKeywords : [],
       }
       if (isDigitalAsset) {
         listingData.asset_type = ['nft','token','whole_token','wallet','meme_coin'].includes(formData.subcategory) ? formData.subcategory : 'meme_coin'
@@ -768,6 +773,31 @@ export default function CreateListingForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6 w-full max-w-full relative z-10">
+      <div className="p-4 rounded-lg border-2 border-cyan-500/40 bg-cyan-500/5">
+        <p className="text-sm font-medium mb-2">How do you want to create?</p>
+        <div className="flex gap-2 mb-3">
+          <button
+            type="button"
+            onClick={() => setListingMode('ai')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${listingMode === 'ai' ? 'bg-cyan-500 text-black' : 'bg-black/30 border border-cyan-500/40 text-cyan-400 hover:bg-cyan-500/10'}`}
+          >
+            AI Listing
+          </button>
+          <button
+            type="button"
+            onClick={() => setListingMode('manual')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${listingMode === 'manual' ? 'bg-cyan-500 text-black' : 'bg-black/30 border border-cyan-500/40 text-cyan-400 hover:bg-cyan-500/10'}`}
+          >
+            Manual Listing
+          </button>
+        </div>
+        {listingMode === 'ai' ? (
+          <p className="text-xs text-muted-foreground">Snap a photo of your item. We&apos;ll find similar listings on the web and suggest a title, description, price, and token details. Review and adjust before submitting.</p>
+        ) : (
+          <p className="text-xs text-muted-foreground">Fill in all fields yourself. Use Snap to Compare below optionally for suggestions.</p>
+        )}
+      </div>
+
       <div className="p-4 border-2 border-[#660099]/50 rounded-lg bg-[#660099]/5">
         <label className="block text-sm font-medium mb-2">Import from product URL (optional)</label>
         <div className="flex gap-2">
@@ -984,6 +1014,19 @@ export default function CreateListingForm() {
       <SnapToCompare
         wallet={publicKey?.toString()}
         applyingComp={applyingComp}
+        onApplyAllSuggestions={(data) => {
+          setFormData((prev) => ({
+            ...prev,
+            title: data.title,
+            description: data.description,
+            price: data.price,
+            category: data.category,
+            subcategory: data.subcategory,
+            searchKeywords: data.searchKeywords,
+            tokenName: data.tokenName,
+            tokenSymbol: data.tokenSymbol,
+          }))
+        }}
         onUseSuggested={(itemDescription, category, subcategory) => {
           setFormData((prev) => ({
             ...prev,
