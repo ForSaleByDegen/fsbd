@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
 
     const raw = (data as { value_json?: unknown } | null)?.value_json
     const list = Array.isArray(raw) ? raw : (typeof raw === 'string' ? (() => { try { return JSON.parse(raw) } catch { return [] } })() : [])
-    const addresses = list.filter((x): x is string => typeof x === 'string').map((s) => s.trim().toLowerCase())
+    const addresses = list.filter((x: unknown): x is string => typeof x === 'string').map((s) => s.trim().toLowerCase())
     const whitelisted = addresses.includes(wallet.toLowerCase())
 
     return NextResponse.json({ whitelisted })
