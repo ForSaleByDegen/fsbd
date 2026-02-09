@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useWallet, useConnection } from '@solana/wallet-adapter-react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Transaction, SystemProgram, LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js'
 import { calculateListingFee, getMaxImagesForTier, canAddSocialsForTier } from '@/lib/tier-check'
@@ -107,6 +107,7 @@ export default function CreateListingForm() {
   const { publicKey, signTransaction, signMessage } = useWallet()
   const { connection } = useConnection()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { tier: tierState, refresh } = useTier()
   const [loading, setLoading] = useState(false)
   const [isAdminUser, setIsAdminUser] = useState(false)
@@ -215,6 +216,30 @@ export default function CreateListingForm() {
   const [applyingImport, setApplyingImport] = useState(false)
   const [applyingComp, setApplyingComp] = useState(false)
   const [tokenLaunchRecovery, setTokenLaunchRecovery] = useState<{ listingId: string; listingUrl: string } | null>(null)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (searchParams.get('from') !== 'listinggenius') return
+    try {
+      const raw = sessionStorage.getItem('listinggenius_prefill')
+      if (!raw) return
+      const prefill = JSON.parse(raw) as { title?: string; description?: string; suggestedPrice?: string; category?: string; subcategory?: string; tags?: string[] }
+      sessionStorage.removeItem('listinggenius_prefill')
+      const catRaw = String(prefill.category ?? '').toLowerCase().replace(/\s+/g, '-')
+      const validCat = ['for-sale', 'digital-assets', 'services', 'gigs', 'housing', 'community', 'jobs'].includes(catRaw) ? catRaw : 'for-sale'
+      const subRaw = String(prefill.subcategory ?? '').toLowerCase().replace(/\s+/g, '-')
+      const validSub = ['electronics', 'furniture', 'vehicles', 'collectibles', 'clothing', 'sports', 'books', 'other'].includes(subRaw) ? subRaw : 'other'
+      setFormData((prev) => ({
+        ...prev,
+        title: prefill.title ?? prev.title,
+        description: prefill.description ?? prev.description,
+        price: prefill.suggestedPrice ?? prev.price,
+        category: validCat,
+        subcategory: validSub,
+      }))
+      router.replace('/listings/create', { scroll: false })
+    } catch { /* ignore */ }
+  }, [searchParams, router])
 
   const { keypair: vanityKeypair, generating: vanityGenerating, consume: consumeVanity } = useVanityGrind(
     formData.vanitySuffix || 'pump',
@@ -943,6 +968,12 @@ export default function CreateListingForm() {
           </div>
         )}
       </div>
+
+      <p className="text-xs text-muted-foreground mb-2">
+        <Link href="/listinggenius" className="text-cyan-400 hover:underline">
+          Or try ListingGenius (Snap, Search, Sell) →
+        </Link>
+      </p>
 
       <SnapToCompare
         wallet={publicKey?.toString()}
