@@ -4,6 +4,8 @@
 **From:** FSBD team  
 **Goal:** Run our in-house vision AI so we don't depend on Gemini anymore.
 
+**Why this matters:** Most apps rent AI from OpenAI/Google and pay per request. $FSBD is changing that — validators run the vision AI on their own hardware, earn $FSBD, and the pool is funded by platform fees. Community-owned compute, not rented APIs.
+
 ## How to share this
 
 Zip the entire `ai-service` folder and send it to your buddy (email, Slack, etc.). Or share the repo and point them to the `ai-service` folder. Everything they need is inside.

@@ -1,6 +1,6 @@
 # FSBD In-House AI Service (Snap to Compare)
 
-This service replaces Gemini for image analysis. Run it on a machine with a GPU and share the URL with the FSBD team so they can point their app at it.
+This service powers Snap to Compare — AI that analyzes a photo of an item and suggests a listing title, description, price, and comps. Run it on your GPU, stake $FSBD, and register as a validator. We route requests to you; you earn $FSBD. No third-party APIs (Gemini, Google). Community-owned compute, funded by platform fees and early treasury. You run the AI; you get paid for it.
 
 ## Requirements
 
