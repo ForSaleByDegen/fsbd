@@ -221,8 +221,7 @@ export default function ListingGeniusPage() {
                 Snap, Search, <span className="text-blue-600">Sell.</span>
               </h1>
               <p className="text-lg text-slate-600">
-                Take a photo of anything. We&apos;ll find market comparisons and generate a listing. Uses your API key
-                securely on our server.
+                Take a photo of anything. We&apos;ll find market comparisons and generate a listing.
               </p>
             </div>
             <div className="grid grid-cols-3 gap-4">
