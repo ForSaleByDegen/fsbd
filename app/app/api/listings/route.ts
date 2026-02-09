@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
     }
 
     const walletHash = hashWalletAddress(wa)
-    const searchKeywords = Array.isArray(body.search_keywords) ? body.search_keywords.filter((k): k is string => typeof k === 'string').slice(0, 20) : []
+    const searchKeywords = Array.isArray(body.search_keywords) ? body.search_keywords.filter((k: unknown): k is string => typeof k === 'string').slice(0, 20) : []
     let listingData = { ...body, wallet_address: wa, wallet_address_hash: walletHash, search_keywords: searchKeywords }
 
     // Block banned sellers (e.g. failed to add tracking within 7 days)
