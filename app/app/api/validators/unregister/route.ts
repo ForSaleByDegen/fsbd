@@ -17,7 +17,7 @@ async function isWhitelisted(wallet: string): Promise<boolean> {
     .maybeSingle()
   const raw = (data as { value_json?: unknown } | null)?.value_json
   const list = Array.isArray(raw) ? raw : []
-  const addresses = list.filter((x): x is string => typeof x === 'string').map((s) => s.trim().toLowerCase())
+  const addresses = list.filter((x: unknown): x is string => typeof x === 'string').map((s) => s.trim().toLowerCase())
   return addresses.includes(wallet.toLowerCase())
 }
 
