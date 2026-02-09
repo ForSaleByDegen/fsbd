@@ -66,7 +66,86 @@ export async function GET(request: NextRequest) {
       }
 
       if (q) {
-        query = query.or(`title.ilike.%${q}%,description.ilike.%${q}%`)
+        const sanitizedQ = q.replace(/'/g, "''").trim()
+        const tokens = sanitizedQ.split(/\s+/).map((t) => t.replace(/[^a-zA-Z0-9_-]/g, '')).filter(Boolean).slice(0, 5)
+        const hasTokens = tokens.length > 0
+
+        if (hasTokens) {
+          // First-party only: search title/description AND search_keywords (no 3rd party APIs)
+          const queryTitleDesc = supabase
+            .from('listings')
+            .select('*')
+            .eq('status', 'active')
+            .or(`title.ilike.%${sanitizedQ}%,description.ilike.%${sanitizedQ}%`)
+          const queryKeywords = supabase
+            .from('listings')
+            .select('*')
+            .eq('status', 'active')
+            .overlaps('search_keywords', tokens)
+
+          let q1 = queryTitleDesc
+          let q2 = queryKeywords
+          if (listed && listed !== 'any') {
+            if (listed === '24h') {
+              const since = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+              q1 = q1.gte('created_at', toIso(since))
+              q2 = q2.gte('created_at', toIso(since))
+            } else if (listed === '7d') {
+              const since = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+              q1 = q1.gte('created_at', toIso(since))
+              q2 = q2.gte('created_at', toIso(since))
+            } else if (listed === '30d') {
+              const since = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+              q1 = q1.gte('created_at', toIso(since))
+              q2 = q2.gte('created_at', toIso(since))
+            } else if (listed === 'older') {
+              const since = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+              q1 = q1.lt('created_at', toIso(since))
+              q2 = q2.lt('created_at', toIso(since))
+            }
+          }
+          if (category && category !== 'all') {
+            q1 = q1.eq('category', category)
+            q2 = q2.eq('category', category)
+          }
+          if (subcategory) {
+            q1 = q1.eq('subcategory', subcategory)
+            q2 = q2.eq('subcategory', subcategory)
+          }
+          if (delivery === 'local_pickup') {
+            q1 = q1.in('delivery_method', ['local_pickup', 'both'])
+            q2 = q2.in('delivery_method', ['local_pickup', 'both'])
+          } else if (delivery === 'ship') {
+            q1 = q1.in('delivery_method', ['ship', 'both'])
+            q2 = q2.in('delivery_method', ['ship', 'both'])
+          }
+          if (locationCity) {
+            q1 = q1.ilike('location_city', `%${locationCity}%`)
+            q2 = q2.ilike('location_city', `%${locationCity}%`)
+          }
+          if (locationRegion) {
+            q1 = q1.ilike('location_region', `%${locationRegion}%`)
+            q2 = q2.ilike('location_region', `%${locationRegion}%`)
+          }
+          q1 = q1.order('created_at', { ascending: sort === 'oldest' }).limit(100)
+          q2 = q2.order('created_at', { ascending: sort === 'oldest' }).limit(100)
+
+          const [res1, res2] = await Promise.all([q1, q2])
+          if (res1.error) throw res1.error
+          if (res2.error) throw res2.error
+          const byId = new Map<string, (typeof res1.data)[0]>()
+          for (const row of [...(res1.data || []), ...(res2.data || [])]) {
+            const r = row as { id: string }
+            if (!byId.has(r.id)) byId.set(r.id, row as (typeof res1.data)[0])
+          }
+          const merged = Array.from(byId.values()).sort((a, b) => {
+            const aDate = (a as { created_at?: string }).created_at ?? ''
+            const bDate = (b as { created_at?: string }).created_at ?? ''
+            return sort === 'oldest' ? (aDate < bDate ? -1 : 1) : (bDate < aDate ? -1 : 1)
+          }).slice(0, 100)
+          return NextResponse.json(merged)
+        }
+        query = query.or(`title.ilike.%${sanitizedQ}%,description.ilike.%${sanitizedQ}%`)
       }
 
       if (delivery === 'local_pickup') {

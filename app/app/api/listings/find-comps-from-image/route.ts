@@ -16,6 +16,7 @@ import { getUserTier, getSnapToCompareLimits, type Tier } from '@/lib/tier-check
 const AI_LISTING_DAILY_MS = 24 * 60 * 60 * 1000
 
 const GEMINI_API_KEY = process.env.GOOGLE_GEMINI_API_KEY || process.env.GEMINI_API_KEY
+const INHOUSE_AI_URL = (process.env.INHOUSE_AI_URL || '').replace(/\/$/, '') // no trailing slash
 const CATEGORIES = ['for-sale', 'digital-assets', 'services', 'gigs', 'housing', 'community', 'jobs']
 const SUBCATEGORIES_FOR_SALE = ['electronics', 'furniture', 'vehicles', 'collectibles', 'clothing', 'sports', 'books', 'other']
 
@@ -176,6 +177,58 @@ async function runGeminiWithGoogleSearch(
   }
 }
 
+/** Validator pool: call registered validators' /api/analyze. No 3rd party. */
+async function runValidatorPool(base64: string, mimeType: string): Promise<string | null> {
+  if (!supabaseAdmin) return null
+  try {
+    const { data: validators } = await supabaseAdmin
+      .from('ai_validators')
+      .select('endpoint_url')
+      .eq('status', 'active')
+    const list = (validators || []) as { endpoint_url: string }[]
+    if (list.length === 0) return null
+    const shuffled = [...list].sort(() => Math.random() - 0.5)
+    for (let i = 0; i < Math.min(3, shuffled.length); i++) {
+      const url = shuffled[i]!.endpoint_url.replace(/\/$/, '')
+      try {
+        const res = await fetch(`${url}/api/analyze`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image_base64: base64, mime_type: mimeType }),
+          signal: AbortSignal.timeout(90000),
+        })
+        if (!res.ok) continue
+        const data = (await res.json()) as { raw_content?: string; error?: string }
+        const raw = data.raw_content?.trim()
+        if (raw) return raw
+      } catch {
+        continue
+      }
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+/** In-house vision API (Ollama/llava on buddy's GPU). No 3rd party. */
+async function runInHouseVision(base64: string, mimeType: string): Promise<string | null> {
+  if (!INHOUSE_AI_URL) return null
+  try {
+    const res = await fetch(`${INHOUSE_AI_URL}/api/analyze`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_base64: base64, mime_type: mimeType }),
+      signal: AbortSignal.timeout(90000),
+    })
+    if (!res.ok) return null
+    const data = (await res.json()) as { raw_content?: string; error?: string }
+    return data.raw_content?.trim() ?? null
+  } catch {
+    return null
+  }
+}
+
 /** Fallback: Gemini with image, no Google Search (works on free tier, no billing). */
 async function runGeminiImageOnly(
   base64: string,
@@ -220,11 +273,15 @@ async function runGeminiImageOnly(
 }
 
 export async function POST(request: NextRequest) {
-  if (!GEMINI_API_KEY) {
+  const hasAnyProvider = !!(supabaseAdmin && (await (async () => {
+    const { data } = await supabaseAdmin.from('ai_validators').select('id').eq('status', 'active').limit(1)
+    return (data?.length ?? 0) > 0
+  })())) || INHOUSE_AI_URL || GEMINI_API_KEY?.trim()
+  if (!hasAnyProvider) {
     return NextResponse.json(
       {
         error:
-          'Image analysis is not configured. Set GOOGLE_GEMINI_API_KEY in Vercel. Get a free key at aistudio.google.com/apikey',
+          'Image analysis is not configured. Add validators at /validators, set INHOUSE_AI_URL, or GOOGLE_GEMINI_API_KEY in Vercel.',
       },
       { status: 503 }
     )
@@ -294,48 +351,53 @@ export async function POST(request: NextRequest) {
     )
     if (rateLimitResponse) return rateLimitResponse
 
-    if (!GEMINI_API_KEY?.trim()) {
-      return NextResponse.json(
-        {
-          error:
-            'Gemini API key is not configured. Set GOOGLE_GEMINI_API_KEY in Vercel. Get a free key at aistudio.google.com/apikey',
-        },
-        { status: 503 }
-      )
-    }
-
     const base64 = extractBase64(imageBase64)
     const dataUrl = imageBase64.includes(',') ? imageBase64 : `data:image/jpeg;base64,${base64}`
     const mimeMatch = dataUrl.match(/^data:(image\/[a-z]+);base64,/i)
     const mimeType = mimeMatch?.[1] ?? 'image/jpeg'
 
-    // Try ListingGenius first (Gemini + Google Search grounding — may require billing)
+    // Order: Validator pool → INHOUSE_AI_URL → Gemini (no 3rd party preferred)
     let rawContent = ''
     let groundingSources: GroundingSource[] = []
-    const groundingResult = await runGeminiWithGoogleSearch(base64, mimeType, GEMINI_API_KEY)
 
-    if (groundingResult && 'rawContent' in groundingResult) {
-      rawContent = groundingResult.rawContent
-      groundingSources = groundingResult.groundingSources
-    } else if (groundingResult && 'error' in groundingResult) {
-      // Grounding failed (e.g. billing) — try fallback without Google Search (free tier)
-      const fallback = await runGeminiImageOnly(base64, mimeType, GEMINI_API_KEY)
-      if (fallback) {
-        rawContent = fallback
+    const validatorResult = await runValidatorPool(base64, mimeType)
+    if (validatorResult) rawContent = validatorResult
+
+    if (!rawContent && INHOUSE_AI_URL) {
+      const inHouse = await runInHouseVision(base64, mimeType)
+      if (inHouse) rawContent = inHouse
+    }
+
+    if (!rawContent && GEMINI_API_KEY?.trim()) {
+      const groundingResult = await runGeminiWithGoogleSearch(base64, mimeType, GEMINI_API_KEY)
+      if (groundingResult && 'rawContent' in groundingResult) {
+        rawContent = groundingResult.rawContent
+        groundingSources = groundingResult.groundingSources
+      } else if (groundingResult && 'error' in groundingResult) {
+        const fallback = await runGeminiImageOnly(base64, mimeType, GEMINI_API_KEY)
+        if (fallback) rawContent = fallback
+        else return NextResponse.json({ error: groundingResult.error }, { status: 502 })
       } else {
-        return NextResponse.json({ error: groundingResult.error }, { status: 502 })
+        const fallback = await runGeminiImageOnly(base64, mimeType, GEMINI_API_KEY)
+        if (fallback) rawContent = fallback
+        else
+          return NextResponse.json(
+            { error: 'Image analysis failed. Try a clearer photo or use keyword search below.' },
+            { status: 502 }
+          )
       }
-    } else {
-      // Grounding returned null — try fallback
-      const fallback = await runGeminiImageOnly(base64, mimeType, GEMINI_API_KEY)
-      if (fallback) {
-        rawContent = fallback
-      } else {
-        return NextResponse.json(
-          { error: 'Image analysis failed. Try a clearer photo or use keyword search below.' },
-          { status: 502 }
-        )
-      }
+    }
+
+    if (!rawContent) {
+      return NextResponse.json(
+        {
+          error:
+            GEMINI_API_KEY?.trim()
+              ? 'Image analysis failed. Try again or use keyword search below.'
+              : 'Image analysis not configured. Set INHOUSE_AI_URL or GOOGLE_GEMINI_API_KEY.',
+        },
+        { status: GEMINI_API_KEY?.trim() ? 502 : 503 }
+      )
     }
 
     let parsed: {

@@ -42,6 +42,7 @@ export const RATE_LIMITS = {
   verifyOAuth: { max: 15, windowSec: 60 },
   verifyCode: { max: 10, windowSec: 60 },
   findCompsFromImage: { max: 10, windowSec: 60 }, // base/fallback; use checkTieredFindCompsRateLimit for tier-based
+  validatorRegister: { max: 5, windowSec: 300 },
   general: { max: 60, windowSec: 60 },
 } as const
 
