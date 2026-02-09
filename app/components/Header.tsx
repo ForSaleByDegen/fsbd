@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import PrivyConnectButton from './PrivyConnectButton'
 import MobilePhantomHint from './MobilePhantomHint'
+import PwaWalletHint from './PwaWalletHint'
 import NotificationBadge from './NotificationBadge'
 import { isAdmin } from '@/lib/admin'
 
@@ -153,7 +154,12 @@ export default function Header() {
         {/* Mobile Navigation Menu */}
         {mobileMenuOpen && (
           <nav className="md:hidden mt-3 pb-2 border-t-2 border-[#660099]">
-            {!connected && <div className="pt-2"><MobilePhantomHint /></div>}
+            {!connected && (
+              <div className="pt-2 space-y-2">
+                <MobilePhantomHint />
+                <PwaWalletHint />
+              </div>
+            )}
             <div className="flex flex-col gap-2 pt-2">
               {!isBetaMode && (
                 <>

@@ -30,6 +30,7 @@ import BuyListingSlotButton from './BuyListingSlotButton'
 import TokenPreviewCard from './TokenPreviewCard'
 import SnapToCompare, { type CompListing } from './SnapToCompare'
 import ImageFileButton from './ImageFileButton'
+import PwaWalletHint from './PwaWalletHint'
 import { useTier } from './providers/TierProvider'
 
 const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/
@@ -969,6 +970,11 @@ export default function CreateListingForm() {
         )}
       </div>
 
+      {!publicKey && (
+        <div className="mb-4">
+          <PwaWalletHint />
+        </div>
+      )}
       <p className="text-xs text-muted-foreground mb-2">
         <Link href="/listinggenius" className="text-cyan-400 hover:underline">
           Or try ListingGenius (Snap, Search, Sell) →
