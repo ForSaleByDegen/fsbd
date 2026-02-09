@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { BarChart3, ExternalLink } from 'lucide-react'
 import { Button, buttonVariants } from './ui/button'
 import { Input } from './ui/input'
@@ -61,6 +61,17 @@ type Props = {
 
 type ViewMode = 'grid' | 'compare'
 
+function formatResetsAt(iso: string): string {
+  const ms = new Date(iso).getTime() - Date.now()
+  if (ms <= 0) return 'soon'
+  const hours = Math.floor(ms / (60 * 60 * 1000))
+  const mins = Math.floor((ms % (60 * 60 * 1000)) / (60 * 1000))
+  if (hours >= 24) return `in ${Math.floor(hours / 24)}d`
+  if (hours > 0) return `in ${hours}h${mins > 0 ? ` ${mins}m` : ''}`
+  if (mins > 0) return `in ${mins}m`
+  return 'in under a minute'
+}
+
 export default function SnapToCompare({ onUseComp, onUseSuggested, onApplyAllSuggestions, applyingComp = false, wallet }: Props) {
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<SnapResult | null>(null)
@@ -75,7 +86,37 @@ export default function SnapToCompare({ onUseComp, onUseSuggested, onApplyAllSug
     resetIn: number
     tier: string
   } | null>(null)
+  const [dailyUsage, setDailyUsage] = useState<{
+    usedToday: boolean
+    resetsAt: string | null
+    limit: number
+  } | null>(null)
   const [cameraOpen, setCameraOpen] = useState(false)
+
+  // Fetch daily AI listing usage when wallet is present (1 per day per user)
+  useEffect(() => {
+    if (!wallet?.trim()) {
+      setDailyUsage(null)
+      return
+    }
+    let cancelled = false
+    fetch(`/api/listings/ai-usage?wallet=${encodeURIComponent(wallet)}`)
+      .then((res) => res.json().catch(() => ({})))
+      .then((data) => {
+        if (cancelled) return
+        setDailyUsage({
+          usedToday: !!data.usedToday,
+          resetsAt: data.resetsAt ?? null,
+          limit: typeof data.limit === 'number' ? data.limit : 1,
+        })
+      })
+      .catch(() => {
+        if (!cancelled) setDailyUsage(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [wallet])
 
   const runAnalysis = async (dataUrl: string) => {
     setError(null)
@@ -93,9 +134,23 @@ export default function SnapToCompare({ onUseComp, onUseSuggested, onApplyAllSug
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
+        if (res.status === 429 && wallet && (data.resetsAt ?? data.retryAfter)) {
+          setDailyUsage({
+            usedToday: true,
+            resetsAt: data.resetsAt ?? (data.retryAfter ? new Date(Date.now() + data.retryAfter * 1000).toISOString() : null),
+            limit: 1,
+          })
+        }
         const msg = data.error || 'Failed to analyze image'
         const retry = data.retryAfter
         throw new Error(retry ? `${msg} Try again in ${retry} seconds.` : msg)
+      }
+      if (wallet && data.dailyLimit) {
+        setDailyUsage({
+          usedToday: true,
+          resetsAt: data.dailyLimit.resetsAt ?? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+          limit: data.dailyLimit.limit ?? 1,
+        })
       }
       setLastFailedImage(null)
       setResult({
@@ -225,6 +280,23 @@ export default function SnapToCompare({ onUseComp, onUseSuggested, onApplyAllSug
           </span>
         )}
       </p>
+      {wallet && dailyUsage !== null && (
+        <p className="text-xs text-muted-foreground mb-2">
+          <span className="text-cyan-400/90 font-medium">AI listing:</span>{' '}
+          {dailyUsage.usedToday ? (
+            <>
+              1/{dailyUsage.limit} used today
+              {dailyUsage.resetsAt && (
+                <span className="text-amber-400/90">
+                  {' '}· resets {formatResetsAt(dailyUsage.resetsAt)}
+                </span>
+              )}
+            </>
+          ) : (
+            <span className="text-[#00ff00]/90">1 remaining today</span>
+          )}
+        </p>
+      )}
       {rateLimitInfo && (
         <p className="text-xs text-muted-foreground mb-2">
           {rateLimitInfo.remaining} of {rateLimitInfo.limit} lookups remaining this minute
@@ -237,22 +309,22 @@ export default function SnapToCompare({ onUseComp, onUseSuggested, onApplyAllSug
       <div className="flex flex-wrap gap-2">
         <ImageFileButton
           onChange={handleFile}
-          disabled={loading}
+          disabled={loading || (!!wallet && !!dailyUsage?.usedToday)}
           className={buttonVariants({ variant: 'outline', size: 'sm', className: 'border-cyan-500 text-cyan-400 hover:bg-cyan-500/20' })}
         >
           <span className="pointer-events-none">
-            {loading ? 'Analyzing…' : 'Take photo / Upload image'}
+            {loading ? 'Analyzing…' : wallet && dailyUsage?.usedToday ? 'Daily limit used (1/day)' : 'Take photo / Upload image'}
           </span>
         </ImageFileButton>
         <Button
           type="button"
           variant="outline"
           size="sm"
-          disabled={loading}
+          disabled={loading || (!!wallet && !!dailyUsage?.usedToday)}
           onClick={() => setCameraOpen(true)}
           className="border-cyan-500/50 text-cyan-400/80 hover:bg-cyan-500/10"
         >
-          Use live camera
+          {wallet && dailyUsage?.usedToday ? 'Daily limit used' : 'Use live camera'}
         </Button>
       </div>
       <p className="text-xs text-muted-foreground mt-2">

@@ -10,7 +10,10 @@ import { Connection } from '@solana/web3.js'
 import { checkTieredFindCompsRateLimit } from '@/lib/rate-limit'
 import { getClientId } from '@/lib/rate-limit'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { hashWalletAddress } from '@/lib/supabase'
 import { getUserTier, getSnapToCompareLimits, type Tier } from '@/lib/tier-check'
+
+const AI_LISTING_DAILY_MS = 24 * 60 * 60 * 1000
 
 const GEMINI_API_KEY = process.env.GOOGLE_GEMINI_API_KEY || process.env.GEMINI_API_KEY
 const CATEGORIES = ['for-sale', 'digital-assets', 'services', 'gigs', 'housing', 'community', 'jobs']
@@ -248,6 +251,40 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Per-user daily limit: 1 AI listing per day (until we run AI in-house)
+    if (wallet && supabaseAdmin && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(wallet)) {
+      const walletHash = hashWalletAddress(wallet)
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('last_ai_listing_at')
+        .eq('wallet_address_hash', walletHash)
+        .maybeSingle()
+      const lastAt = (profile as { last_ai_listing_at?: string | null } | null)?.last_ai_listing_at
+      if (lastAt) {
+        const lastMs = new Date(lastAt).getTime()
+        const nowMs = Date.now()
+        if (nowMs - lastMs < AI_LISTING_DAILY_MS) {
+          const resetsAt = new Date(lastMs + AI_LISTING_DAILY_MS).toISOString()
+          const resetInSec = Math.ceil((lastMs + AI_LISTING_DAILY_MS - nowMs) / 1000)
+          return NextResponse.json(
+            {
+              error: 'You can use AI listing once per day. Connect again tomorrow or use Manual Listing.',
+              resetsAt,
+              retryAfter: resetInSec,
+            },
+            {
+              status: 429,
+              headers: {
+                'Content-Type': 'application/json',
+                'Retry-After': String(resetInSec),
+                'X-AI-Listing-Resets-At': resetsAt,
+              },
+            }
+          )
+        }
+      }
+    }
+
     const limits = getSnapToCompareLimits(tier)
     const rateLimitKey = wallet || getClientId(request)
     const { response: rateLimitResponse, headers: rateLimitHeaders } = checkTieredFindCompsRateLimit(
@@ -382,6 +419,15 @@ export async function POST(request: NextRequest) {
     }
     if (!suggestedPrice) suggestedPrice = ''
 
+    // Record this AI listing use for daily limit (1 per user per day)
+    if (wallet && supabaseAdmin && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(wallet)) {
+      const walletHash = hashWalletAddress(wallet)
+      await supabaseAdmin
+        .from('profiles')
+        .update({ last_ai_listing_at: new Date().toISOString() })
+        .eq('wallet_address_hash', walletHash)
+    }
+
     return NextResponse.json(
       {
         itemDescription: parsed.itemDescription ?? '',
@@ -401,6 +447,9 @@ export async function POST(request: NextRequest) {
           limit: limits.maxPerMin,
           resetIn: Number(rateLimitHeaders['X-RateLimit-Reset']),
         },
+        dailyLimit: wallet
+          ? { used: 1, limit: 1, resetsAt: new Date(Date.now() + AI_LISTING_DAILY_MS).toISOString() }
+          : undefined,
       },
       { headers: rateLimitHeaders }
     )
