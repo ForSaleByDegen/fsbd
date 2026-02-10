@@ -13,8 +13,11 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 import { hashWalletAddress } from '@/lib/supabase'
 import { getUserTier, getSnapToCompareLimits, type Tier } from '@/lib/tier-check'
 import { parseAndValidateValidatorResponse } from '@/lib/validator-response-validate'
+import { LISTING_ANALYSIS_PROMPT } from '@/lib/validator-prompt'
 
 const AI_LISTING_DAILY_MS = 24 * 60 * 60 * 1000
+const BROWSER_VALIDATOR_WAIT_MS = 90000
+const BROWSER_VALIDATOR_POLL_MS = 2000
 
 const GEMINI_API_KEY = process.env.GOOGLE_GEMINI_API_KEY || process.env.GEMINI_API_KEY
 const INHOUSE_AI_URL = (process.env.INHOUSE_AI_URL || '').replace(/\/$/, '') // no trailing slash
@@ -228,6 +231,53 @@ async function runValidatorPool(base64: string, mimeType: string): Promise<strin
   }
 }
 
+/** Browser validator pool: create job, wait for browser validator to claim and complete. */
+async function runBrowserValidatorPool(base64: string, mimeType: string): Promise<string | null> {
+  if (!supabaseAdmin) return null
+  try {
+    const { count } = await supabaseAdmin
+      .from('ai_validators')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'active')
+      .eq('validator_type', 'browser')
+    if (!count || count < 1) return null
+
+    const { data: inserted } = await supabaseAdmin
+      .from('validator_jobs')
+      .insert({
+        image_base64: base64,
+        mime_type: mimeType,
+        prompt: LISTING_ANALYSIS_PROMPT,
+        status: 'pending',
+      })
+      .select('id')
+      .single()
+    if (!inserted) return null
+
+    const jobId = (inserted as { id: string }).id
+    const deadline = Date.now() + BROWSER_VALIDATOR_WAIT_MS
+
+    while (Date.now() < deadline) {
+      await new Promise((r) => setTimeout(r, BROWSER_VALIDATOR_POLL_MS))
+      const { data: job } = await supabaseAdmin
+        .from('validator_jobs')
+        .select('status, result')
+        .eq('id', jobId)
+        .single()
+      const row = job as { status: string; result: string | null } | null
+      if (row?.status === 'completed' && row.result) {
+        const validated = parseAndValidateValidatorResponse(row.result)
+        if (validated.ok) return row.result
+        break
+      }
+      if (row?.status === 'timeout') break
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
 /** In-house vision API (Ollama/llava on buddy's GPU). No 3rd party. Validates response before accepting. */
 async function runInHouseVision(base64: string, mimeType: string): Promise<string | null> {
   if (!INHOUSE_AI_URL) return null
@@ -383,6 +433,11 @@ export async function POST(request: NextRequest) {
 
     const validatorResult = await runValidatorPool(base64, mimeType)
     if (validatorResult) rawContent = validatorResult
+
+    if (!rawContent) {
+      const browserResult = await runBrowserValidatorPool(base64, mimeType)
+      if (browserResult) rawContent = browserResult
+    }
 
     if (!rawContent && INHOUSE_AI_URL) {
       const inHouse = await runInHouseVision(base64, mimeType)

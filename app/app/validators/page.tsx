@@ -7,9 +7,10 @@ import Footer from '@/components/Footer'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import PwaWalletHint from '@/components/PwaWalletHint'
+import BrowserValidatorRunner from '@/components/BrowserValidatorRunner'
 
 type PoolStats = { totalValidators: number; totalStaked: number }
-type MyStatus = { registered: boolean; endpoint_url?: string; stake_amount?: number; status?: string }
+type MyStatus = { registered: boolean; endpoint_url?: string; stake_amount?: number; status?: string; validator_type?: string }
 
 export default function ValidatorsPage() {
   const { connected, publicKey } = useWallet()
@@ -19,6 +20,7 @@ export default function ValidatorsPage() {
   const [userIsAdmin, setUserIsAdmin] = useState(false)
   const [poolStats, setPoolStats] = useState<PoolStats>({ totalValidators: 0, totalStaked: 0 })
   const [myStatus, setMyStatus] = useState<MyStatus | null>(null)
+  const [validatorMode, setValidatorMode] = useState<'endpoint' | 'browser'>('browser')
   const [endpointUrl, setEndpointUrl] = useState('')
   const [stakeAmount, setStakeAmount] = useState('10000')
   const [balance, setBalance] = useState<number | null>(null)
@@ -43,7 +45,7 @@ export default function ValidatorsPage() {
     ]).then(([whitelistRes, meRes, adminRes]) => {
       if (cancelled) return
       setWhitelisted(!!whitelistRes.whitelisted)
-      setMyStatus({ registered: !!meRes.registered, endpoint_url: meRes.endpoint_url, stake_amount: meRes.stake_amount, status: meRes.status })
+      setMyStatus({ registered: !!meRes.registered, endpoint_url: meRes.endpoint_url, stake_amount: meRes.stake_amount, status: meRes.status, validator_type: meRes.validator_type })
       setUserIsAdmin(!!adminRes?.isAdmin)
     })
     return () => { cancelled = true }
@@ -75,7 +77,9 @@ export default function ValidatorsPage() {
   }
 
   const handleRegister = async () => {
-    if (!wallet || !endpointUrl.trim()) return
+    if (!wallet) return
+    const isBrowser = validatorMode === 'browser'
+    if (!isBrowser && !endpointUrl.trim()) return
     const stake = parseInt(stakeAmount, 10)
     if (!Number.isFinite(stake) || stake < 0) {
       setError('Enter a valid stake amount')
@@ -85,15 +89,18 @@ export default function ValidatorsPage() {
     setError(null)
     setSuccess(null)
     try {
+      const body = isBrowser
+        ? { wallet, validator_type: 'browser', stake_amount: stake }
+        : { wallet, endpoint_url: endpointUrl.trim(), stake_amount: stake }
       const res = await fetch('/api/validators/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ wallet, endpoint_url: endpointUrl.trim(), stake_amount: stake }),
+        body: JSON.stringify(body),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Registration failed')
       setSuccess('Registered as validator')
-      setMyStatus({ registered: true, endpoint_url: endpointUrl.trim(), stake_amount: stake, status: 'active' })
+      setMyStatus({ registered: true, endpoint_url: isBrowser ? undefined : endpointUrl.trim(), stake_amount: stake, status: 'active', validator_type: isBrowser ? 'browser' : 'endpoint' })
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Registration failed')
     } finally {
@@ -185,7 +192,22 @@ export default function ValidatorsPage() {
 
             <section>
               <h2 className="text-lg font-pixel text-[#ff00ff] mb-3" style={{ fontFamily: 'var(--font-pixel)' }}>
-                Download package
+                Run in browser (no download)
+              </h2>
+              <p className="mb-3 text-sm">
+                No install needed. Click below to run the vision model in your browser. First time loads ~2GB; keep the tab open to validate.
+              </p>
+              {myStatus?.registered && myStatus.validator_type === 'browser' && wallet && (
+                <BrowserValidatorRunner wallet={wallet} />
+              )}
+              {(!myStatus?.registered || myStatus.validator_type !== 'browser') && (
+                <p className="text-xs text-purple-muted">Register as a browser validator below, then come back here.</p>
+              )}
+            </section>
+
+            <section>
+              <h2 className="text-lg font-pixel text-[#ff00ff] mb-3" style={{ fontFamily: 'var(--font-pixel)' }}>
+                Or download package (GPU server)
               </h2>
               <a href="/ai-service.zip" download="ai-service.zip">
                 <Button variant="outline" className="border-cyan-500 text-cyan-400 hover:bg-cyan-500/20">
@@ -200,7 +222,8 @@ export default function ValidatorsPage() {
                 <h2 className="text-lg font-pixel text-[#00ff00] mb-2" style={{ fontFamily: 'var(--font-pixel)' }}>
                   Your status
                 </h2>
-                <p>Endpoint: {myStatus.endpoint_url}</p>
+                <p>Type: {myStatus.validator_type === 'browser' ? 'Browser validator' : 'Endpoint'}</p>
+                {myStatus.endpoint_url && <p>Endpoint: {myStatus.endpoint_url}</p>}
                 <p>Staked: {formatNum(myStatus.stake_amount ?? 0)} $FSBD</p>
                 <Button
                   variant="outline"
@@ -219,14 +242,39 @@ export default function ValidatorsPage() {
                 </h2>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm mb-1">Endpoint URL</label>
-                    <Input
-                      placeholder="https://ai.example.com or http://1.2.3.4:8080"
-                      value={endpointUrl}
-                      onChange={(e) => setEndpointUrl(e.target.value)}
-                      className="bg-black/50 border-cyan-500/40"
-                    />
+                    <label className="block text-sm mb-2">Validator type</label>
+                    <div className="flex gap-4">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="validatorMode"
+                          checked={validatorMode === 'browser'}
+                          onChange={() => setValidatorMode('browser')}
+                        />
+                        Browser (no download)
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="validatorMode"
+                          checked={validatorMode === 'endpoint'}
+                          onChange={() => setValidatorMode('endpoint')}
+                        />
+                        Endpoint (run server)
+                      </label>
+                    </div>
                   </div>
+                  {validatorMode === 'endpoint' && (
+                    <div>
+                      <label className="block text-sm mb-1">Endpoint URL</label>
+                      <Input
+                        placeholder="https://ai.example.com or http://1.2.3.4:8080"
+                        value={endpointUrl}
+                        onChange={(e) => setEndpointUrl(e.target.value)}
+                        className="bg-black/50 border-cyan-500/40"
+                      />
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm mb-1">Stake amount ($FSBD)</label>
                     <Input
@@ -252,7 +300,7 @@ export default function ValidatorsPage() {
                   </div>
                   <Button
                     className="bg-cyan-500 text-black hover:bg-cyan-400"
-                    disabled={registering || !endpointUrl.trim()}
+                    disabled={registering || (validatorMode === 'endpoint' && !endpointUrl.trim())}
                     onClick={handleRegister}
                   >
                     {registering ? 'Registering…' : 'Register as validator'}

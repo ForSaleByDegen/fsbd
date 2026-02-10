@@ -19,6 +19,7 @@
     "@metaplex-foundation/umi": "^0.9.2",
     "@metaplex-foundation/umi-bundle-defaults": "^0.9.2",
     "@metaplex-foundation/umi-signer-wallet-adapters": "^1.2.0",
+    "@mlc-ai/web-llm": "^0.2.80",
     "@privy-io/react-auth": "^3.13.0",
     "@radix-ui/react-dialog": "^1.0.5",
     "@radix-ui/react-select": "^2.0.0",

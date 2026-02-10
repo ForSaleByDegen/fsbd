@@ -32,13 +32,14 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => ({}))
     const wallet = typeof body.wallet === 'string' ? body.wallet.trim() : ''
     const endpointUrl = typeof body.endpoint_url === 'string' ? body.endpoint_url.trim() : ''
+    const validatorType = typeof body.validator_type === 'string' && body.validator_type === 'browser' ? 'browser' : 'endpoint'
     const stakeAmount = typeof body.stake_amount === 'number' ? body.stake_amount : Number(body.stake_amount)
 
     if (!wallet || !BASE58.test(wallet)) {
       return NextResponse.json({ error: 'Invalid wallet address' }, { status: 400 })
     }
-    if (!endpointUrl || endpointUrl.length < 10) {
-      return NextResponse.json({ error: 'Valid endpoint URL required' }, { status: 400 })
+    if (validatorType === 'endpoint' && (!endpointUrl || endpointUrl.length < 10)) {
+      return NextResponse.json({ error: 'Valid endpoint URL required for endpoint validators' }, { status: 400 })
     }
     if (!Number.isFinite(stakeAmount) || stakeAmount < 0) {
       return NextResponse.json({ error: 'Valid stake_amount required' }, { status: 400 })
@@ -71,15 +72,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Sanitize endpoint URL
-    let url = endpointUrl
-    if (!url.startsWith('http://') && !url.startsWith('https://')) url = `https://${url}`
-    try {
-      new URL(url)
-    } catch {
-      return NextResponse.json({ error: 'Invalid endpoint URL format' }, { status: 400 })
+    let cleanUrl: string | null = null
+    if (validatorType === 'endpoint') {
+      let url = endpointUrl
+      if (!url.startsWith('http://') && !url.startsWith('https://')) url = `https://${url}`
+      try {
+        new URL(url)
+      } catch {
+        return NextResponse.json({ error: 'Invalid endpoint URL format' }, { status: 400 })
+      }
+      cleanUrl = url.replace(/\/$/, '')
     }
-    const cleanUrl = url.replace(/\/$/, '')
 
     const walletHash = hashWalletAddress(wallet)
     const { error } = await supabaseAdmin
@@ -89,6 +92,7 @@ export async function POST(request: NextRequest) {
           wallet_address_hash: walletHash,
           wallet_address: wallet,
           endpoint_url: cleanUrl,
+          validator_type: validatorType,
           stake_amount: Math.floor(stakeAmount),
           status: 'active',
           updated_at: new Date().toISOString(),

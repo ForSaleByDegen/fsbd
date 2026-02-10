@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     const walletHash = hashWalletAddress(wallet)
     const { data } = await supabaseAdmin
       .from('ai_validators')
-      .select('endpoint_url, stake_amount, status')
+      .select('endpoint_url, stake_amount, status, validator_type')
       .eq('wallet_address_hash', walletHash)
       .maybeSingle()
 
@@ -48,12 +48,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ registered: false })
     }
 
-    const row = data as { endpoint_url: string; stake_amount: number; status: string }
+    const row = data as { endpoint_url: string | null; stake_amount: number; status: string; validator_type?: string }
     return NextResponse.json({
       registered: row.status === 'active',
       endpoint_url: row.endpoint_url,
       stake_amount: row.stake_amount,
       status: row.status,
+      validator_type: row.validator_type ?? 'endpoint',
     })
   } catch (e) {
     console.error('[validators/me]', e)
