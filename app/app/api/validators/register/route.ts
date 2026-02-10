@@ -46,7 +46,13 @@ export async function POST(request: NextRequest) {
     }
 
     const whitelisted = await isWhitelisted(wallet)
-    if (!whitelisted) {
+    let isAdminWallet = false
+    if (supabaseAdmin) {
+      const walletHash = hashWalletAddress(wallet)
+      const { data: adminRow } = await supabaseAdmin.from('admins').select('id').eq('wallet_address_hash', walletHash).eq('is_active', true).maybeSingle()
+      isAdminWallet = !!adminRow
+    }
+    if (!whitelisted && !isAdminWallet) {
       return NextResponse.json({ error: 'Wallet not whitelisted for validator access' }, { status: 403 })
     }
 

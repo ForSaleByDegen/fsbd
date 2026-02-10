@@ -165,10 +165,10 @@ export default function ValidatorsPage() {
                 You run the vision AI that powers Snap to Compare — the feature that lets sellers photograph an item and get AI-suggested titles, descriptions, prices, and comps. When a user snaps a photo, we send that image to your node. Your GPU runs the model (Ollama/LLaVA), analyzes the item, and returns structured data. No third-party APIs. No Gemini. No Google. The AI runs on hardware you control, and you earn $FSBD for contributing.
               </p>
               <h3 className="text-base font-pixel text-[#ff00ff] mt-4 mb-2" style={{ fontFamily: 'var(--font-pixel)' }}>
-                How we&apos;re changing the way AI is funded and run
+                Own the AI. Get paid for it.
               </h3>
               <p>
-                Most apps rely on closed APIs (OpenAI, Google, Anthropic). You pay per request, hit rate limits, and have no say in how the model behaves. $FSBD flips that: the validator pool is community-owned compute. Early supporters get treasury/airdrop payouts. As usage grows, fees from Snap-to-Compare and listing creation flow into the pool. Validators earn $FSBD for serving requests. The pool stays funded because the more people use the platform, the more they use AI — and the more they use AI, the more fees go back to validators. You&apos;re not renting someone else&apos;s API. You&apos;re running the AI and getting paid for it.
+                Every other app rents AI from OpenAI, Google, Anthropic — pay per request, hit limits, zero control. $FSBD flips the script: the validator pool is community-owned compute. You run the model. You earn $FSBD. Fees from Snap to Compare and listing creation flow into the pool, so the more people use the platform, the more validators earn. No third-party API. No middleman. Just you, your GPU or browser, and the rewards.
               </p>
             </section>
 

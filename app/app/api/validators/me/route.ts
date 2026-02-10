@@ -29,7 +29,13 @@ export async function GET(request: NextRequest) {
     }
 
     const whitelisted = await isWhitelisted(wallet)
-    if (!whitelisted) {
+    let isAdminWallet = false
+    if (supabaseAdmin) {
+      const wh = hashWalletAddress(wallet)
+      const { data: adminRow } = await supabaseAdmin.from('admins').select('id').eq('wallet_address_hash', wh).eq('is_active', true).maybeSingle()
+      isAdminWallet = !!adminRow
+    }
+    if (!whitelisted && !isAdminWallet) {
       return NextResponse.json({ registered: false })
     }
 
