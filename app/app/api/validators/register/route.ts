@@ -45,8 +45,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Valid stake_amount required' }, { status: 400 })
     }
 
-    // Enforce admin-configured minimum stake
-    let minStake = 0
+    // Enforce admin-configured minimum stake (default 10M)
+    const DEFAULT_MIN_STAKE = 10_000_000
+    let minStake = DEFAULT_MIN_STAKE
     if (supabaseAdmin) {
       const { data: cfg } = await supabaseAdmin.from('platform_config').select('value_json').eq('key', 'min_validator_stake').maybeSingle()
       const v = (cfg as { value_json?: unknown } | null)?.value_json

@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import PwaWalletHint from '@/components/PwaWalletHint'
 import BrowserValidatorRunner from '@/components/BrowserValidatorRunner'
+import ValidatorApyCalculator from '@/components/ValidatorApyCalculator'
 
 type PoolStats = { totalValidators: number; totalStaked: number }
 type RewardsInfo = { enabled: boolean; current_reward_per_job: number }
@@ -25,7 +26,7 @@ export default function ValidatorsPage() {
   const [myStatus, setMyStatus] = useState<MyStatus | null>(null)
   const [validatorMode, setValidatorMode] = useState<'endpoint' | 'browser'>('browser')
   const [endpointUrl, setEndpointUrl] = useState('')
-  const [stakeAmount, setStakeAmount] = useState('10000')
+  const [stakeAmount, setStakeAmount] = useState('10000000')
   const [balance, setBalance] = useState<number | null>(null)
   const [registering, setRegistering] = useState(false)
   const [unregistering, setUnregistering] = useState(false)
@@ -94,8 +95,9 @@ export default function ValidatorsPage() {
     const isBrowser = validatorMode === 'browser'
     if (!isBrowser && !endpointUrl.trim()) return
     const stake = parseInt(stakeAmount, 10)
-    if (!Number.isFinite(stake) || stake < 0) {
-      setError('Enter a valid stake amount')
+    const MIN_STAKE = 10_000_000
+    if (!Number.isFinite(stake) || stake < MIN_STAKE) {
+      setError(`Minimum stake: ${MIN_STAKE.toLocaleString()} $FSBD`)
       return
     }
     setRegistering(true)
@@ -215,6 +217,15 @@ export default function ValidatorsPage() {
             </section>
 
             <section>
+              <ValidatorApyCalculator
+                totalStaked={poolStats.totalStaked}
+                totalValidators={Math.max(1, poolStats.totalValidators)}
+                rewardPerJob={rewardsInfo.current_reward_per_job || 10}
+                onStakeChange={(v) => setStakeAmount(String(v))}
+              />
+            </section>
+
+            <section>
               <h2 className="text-lg font-pixel text-[#ff00ff] mb-3" style={{ fontFamily: 'var(--font-pixel)' }}>
                 Run in browser (no download)
               </h2>
@@ -319,12 +330,12 @@ export default function ValidatorsPage() {
                     <label className="block text-sm mb-1">Stake amount ($FSBD)</label>
                     <Input
                       type="number"
-                      placeholder="10000"
+                      placeholder="10000000"
                       value={stakeAmount}
                       onChange={(e) => setStakeAmount(e.target.value)}
                       className="bg-black/50 border-cyan-500/40"
                     />
-                    <p className="text-xs mt-1">You must hold at least this much $FSBD in your wallet.</p>
+                    <p className="text-xs mt-1">Minimum: 10,000,000 $FSBD. You must hold at least this much in your wallet.</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Button

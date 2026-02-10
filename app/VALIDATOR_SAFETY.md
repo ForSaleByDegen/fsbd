@@ -35,12 +35,14 @@ When implementing the job queue, use:
 
 ## WebGPU Workgroup Patch (Browser Validators)
 
-We apply a minimal patch to `@mlc-ai/web-llm` so vision models work on GPUs where the default workgroup limit (256) is too low. The patch:
+We apply a minimal patch to `@mlc-ai/web-llm@0.2.80` so vision models work on GPUs where the default workgroup limit (256) is too low. The patch:
 
 - Requests `maxComputeInvocationsPerWorkgroup` via `requiredLimits` when calling WebGPU `requestDevice()`
 - Uses `Math.min(1024, adapter.limits.maxComputeInvocationsPerWorkgroup ?? 256)` — we never request more than the adapter reports
 - No new code paths, network calls, or file access
 - WebGPU remains sandboxed by the browser; we do not compromise the user's machine
+
+**If you see "maxComputeInvocationsPerWorkgroup ... exceeds the maximum allowed (256)"**: Ensure `@mlc-ai/web-llm` is pinned to exactly `0.2.80` (no caret) so the patch applies. Run `npm install` and `npx patch-package` in the app directory, then rebuild.
 
 ## Multiple Data Points Before Submitting
 
