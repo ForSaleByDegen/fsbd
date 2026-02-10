@@ -11,7 +11,7 @@ import PwaWalletHint from '@/components/PwaWalletHint'
 import BrowserValidatorRunner from '@/components/BrowserValidatorRunner'
 
 type PoolStats = { totalValidators: number; totalStaked: number }
-type MyStatus = { registered: boolean; endpoint_url?: string; stake_amount?: number; status?: string; validator_type?: string }
+type MyStatus = { registered: boolean; endpoint_url?: string; stake_amount?: number; status?: string; validator_type?: string; jobs_completed?: number }
 
 export default function ValidatorsPage() {
   const { connected, publicKey } = useWallet()
@@ -46,7 +46,7 @@ export default function ValidatorsPage() {
     ]).then(([whitelistRes, meRes, adminRes]) => {
       if (cancelled) return
       setWhitelisted(!!whitelistRes.whitelisted)
-      setMyStatus({ registered: !!meRes.registered, endpoint_url: meRes.endpoint_url, stake_amount: meRes.stake_amount, status: meRes.status, validator_type: meRes.validator_type })
+      setMyStatus({ registered: !!meRes.registered, endpoint_url: meRes.endpoint_url, stake_amount: meRes.stake_amount, status: meRes.status, validator_type: meRes.validator_type, jobs_completed: meRes.jobs_completed ?? 0 })
       setUserIsAdmin(!!adminRes?.isAdmin)
     })
     return () => { cancelled = true }
@@ -101,7 +101,7 @@ export default function ValidatorsPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Registration failed')
       setSuccess('Registered as validator')
-      setMyStatus({ registered: true, endpoint_url: isBrowser ? undefined : endpointUrl.trim(), stake_amount: stake, status: 'active', validator_type: isBrowser ? 'browser' : 'endpoint' })
+      setMyStatus({ registered: true, endpoint_url: isBrowser ? undefined : endpointUrl.trim(), stake_amount: stake, status: 'active', validator_type: isBrowser ? 'browser' : 'endpoint', jobs_completed: 0 })
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Registration failed')
     } finally {
@@ -206,6 +206,9 @@ export default function ValidatorsPage() {
               <h2 className="text-lg font-pixel text-[#ff00ff] mb-3" style={{ fontFamily: 'var(--font-pixel)' }}>
                 Run in browser (no download)
               </h2>
+              <p className="text-xs text-purple-muted mb-2">
+                Registration is persistent. If &quot;Run in browser&quot; fails (WebGPU, model load), reload and try again — the tab must stay open while validating.
+              </p>
               <p className="mb-2 text-sm">
                 Easiest option. Register as a browser validator below, then click &quot;Run in browser.&quot; The vision model (Phi-3.5) loads in your tab via WebGPU. First time: ~2GB download. Keep the tab open to poll for jobs — when a seller uses Snap to Compare, you&apos;ll get the image, run inference, and earn.
               </p>
@@ -241,6 +244,8 @@ export default function ValidatorsPage() {
                 <p>Type: {myStatus.validator_type === 'browser' ? 'Browser validator' : 'Endpoint'}</p>
                 {myStatus.endpoint_url && <p>Endpoint: {myStatus.endpoint_url}</p>}
                 <p>Staked: {formatNum(myStatus.stake_amount ?? 0)} $FSBD</p>
+                <p>Jobs completed: {myStatus.jobs_completed ?? 0}</p>
+                <p className="text-xs text-purple-muted">Earnings: Coming soon (rewards from completed jobs)</p>
                 <Button
                   variant="outline"
                   size="sm"
