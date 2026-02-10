@@ -1,0 +1,21 @@
+diff --git a/node_modules/@mlc-ai/web-llm/lib/index.js b/node_modules/@mlc-ai/web-llm/lib/index.js
+index 933b5b7..dd5c83b 100644
+--- a/node_modules/@mlc-ai/web-llm/lib/index.js
++++ b/node_modules/@mlc-ai/web-llm/lib/index.js
+@@ -3731,6 +3731,8 @@ function requireLib$2 () {
+ 		                      `exceeds limit. requested=${requiredMaxStorageBuffersPerShaderStage}, ` +
+ 		                      `limit=${adapter.limits.maxStorageBuffersPerShaderStage}. `);
+ 		              }
++		              // Request higher workgroup limit for vision/some models (default 256, some need 1024)
++		              const requiredMaxComputeInvocationsPerWorkgroup = Math.min(1024, adapter.limits.maxComputeInvocationsPerWorkgroup ?? 256);
+ 		              const requiredFeatures = [];
+ 		              // Always require f16 if available
+ 		              if (adapter.features.has("shader-f16")) {
+@@ -3745,6 +3747,7 @@ function requireLib$2 () {
+ 		                      maxStorageBufferBindingSize: requiredMaxStorageBufferBindingSize,
+ 		                      maxComputeWorkgroupStorageSize: requiredMaxComputeWorkgroupStorageSize,
+ 		                      maxStorageBuffersPerShaderStage: requiredMaxStorageBuffersPerShaderStage,
++		                      maxComputeInvocationsPerWorkgroup: requiredMaxComputeInvocationsPerWorkgroup,
+ 		                  },
+ 		                  requiredFeatures
+ 		              });
