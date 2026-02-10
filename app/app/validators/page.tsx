@@ -14,6 +14,7 @@ import ValidatorApyCalculator from '@/components/ValidatorApyCalculator'
 type PoolStats = { totalValidators: number; totalStaked: number }
 type RewardsInfo = { enabled: boolean; current_reward_per_job: number }
 type MyStatus = { registered: boolean; endpoint_url?: string; stake_amount?: number; status?: string; validator_type?: string; jobs_completed?: number; total_earned?: number }
+type MyJob = { id: string; status: string; created_at: string; claimed_at: string | null; completed_at: string | null; reward: number }
 
 export default function ValidatorsPage() {
   const { connected, publicKey } = useWallet()
@@ -33,6 +34,7 @@ export default function ValidatorsPage() {
   const [checkingBalance, setCheckingBalance] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const [myJobs, setMyJobs] = useState<MyJob[]>([])
 
   useEffect(() => {
     if (!wallet) {
@@ -74,6 +76,22 @@ export default function ValidatorsPage() {
       })
     return () => { cancelled = true }
   }, [])
+
+  useEffect(() => {
+    const canSee = connected && (whitelisted === true || userIsAdmin)
+    if (!wallet || !canSee) {
+      setMyJobs([])
+      return
+    }
+    let cancelled = false
+    fetch(`/api/validators/jobs/my?wallet=${encodeURIComponent(wallet)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (!cancelled && Array.isArray(data.jobs)) setMyJobs(data.jobs)
+      })
+      .catch(() => { if (!cancelled) setMyJobs([]) })
+    return () => { cancelled = true }
+  }, [wallet, connected, whitelisted, userIsAdmin, myStatus?.jobs_completed])
 
   const checkBalance = async () => {
     if (!wallet) return
@@ -270,6 +288,20 @@ export default function ValidatorsPage() {
                 <p>Jobs completed: {myStatus.jobs_completed ?? 0}</p>
                 {(myStatus.total_earned ?? 0) > 0 && (
                   <p>Total earned: {formatNum(myStatus.total_earned ?? 0)} $FSBD</p>
+                )}
+                {myJobs.length > 0 && (
+                  <div className="mt-3">
+                    <h3 className="text-sm font-pixel text-cyan-400 mb-2" style={{ fontFamily: 'var(--font-pixel)' }}>Your recent jobs</h3>
+                    <ul className="text-xs space-y-1 max-h-32 overflow-y-auto">
+                      {myJobs.slice(0, 10).map((j) => (
+                        <li key={j.id} className="flex justify-between gap-2">
+                          <span className="truncate">{j.id.slice(0, 8)}…</span>
+                          <span className={j.status === 'completed' ? 'text-[#00ff00]' : j.status === 'claimed' ? 'text-amber-400' : 'text-purple-muted'}>{j.status}</span>
+                          {(j.reward ?? 0) > 0 && <span className="text-[#00ff00]">+{j.reward} $FSBD</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 )}
                 <p className="text-xs text-purple-muted">
                   {rewardsInfo.enabled && rewardsInfo.current_reward_per_job > 0

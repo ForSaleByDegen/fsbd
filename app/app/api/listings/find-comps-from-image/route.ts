@@ -1,23 +1,24 @@
 /**
  * POST /api/listings/find-comps-from-image
- * Analyzes an image with AI (ListingGenius: Gemini + Google Search grounding), describes the item, and returns comparable listings from FSBD.
- * Uses only GOOGLE_GEMINI_API_KEY for AI lookups. Rate limit and max comps are tier-based.
- * Body: { imageBase64: string, wallet?: string }
- * Returns: { itemDescription, suggestedCategory, suggestedSubcategory, searchKeywords, comps, groundingSources?, tier, rateLimit }
+ * Body: { imageBase64: string, wallet?: string, aiLookupSignature?: string }
+ * When ai_lookup_fee_fsbd > 0 and wallet present, aiLookupSignature is required (transfer tx).
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { Connection } from '@solana/web3.js'
+import { Connection, PublicKey } from '@solana/web3.js'
+import { getAssociatedTokenAddressSync } from '@solana/spl-token'
 import { checkTieredFindCompsRateLimit } from '@/lib/rate-limit'
 import { getClientId } from '@/lib/rate-limit'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { hashWalletAddress } from '@/lib/supabase'
-import { getUserTier, getSnapToCompareLimits, type Tier } from '@/lib/tier-check'
+import { getUserTier, getSnapToCompareLimits, getFsbdMintAddress, extractFsbdMintFromConfig, type Tier } from '@/lib/tier-check'
 import { parseAndValidateValidatorResponse } from '@/lib/validator-response-validate'
 import { LISTING_ANALYSIS_PROMPT } from '@/lib/validator-prompt'
+import { fetchMarketPrices } from '@/lib/market-price-api'
 
 const AI_LISTING_DAILY_MS = 24 * 60 * 60 * 1000
-const BROWSER_VALIDATOR_WAIT_MS = 90000
+const BROWSER_VALIDATOR_WAIT_MS = 45000
 const BROWSER_VALIDATOR_POLL_MS = 2000
+const ENDPOINT_VALIDATOR_TIMEOUT_MS = 20000
 
 const GEMINI_API_KEY = process.env.GOOGLE_GEMINI_API_KEY || process.env.GEMINI_API_KEY
 const INHOUSE_AI_URL = (process.env.INHOUSE_AI_URL || '').replace(/\/$/, '') // no trailing slash
@@ -212,7 +213,7 @@ async function runValidatorPool(base64: string, mimeType: string): Promise<strin
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ image_base64: base64, mime_type: mimeType }),
-          signal: AbortSignal.timeout(90000),
+          signal: AbortSignal.timeout(ENDPOINT_VALIDATOR_TIMEOUT_MS),
         })
         if (!res.ok) continue
         const data = (await res.json()) as { raw_content?: string; error?: string }
@@ -362,9 +363,67 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => ({}))
     const imageBase64 = typeof body.imageBase64 === 'string' ? body.imageBase64 : ''
     const wallet = typeof body.wallet === 'string' ? body.wallet.trim() || null : null
+    const aiLookupSignature = typeof body.aiLookupSignature === 'string' ? body.aiLookupSignature.trim() || null : null
 
     if (!imageBase64) {
       return NextResponse.json({ error: 'imageBase64 required' }, { status: 400 })
+    }
+
+    // AI lookup fee: when ai_lookup_fee_fsbd > 0 and wallet provided, require payment
+    let aiLookupFeeFsbd = 0
+    if (supabaseAdmin) {
+      const { data: cfg } = await supabaseAdmin.from('platform_config').select('value_json').eq('key', 'ai_lookup_fee_fsbd').maybeSingle()
+      const v = (cfg as { value_json?: unknown } | null)?.value_json
+      aiLookupFeeFsbd = typeof v === 'number' ? v : (typeof v === 'string' ? parseInt(v, 10) || 0 : 0)
+    }
+    if (aiLookupFeeFsbd > 0) {
+      if (!wallet || !/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(wallet)) {
+        return NextResponse.json({ error: 'Connect your wallet to pay for AI lookup.' }, { status: 400 })
+      }
+      if (!aiLookupSignature) {
+        return NextResponse.json(
+          { error: `Pay ${aiLookupFeeFsbd.toLocaleString()} $FSBD for this AI lookup.`, aiLookupFeeFsbd },
+          { status: 402 }
+        )
+      }
+      const appWallet = process.env.NEXT_PUBLIC_APP_WALLET
+      if (!appWallet || appWallet === 'YOUR_WALLET_ADDRESS') {
+        return NextResponse.json({ error: 'AI lookup payment not configured' }, { status: 503 })
+      }
+      const { data: configRows } = await supabaseAdmin.from('platform_config').select('key, value_json')
+      const fsbdMint = getFsbdMintAddress(extractFsbdMintFromConfig((configRows as { key: string; value_json: unknown }[]) ?? null))
+      if (!fsbdMint || fsbdMint === 'FSBD_TOKEN_MINT_PLACEHOLDER') {
+        return NextResponse.json({ error: '$FSBD token not configured' }, { status: 503 })
+      }
+      const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || 'https://api.mainnet-beta.solana.com'
+      const connection = new Connection(rpcUrl)
+      const tx = await connection.getParsedTransaction(aiLookupSignature, { maxSupportedTransactionVersion: 0 })
+      if (!tx || tx.meta?.err) {
+        return NextResponse.json({ error: 'Invalid or failed payment transaction' }, { status: 400 })
+      }
+      const requiredAmount = BigInt(Math.floor(aiLookupFeeFsbd * 1e6))
+      const appPubkey = new PublicKey(appWallet)
+      const mintPubkey = new PublicKey(fsbdMint)
+      const appAta = getAssociatedTokenAddressSync(mintPubkey, appPubkey)
+      let foundValid = false
+      const checkIx = (p: { type?: string; info?: { destination?: string; amount?: string } } | null) => {
+        if (p?.type === 'transfer' || p?.type === 'transferChecked') {
+          if (p.info?.destination === appAta.toBase58() && p.info?.amount && BigInt(p.info.amount) >= requiredAmount) foundValid = true
+        }
+      }
+      for (const ix of tx.transaction.message.instructions) {
+        if ('parsed' in ix && ix.parsed) checkIx(ix.parsed as { type?: string; info?: { destination?: string; amount?: string } })
+      }
+      if (tx.meta?.innerInstructions) {
+        for (const g of tx.meta.innerInstructions) {
+          for (const inner of g.instructions) {
+            checkIx((inner as { parsed?: { type?: string; info?: { destination?: string; amount?: string } } }).parsed ?? null)
+          }
+        }
+      }
+      if (!foundValid) {
+        return NextResponse.json({ error: `Transaction must transfer ${aiLookupFeeFsbd.toLocaleString()} $FSBD to the platform.` }, { status: 400 })
+      }
     }
 
     // Resolve tier (wallet = tier lookup; no wallet = free tier)
@@ -427,40 +486,42 @@ export async function POST(request: NextRequest) {
     const mimeMatch = dataUrl.match(/^data:(image\/[a-z]+);base64,/i)
     const mimeType = mimeMatch?.[1] ?? 'image/jpeg'
 
-    // Order: Validator pool → INHOUSE_AI_URL → Gemini (no 3rd party preferred)
+    // Run all providers in parallel — first successful result wins (faster UX)
     let rawContent = ''
     let groundingSources: GroundingSource[] = []
+    const geminiKey = GEMINI_API_KEY?.trim()
 
-    const validatorResult = await runValidatorPool(base64, mimeType)
-    if (validatorResult) rawContent = validatorResult
-
-    if (!rawContent) {
-      const browserResult = await runBrowserValidatorPool(base64, mimeType)
-      if (browserResult) rawContent = browserResult
+    const runAll = async (): Promise<{ raw: string; grounding?: GroundingSource[] } | null> => {
+      const tasks: Promise<{ raw: string; grounding?: GroundingSource[] } | null>[] = []
+      tasks.push(runValidatorPool(base64, mimeType).then((r) => (r ? { raw: r } : null)))
+      tasks.push(runBrowserValidatorPool(base64, mimeType).then((r) => (r ? { raw: r } : null)))
+      if (INHOUSE_AI_URL) tasks.push(runInHouseVision(base64, mimeType).then((r) => (r ? { raw: r } : null)))
+      if (geminiKey) {
+        tasks.push(
+          runGeminiWithGoogleSearch(base64, mimeType, geminiKey).then((r) => {
+            if (r && 'rawContent' in r) return { raw: r.rawContent, grounding: r.groundingSources }
+            return null
+          })
+        )
+        tasks.push(runGeminiImageOnly(base64, mimeType, geminiKey).then((r) => (r ? { raw: r } : null)))
+      }
+      const results = await Promise.all(tasks)
+      for (const r of results) if (r?.raw) return r
+      return null
     }
 
-    if (!rawContent && INHOUSE_AI_URL) {
-      const inHouse = await runInHouseVision(base64, mimeType)
-      if (inHouse) rawContent = inHouse
+    const first = await runAll()
+    if (first) {
+      rawContent = first.raw
+      if (first.grounding?.length) groundingSources = first.grounding
     }
 
-    if (!rawContent && GEMINI_API_KEY?.trim()) {
-      const groundingResult = await runGeminiWithGoogleSearch(base64, mimeType, GEMINI_API_KEY)
-      if (groundingResult && 'rawContent' in groundingResult) {
-        rawContent = groundingResult.rawContent
-        groundingSources = groundingResult.groundingSources
-      } else if (groundingResult && 'error' in groundingResult) {
-        const fallback = await runGeminiImageOnly(base64, mimeType, GEMINI_API_KEY)
-        if (fallback) rawContent = fallback
-        else return NextResponse.json({ error: groundingResult.error }, { status: 502 })
-      } else {
-        const fallback = await runGeminiImageOnly(base64, mimeType, GEMINI_API_KEY)
-        if (fallback) rawContent = fallback
-        else
-          return NextResponse.json(
-            { error: 'Image analysis failed. Try a clearer photo or use keyword search below.' },
-            { status: 502 }
-          )
+    if (!rawContent && geminiKey) {
+      const groundingResult = await runGeminiWithGoogleSearch(base64, mimeType, geminiKey)
+      if (groundingResult && 'error' in groundingResult) {
+        const fallback = await runGeminiImageOnly(base64, mimeType, geminiKey)
+        if (!fallback) return NextResponse.json({ error: groundingResult.error }, { status: 502 })
+        rawContent = fallback
       }
     }
 
@@ -490,6 +551,10 @@ export async function POST(request: NextRequest) {
     const keywords = Array.isArray(parsed.searchKeywords) ? parsed.searchKeywords : []
     const suggestedCategory = (parsed.category && CATEGORIES.includes(parsed.category)) ? parsed.category : 'for-sale'
     const suggestedSubcategory = (parsed.subcategory && SUBCATEGORIES_FOR_SALE.includes(parsed.subcategory)) ? parsed.subcategory : 'other'
+
+    // Fetch market price context from external API (e.g. RapidAPI eBay)
+    const searchQuery = keywords.length > 0 ? keywords.slice(0, 3).join(' ') : (parsed.suggestedTitle ?? '').slice(0, 60)
+    const marketData = searchQuery.trim() ? await fetchMarketPrices(searchQuery) : null
 
     let comps: unknown[] = []
     if (supabaseAdmin && keywords.length > 0) {
@@ -529,8 +594,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Fallback suggestedPrice from comps if Gemini did not provide it
+    // suggestedPrice: AI first, then market data median, then comps median
     let suggestedPrice = parsed.suggestedPrice?.trim()
+    if (!suggestedPrice && marketData?.marketPriceRange?.median) {
+      suggestedPrice = String(marketData.marketPriceRange.median)
+    }
     if (!suggestedPrice && Array.isArray(comps) && comps.length > 0) {
       const prices = (comps as { price?: number }[]).map((c) => c.price).filter((p): p is number => typeof p === 'number' && p > 0)
       if (prices.length > 0) {
@@ -545,12 +613,21 @@ export async function POST(request: NextRequest) {
     }
     if (!suggestedPrice) suggestedPrice = ''
 
-    // Record this AI listing use for daily limit (1 per user per day)
+    // Record this AI listing use for daily limit (1 per user per day) and increment total count
     if (wallet && supabaseAdmin && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(wallet)) {
       const walletHash = hashWalletAddress(wallet)
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('ai_analyses_count')
+        .eq('wallet_address_hash', walletHash)
+        .maybeSingle()
+      const currentCount = (profile as { ai_analyses_count?: number } | null)?.ai_analyses_count ?? 0
       await supabaseAdmin
         .from('profiles')
-        .update({ last_ai_listing_at: new Date().toISOString() })
+        .update({
+          last_ai_listing_at: new Date().toISOString(),
+          ai_analyses_count: currentCount + 1,
+        })
         .eq('wallet_address_hash', walletHash)
     }
 
@@ -566,6 +643,8 @@ export async function POST(request: NextRequest) {
         suggestedTokenSymbol: (parsed.suggestedTokenSymbol ?? '').slice(0, 10),
         suggestedTokenDescription: (parsed.suggestedTokenDescription ?? '').slice(0, 500),
         comps,
+        marketPriceRange: marketData?.marketPriceRange,
+        recentSales: marketData?.recentSales,
         groundingSources: groundingSources.length > 0 ? groundingSources : undefined,
         tier,
         rateLimit: {

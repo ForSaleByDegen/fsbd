@@ -8,6 +8,10 @@
     {
       "path": "/api/cron/escrow-deadlines",
       "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/cron/validator-job-timeout",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

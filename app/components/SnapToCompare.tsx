@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useWallet } from '@solana/wallet-adapter-react'
+import { Connection, PublicKey, Transaction } from '@solana/web3.js'
+import { getAssociatedTokenAddressSync, createTransferInstruction, getMint } from '@solana/spl-token'
 import { BarChart3, ExternalLink } from 'lucide-react'
 import { Button, buttonVariants } from './ui/button'
 import { Input } from './ui/input'
@@ -25,6 +28,9 @@ export type CompListing = {
 
 export type GroundingSource = { title?: string; uri?: string }
 
+export type MarketPriceRange = { min: number; max: number; median: number; currency: string }
+export type RecentSale = { price: number; date?: string }
+
 export type SnapResult = {
   itemDescription: string
   suggestedTitle?: string
@@ -36,6 +42,8 @@ export type SnapResult = {
   suggestedTokenSymbol?: string
   suggestedTokenDescription?: string
   comps: CompListing[]
+  marketPriceRange?: MarketPriceRange
+  recentSales?: RecentSale[]
   groundingSources?: GroundingSource[]
 }
 
@@ -73,6 +81,8 @@ function formatResetsAt(iso: string): string {
 }
 
 export default function SnapToCompare({ onUseComp, onUseSuggested, onApplyAllSuggestions, applyingComp = false, wallet }: Props) {
+  const { publicKey, signTransaction } = useWallet()
+  const effectiveWallet = wallet ?? publicKey?.toString() ?? null
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<SnapResult | null>(null)
   const [snappedPhoto, setSnappedPhoto] = useState<string | null>(null)
@@ -90,17 +100,19 @@ export default function SnapToCompare({ onUseComp, onUseSuggested, onApplyAllSug
     usedToday: boolean
     resetsAt: string | null
     limit: number
+    totalAnalyses?: number
+    aiLookupFeeFsbd?: number
   } | null>(null)
   const [cameraOpen, setCameraOpen] = useState(false)
 
-  // Fetch daily AI listing usage when wallet is present (1 per day per user)
+  // Fetch daily AI listing usage when effectiveWallet is present (1 per day per user)
   useEffect(() => {
-    if (!wallet?.trim()) {
+    if (!effectiveWallet?.trim()) {
       setDailyUsage(null)
       return
     }
     let cancelled = false
-    fetch(`/api/listings/ai-usage?wallet=${encodeURIComponent(wallet)}`)
+    fetch(`/api/listings/ai-usage?wallet=${encodeURIComponent(effectiveWallet)}`)
       .then((res) => res.json().catch(() => ({})))
       .then((data) => {
         if (cancelled) return
@@ -108,6 +120,8 @@ export default function SnapToCompare({ onUseComp, onUseSuggested, onApplyAllSug
           usedToday: !!data.usedToday,
           resetsAt: data.resetsAt ?? null,
           limit: typeof data.limit === 'number' ? data.limit : 1,
+          totalAnalyses: typeof data.totalAnalyses === 'number' ? data.totalAnalyses : 0,
+          aiLookupFeeFsbd: typeof data.aiLookupFeeFsbd === 'number' ? data.aiLookupFeeFsbd : 0,
         })
       })
       .catch(() => {
@@ -116,7 +130,7 @@ export default function SnapToCompare({ onUseComp, onUseSuggested, onApplyAllSug
     return () => {
       cancelled = true
     }
-  }, [wallet])
+  }, [effectiveWallet])
 
   const runAnalysis = async (dataUrl: string) => {
     setError(null)
@@ -124,17 +138,50 @@ export default function SnapToCompare({ onUseComp, onUseSuggested, onApplyAllSug
     setRateLimitInfo(null)
     setLoading(true)
     try {
+      let aiLookupSignature: string | null = null
+      const fee = dailyUsage?.aiLookupFeeFsbd ?? 0
+      if (fee > 0 && effectiveWallet && publicKey && signTransaction) {
+        const cfgRes = await fetch('/api/config')
+        const cfg = await cfgRes.json().catch(() => ({}))
+        const fsbdMint = cfg.fsbd_token_mint
+        const appWallet = process.env.NEXT_PUBLIC_APP_WALLET
+        if (fsbdMint && fsbdMint !== 'FSBD_TOKEN_MINT_PLACEHOLDER' && appWallet && appWallet !== 'YOUR_WALLET_ADDRESS') {
+          const connection = new Connection(process.env.NEXT_PUBLIC_RPC_URL || 'https://api.mainnet-beta.solana.com')
+          const mint = new PublicKey(fsbdMint)
+          const appPubkey = new PublicKey(appWallet)
+          const userAta = getAssociatedTokenAddressSync(mint, publicKey)
+          const appAta = getAssociatedTokenAddressSync(mint, appPubkey)
+          const mintInfo = await getMint(connection, mint)
+          const amount = BigInt(Math.floor(fee * 10 ** mintInfo.decimals))
+          const tx = new Transaction().add(createTransferInstruction(userAta, appAta, publicKey, amount))
+          const { blockhash } = await connection.getLatestBlockhash('confirmed')
+          tx.recentBlockhash = blockhash
+          tx.feePayer = publicKey
+          const signed = await signTransaction(tx)
+          const sig = await connection.sendRawTransaction(signed.serialize(), { skipPreflight: false })
+          await connection.confirmTransaction(sig, 'confirmed')
+          aiLookupSignature = sig
+        } else {
+          throw new Error('AI lookup payment not configured. Connect support.')
+        }
+      } else if (fee > 0 && (!effectiveWallet || !signTransaction)) {
+        throw new Error(`Connect your wallet to pay ${fee.toLocaleString()} $FSBD for AI lookup.`)
+      }
       const res = await fetch('/api/listings/find-comps-from-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           imageBase64: dataUrl,
-          ...(wallet ? { wallet } : {}),
+          ...(effectiveWallet ? { wallet: effectiveWallet } : {}),
+          ...(aiLookupSignature ? { aiLookupSignature } : {}),
         }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        if (res.status === 429 && wallet && (data.resetsAt ?? data.retryAfter)) {
+        if (res.status === 402) {
+          throw new Error(data.error || `Pay ${(data.aiLookupFeeFsbd ?? fee).toLocaleString()} $FSBD for AI lookup. Connect wallet and try again.`)
+        }
+        if (res.status === 429 && effectiveWallet && (data.resetsAt ?? data.retryAfter)) {
           setDailyUsage({
             usedToday: true,
             resetsAt: data.resetsAt ?? (data.retryAfter ? new Date(Date.now() + data.retryAfter * 1000).toISOString() : null),
@@ -145,12 +192,22 @@ export default function SnapToCompare({ onUseComp, onUseSuggested, onApplyAllSug
         const retry = data.retryAfter
         throw new Error(retry ? `${msg} Try again in ${retry} seconds.` : msg)
       }
-      if (wallet && data.dailyLimit) {
+      if (effectiveWallet && data.dailyLimit) {
         setDailyUsage({
           usedToday: true,
           resetsAt: data.dailyLimit.resetsAt ?? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
           limit: data.dailyLimit.limit ?? 1,
+          totalAnalyses: (dailyUsage?.totalAnalyses ?? 0) + 1,
         })
+        fetch(`/api/listings/ai-usage?wallet=${encodeURIComponent(effectiveWallet)}`)
+          .then((r) => r.json().catch(() => ({})))
+          .then((u) => setDailyUsage((prev) => prev ? {
+            ...prev,
+            usedToday: !!u.usedToday,
+            resetsAt: u.resetsAt ?? prev.resetsAt,
+            limit: typeof u.limit === 'number' ? u.limit : prev.limit,
+            totalAnalyses: typeof u.totalAnalyses === 'number' ? u.totalAnalyses : prev.totalAnalyses,
+          } : prev))
       }
       setLastFailedImage(null)
       setResult({
@@ -165,6 +222,8 @@ export default function SnapToCompare({ onUseComp, onUseSuggested, onApplyAllSug
         suggestedTokenDescription: data.suggestedTokenDescription ?? '',
         comps: Array.isArray(data.comps) ? data.comps : [],
         groundingSources: Array.isArray(data.groundingSources) ? data.groundingSources : undefined,
+        marketPriceRange: data.marketPriceRange,
+        recentSales: Array.isArray(data.recentSales) ? data.recentSales : undefined,
       })
       setSnappedPhoto(dataUrl)
       setViewMode('grid')
@@ -270,7 +329,7 @@ export default function SnapToCompare({ onUseComp, onUseSuggested, onApplyAllSug
       <label className="block text-sm font-medium mb-2">Snap to Compare — take a photo or upload an image</label>
       <p className="text-sm text-muted-foreground mb-3">
         We&apos;ll analyze your item and find similar FSBD listings with pricing. Use a comp to prefill your listing.
-        {wallet ? (
+        {effectiveWallet ? (
           <span className="block mt-1 text-xs text-cyan-400/80">
             Your tier limits your lookups per minute. Hold more $FSBD for higher limits.
           </span>
@@ -280,7 +339,7 @@ export default function SnapToCompare({ onUseComp, onUseSuggested, onApplyAllSug
           </span>
         )}
       </p>
-      {wallet && dailyUsage !== null && (
+      {effectiveWallet && dailyUsage !== null && (
         <p className="text-xs text-muted-foreground mb-2">
           <span className="text-cyan-400/90 font-medium">AI listing:</span>{' '}
           {dailyUsage.usedToday ? (
@@ -294,6 +353,12 @@ export default function SnapToCompare({ onUseComp, onUseSuggested, onApplyAllSug
             </>
           ) : (
             <span className="text-[#00ff00]/90">1 remaining today</span>
+          )}
+          {typeof dailyUsage.totalAnalyses === 'number' && dailyUsage.totalAnalyses > 0 && (
+            <span className="text-purple-muted"> · Total analyses: {dailyUsage.totalAnalyses}</span>
+          )}
+          {(dailyUsage.aiLookupFeeFsbd ?? 0) > 0 && (
+            <span className="text-amber-400/90"> · {dailyUsage.aiLookupFeeFsbd!.toLocaleString()} $FSBD per lookup</span>
           )}
         </p>
       )}
@@ -309,22 +374,22 @@ export default function SnapToCompare({ onUseComp, onUseSuggested, onApplyAllSug
       <div className="flex flex-wrap gap-2">
         <ImageFileButton
           onChange={handleFile}
-          disabled={loading || (!!wallet && !!dailyUsage?.usedToday)}
+          disabled={loading || (!!effectiveWallet && !!dailyUsage?.usedToday)}
           className={buttonVariants({ variant: 'outline', size: 'sm', className: 'border-cyan-500 text-cyan-400 hover:bg-cyan-500/20' })}
         >
           <span className="pointer-events-none">
-            {loading ? 'Analyzing…' : wallet && dailyUsage?.usedToday ? 'Daily limit used (1/day)' : 'Take photo / Upload image'}
+            {loading ? 'Analyzing…' : effectiveWallet && dailyUsage?.usedToday ? 'Daily limit used (1/day)' : 'Take photo / Upload image'}
           </span>
         </ImageFileButton>
         <Button
           type="button"
           variant="outline"
           size="sm"
-          disabled={loading || (!!wallet && !!dailyUsage?.usedToday)}
+          disabled={loading || (!!effectiveWallet && !!dailyUsage?.usedToday)}
           onClick={() => setCameraOpen(true)}
           className="border-cyan-500/50 text-cyan-400/80 hover:bg-cyan-500/10"
         >
-          {wallet && dailyUsage?.usedToday ? 'Daily limit used' : 'Use live camera'}
+          {effectiveWallet && dailyUsage?.usedToday ? 'Daily limit used' : 'Use live camera'}
         </Button>
       </div>
       <p className="text-xs text-muted-foreground mt-2">

@@ -65,7 +65,7 @@ export default function ValidatorApyCalculator({
 }: Props) {
   const [stake, setStake] = useState(10_000_000)
   const [computeIndex, setComputeIndex] = useState(0)
-  const [jobsPerMonth, setJobsPerMonth] = useState(200)
+  const [jobsPerMonth, setJobsPerMonth] = useState(400)
 
   const computeMult = COMPUTE_OPTIONS[computeIndex]!.mult
 
@@ -160,8 +160,9 @@ export default function ValidatorApyCalculator({
 
       <div className="pt-4 border-t border-cyan-500/30 grid gap-3 sm:grid-cols-2">
         <div className="p-3 bg-black/30 rounded border border-[#00ff00]/30">
-          <p className="text-xs text-purple-muted font-pixel-alt">Projected APY</p>
+          <p className="text-xs text-purple-muted font-pixel-alt">Projected APY / ROI</p>
           <p className="text-2xl font-pixel text-[#00ff00]">{result.apy.toFixed(1)}%</p>
+          <p className="text-xs text-purple-muted mt-0.5">Strong early-validator returns</p>
         </div>
         <div className="p-3 bg-black/30 rounded border border-[#00ff00]/30">
           <p className="text-xs text-purple-muted font-pixel-alt">Your job share</p>

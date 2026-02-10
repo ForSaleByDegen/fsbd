@@ -16,7 +16,7 @@ export type ValidatorRewardsConfig = {
 
 const DEFAULT_CONFIG: ValidatorRewardsConfig = {
   enabled: false,
-  base_reward_per_job: 10,
+  base_reward_per_job: 25,
   decay_period_days: 30,
   decay_percent: 5,
   start_date: null,
