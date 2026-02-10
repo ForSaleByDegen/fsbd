@@ -42,6 +42,7 @@ export type ParsedValidatorResponse = {
   searchKeywords?: unknown
   suggestedTitle?: string
   suggestedPrice?: string
+  price?: string  // alternate key some AIs use
   suggestedTokenName?: string
   suggestedTokenSymbol?: string
   suggestedTokenDescription?: string
@@ -102,8 +103,8 @@ export function validateValidatorResponse(parsed: ParsedValidatorResponse): Vali
     }
   }
 
-  // 6. Price format: must look like a reasonable number (optional)
-  const priceStr = typeof parsed.suggestedPrice === 'string' ? parsed.suggestedPrice.trim() : ''
+  // 6. Price format: must look like a reasonable number (optional). Accept suggestedPrice or price.
+  const priceStr = typeof parsed.suggestedPrice === 'string' ? parsed.suggestedPrice.trim() : (typeof parsed.price === 'string' ? parsed.price.trim() : '')
   if (priceStr && priceStr.length > LIMITS.suggestedPrice) {
     return { ok: false, reason: 'suggestedPrice too long' }
   }
@@ -131,15 +132,45 @@ export function validateValidatorResponse(parsed: ParsedValidatorResponse): Vali
 }
 
 /**
+ * Extract JSON object from raw content (handles markdown, prose, etc.)
+ */
+function extractJson(text: string): string | null {
+  let s = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim()
+  const brace = s.indexOf('{')
+  if (brace >= 0) {
+    let depth = 0
+    let end = -1
+    for (let i = brace; i < s.length; i++) {
+      if (s[i] === '{') depth++
+      else if (s[i] === '}') {
+        depth--
+        if (depth === 0) {
+          end = i
+          break
+        }
+      }
+    }
+    if (end >= 0) return s.slice(brace, end + 1)
+  }
+  return null
+}
+
+/**
  * Parse raw_content string and validate. Returns ValidationResult.
  */
 export function parseAndValidateValidatorResponse(rawContent: string): ValidationResult {
-  let parsed: ParsedValidatorResponse
   try {
     const cleaned = rawContent.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim()
-    parsed = JSON.parse(cleaned) as ParsedValidatorResponse
+    let parsed: ParsedValidatorResponse
+    try {
+      parsed = JSON.parse(cleaned) as ParsedValidatorResponse
+    } catch {
+      const jsonStr = extractJson(cleaned)
+      if (!jsonStr) return { ok: false, reason: 'Invalid JSON in response' }
+      parsed = JSON.parse(jsonStr) as ParsedValidatorResponse
+    }
+    return validateValidatorResponse(parsed)
   } catch {
     return { ok: false, reason: 'Invalid JSON in response' }
   }
-  return validateValidatorResponse(parsed)
 }

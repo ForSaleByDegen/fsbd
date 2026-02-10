@@ -84,7 +84,7 @@ export default function BrowserValidatorRunner({ wallet, onStatus }: Props) {
               })
 
               const rawContent = completion?.choices?.[0]?.message?.content?.trim()
-              if (rawContent) {
+              if (rawContent && rawContent.length >= 10) {
                 const completeRes = await fetch(`/api/validators/jobs/${id}/complete`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
@@ -92,7 +92,21 @@ export default function BrowserValidatorRunner({ wallet, onStatus }: Props) {
                 })
                 if (completeRes.ok) {
                   setJobsCompleted((n) => n + 1)
+                } else {
+                  // Validation failed — release job so it doesn't stay stuck
+                  await fetch(`/api/validators/jobs/${id}/fail`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ wallet }),
+                  })
                 }
+              } else {
+                // Empty or too short — release job
+                await fetch(`/api/validators/jobs/${id}/fail`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ wallet }),
+                })
               }
               updateStatus('ready', 'Polling for jobs…')
             }

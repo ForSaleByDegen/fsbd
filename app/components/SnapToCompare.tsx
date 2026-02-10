@@ -446,6 +446,27 @@ export default function SnapToCompare({ onUseComp, onUseSuggested, onApplyAllSug
 
       {result && (
         <div className="mt-4 space-y-4">
+          {/* Estimated price — prominent display at top. Use suggestedPrice, or marketPriceRange, or first comp price */}
+          {(() => {
+            const priceLabel: string | null = result.suggestedPrice
+              ? result.suggestedPrice
+              : result.marketPriceRange
+                ? result.marketPriceRange.min === result.marketPriceRange.max
+                  ? `$${result.marketPriceRange.median}`
+                  : `$${result.marketPriceRange.min}–$${result.marketPriceRange.max}`
+                : result.comps?.length && typeof (result.comps[0] as { price?: number })?.price === 'number'
+                  ? String((result.comps[0] as { price: number }).price)
+                  : null
+            return priceLabel ? (
+              <div className="p-3 rounded-lg border-2 border-[#00ff00]/50 bg-[#00ff00]/10">
+                <p className="text-xs text-cyan-400 font-medium mb-0.5">Estimated price</p>
+                <p className="text-xl font-pixel text-[#00ff00]" style={{ fontFamily: 'var(--font-pixel)' }}>
+                  {priceLabel}
+                  <span className="text-sm font-pixel-alt text-purple-muted ml-1 font-normal">(USD or SOL)</span>
+                </p>
+              </div>
+            ) : null
+          })()}
           {/* AI-suggested description & category */}
           {(result.itemDescription || onUseSuggested || onApplyAllSuggestions) && (
             <div className="p-3 rounded-lg border border-cyan-500/40 bg-cyan-500/5">

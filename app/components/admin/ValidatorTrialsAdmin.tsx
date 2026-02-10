@@ -274,7 +274,7 @@ export default function ValidatorTrialsAdmin() {
                 <p className="text-xs text-purple-muted mt-1">
                   {stats.rewards.total_pending} pending · {stats.rewards.total_paid} paid
                   {!rewardsEnabled && (
-                    <span className="block mt-1 text-amber-400">Ledger off — enable below</span>
+                    <span className="block mt-1 text-amber-400">Ledger off — enable in Rewards section</span>
                   )}
                 </p>
               </div>
