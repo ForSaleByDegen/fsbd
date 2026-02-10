@@ -43,3 +43,7 @@ Token distribution to validators is configurable and can be slowed down over tim
 - ...approaches `min_reward_per_job` over time
 
 Update via Supabase SQL or an admin API.
+
+## Ledger and Payouts
+
+When rewards are enabled and a validator completes a job, the reward is recorded in `validator_rewards_ledger` (status `pending`). The `total_earned` shown in the validators UI is the sum of all ledger entries for that wallet. Actual on-chain $FSBD transfers require a payout process (similar to lister-airdrop) using `VALIDATOR_REWARDS_KEYPAIR_BASE64` — not yet implemented.

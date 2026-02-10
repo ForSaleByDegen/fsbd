@@ -65,6 +65,16 @@ export async function GET(request: NextRequest) {
       .eq('status', 'completed')
     jobs_completed = count ?? 0
 
+    // Total earned $FSBD (sum of ledger entries)
+    let total_earned = 0
+    const { data: ledgerRows } = await supabaseAdmin
+      .from('validator_rewards_ledger')
+      .select('amount')
+      .eq('validator_wallet', wallet)
+    if (ledgerRows && Array.isArray(ledgerRows)) {
+      total_earned = ledgerRows.reduce((sum: number, r: { amount: number }) => sum + (Number(r.amount) || 0), 0)
+    }
+
     return NextResponse.json({
       registered: row.status === 'active',
       endpoint_url: row.endpoint_url,
@@ -72,6 +82,7 @@ export async function GET(request: NextRequest) {
       status: row.status,
       validator_type: row.validator_type ?? 'endpoint',
       jobs_completed,
+      total_earned,
     })
   } catch (e) {
     console.error('[validators/me]', e)

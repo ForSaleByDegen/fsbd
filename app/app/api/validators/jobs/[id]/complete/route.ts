@@ -2,10 +2,12 @@
  * POST /api/validators/jobs/[id]/complete
  * Browser validator submits result. Only the validator who claimed the job may complete it.
  * Body: { wallet, raw_content }
+ * Records reward in validator_rewards_ledger when config.enabled.
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { parseAndValidateValidatorResponse } from '@/lib/validator-response-validate'
+import { parseRewardsConfig, getCurrentRewardPerJob } from '@/lib/validator-rewards'
 
 const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/
 
@@ -65,6 +67,23 @@ export async function POST(
         { error: 'Job not found, already completed, or not claimed by you' },
         { status: 404 }
       )
+    }
+
+    // Record reward if enabled
+    const { data: configRow } = await supabaseAdmin
+      .from('platform_config')
+      .select('value_json')
+      .eq('key', 'validator_rewards_config')
+      .maybeSingle()
+    const config = parseRewardsConfig((configRow as { value_json?: unknown } | null)?.value_json)
+    const amount = getCurrentRewardPerJob(config)
+    if (config.enabled && amount > 0) {
+      await supabaseAdmin.from('validator_rewards_ledger').insert({
+        validator_wallet: wallet,
+        job_id: jobId,
+        amount,
+        status: 'pending',
+      })
     }
 
     return NextResponse.json({ ok: true })

@@ -12,7 +12,7 @@ import BrowserValidatorRunner from '@/components/BrowserValidatorRunner'
 
 type PoolStats = { totalValidators: number; totalStaked: number }
 type RewardsInfo = { enabled: boolean; current_reward_per_job: number }
-type MyStatus = { registered: boolean; endpoint_url?: string; stake_amount?: number; status?: string; validator_type?: string; jobs_completed?: number }
+type MyStatus = { registered: boolean; endpoint_url?: string; stake_amount?: number; status?: string; validator_type?: string; jobs_completed?: number; total_earned?: number }
 
 export default function ValidatorsPage() {
   const { connected, publicKey } = useWallet()
@@ -48,7 +48,7 @@ export default function ValidatorsPage() {
     ]).then(([whitelistRes, meRes, adminRes]) => {
       if (cancelled) return
       setWhitelisted(!!whitelistRes.whitelisted)
-      setMyStatus({ registered: !!meRes.registered, endpoint_url: meRes.endpoint_url, stake_amount: meRes.stake_amount, status: meRes.status, validator_type: meRes.validator_type, jobs_completed: meRes.jobs_completed ?? 0 })
+      setMyStatus({ registered: !!meRes.registered, endpoint_url: meRes.endpoint_url, stake_amount: meRes.stake_amount, status: meRes.status, validator_type: meRes.validator_type, jobs_completed: meRes.jobs_completed ?? 0, total_earned: meRes.total_earned ?? 0 })
       setUserIsAdmin(!!adminRes?.isAdmin)
     })
     return () => { cancelled = true }
@@ -113,7 +113,7 @@ export default function ValidatorsPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Registration failed')
       setSuccess('Registered as validator')
-      setMyStatus({ registered: true, endpoint_url: isBrowser ? undefined : endpointUrl.trim(), stake_amount: stake, status: 'active', validator_type: isBrowser ? 'browser' : 'endpoint', jobs_completed: 0 })
+      setMyStatus((prev) => ({ ...prev, registered: true, endpoint_url: isBrowser ? undefined : endpointUrl.trim(), stake_amount: stake, status: 'active', validator_type: isBrowser ? 'browser' : 'endpoint', jobs_completed: prev?.jobs_completed ?? 0, total_earned: prev?.total_earned ?? 0 }))
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Registration failed')
     } finally {
@@ -257,6 +257,9 @@ export default function ValidatorsPage() {
                 {myStatus.endpoint_url && <p>Endpoint: {myStatus.endpoint_url}</p>}
                 <p>Staked: {formatNum(myStatus.stake_amount ?? 0)} $FSBD</p>
                 <p>Jobs completed: {myStatus.jobs_completed ?? 0}</p>
+                {(myStatus.total_earned ?? 0) > 0 && (
+                  <p>Total earned: {formatNum(myStatus.total_earned ?? 0)} $FSBD</p>
+                )}
                 <p className="text-xs text-purple-muted">
                   {rewardsInfo.enabled && rewardsInfo.current_reward_per_job > 0
                     ? `Earnings: ${rewardsInfo.current_reward_per_job} $FSBD per job (distribution slows over time)`
