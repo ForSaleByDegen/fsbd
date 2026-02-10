@@ -78,12 +78,15 @@ export async function POST(
     const config = parseRewardsConfig((configRow as { value_json?: unknown } | null)?.value_json)
     const amount = getCurrentRewardPerJob(config)
     if (config.enabled && amount > 0) {
-      await supabaseAdmin.from('validator_rewards_ledger').insert({
+      const { error: ledgerErr } = await supabaseAdmin.from('validator_rewards_ledger').insert({
         validator_wallet: wallet,
         job_id: jobId,
         amount,
         status: 'pending',
       })
+      if (ledgerErr) {
+        console.error('[validators/jobs/complete] Ledger insert failed:', ledgerErr)
+      }
     }
 
     return NextResponse.json({ ok: true })

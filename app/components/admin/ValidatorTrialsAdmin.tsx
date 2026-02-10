@@ -23,6 +23,41 @@ export default function ValidatorTrialsAdmin() {
   const [whitelistLoading, setWhitelistLoading] = useState(false)
   const [addRemoving, setAddRemoving] = useState(false)
   const [message, setMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
+  const [rewardsEnabled, setRewardsEnabled] = useState(false)
+  const [rewardsSaving, setRewardsSaving] = useState(false)
+
+  const fetchRewardsConfig = async () => {
+    if (!adminWallet) return
+    try {
+      const res = await fetch(`/api/admin/validator-config?wallet=${encodeURIComponent(adminWallet)}`)
+      const data = await res.json().catch(() => ({}))
+      if (res.ok && data.validator_rewards_config?.enabled !== undefined) {
+        setRewardsEnabled(!!data.validator_rewards_config.enabled)
+      }
+    } catch { /* ignore */ }
+  }
+
+  const toggleRewards = async () => {
+    if (!adminWallet) return
+    setRewardsSaving(true)
+    setMessage(null)
+    try {
+      const res = await fetch('/api/admin/validator-config', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wallet: adminWallet, enabled: !rewardsEnabled }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Failed to update')
+      setRewardsEnabled(!rewardsEnabled)
+      setMessage({ type: 'ok', text: rewardsEnabled ? 'Rewards disabled' : 'Rewards enabled — new completions will log to ledger' })
+      fetchStats()
+    } catch (e) {
+      setMessage({ type: 'err', text: e instanceof Error ? e.message : 'Failed to update' })
+    } finally {
+      setRewardsSaving(false)
+    }
+  }
 
   const fetchWhitelist = async () => {
     if (!adminWallet) return
@@ -63,6 +98,7 @@ export default function ValidatorTrialsAdmin() {
     setLoading(true)
     fetchWhitelist()
     fetchStats()
+    fetchRewardsConfig()
   }, [adminWallet])
 
   const handleAdd = async () => {
@@ -177,6 +213,28 @@ export default function ValidatorTrialsAdmin() {
         )}
       </div>
 
+      {/* Rewards ledger toggle */}
+      <div className="p-4 border-2 border-[#660099] bg-black/50 rounded">
+        <h3 className="font-pixel text-[#ff00ff] mb-2 text-lg" style={{ fontFamily: 'var(--font-pixel)' }}>
+          Validator Rewards Ledger
+        </h3>
+        <p className="text-purple-muted font-pixel-alt text-sm mb-3">
+          When enabled, each completed job is logged and adds to the validator&apos;s total earned. Disabled = no ledger entries.
+        </p>
+        <div className="flex items-center gap-3">
+          <span className={`font-pixel-alt text-sm ${rewardsEnabled ? 'text-[#00ff00]' : 'text-amber-400'}`}>
+            {rewardsEnabled ? 'Ledger ON — completions logged' : 'Ledger OFF — completions not logged'}
+          </span>
+          <Button
+            onClick={toggleRewards}
+            disabled={rewardsSaving}
+            className={`border-2 font-pixel-alt ${rewardsEnabled ? 'border-amber-500 text-amber-400 hover:bg-amber-500/20' : 'border-[#00ff00] text-[#00ff00] hover:bg-[#00ff00]/20'}`}
+          >
+            {rewardsSaving ? '…' : rewardsEnabled ? 'Disable' : 'Enable'}
+          </Button>
+        </div>
+      </div>
+
       {/* Monitoring stats */}
       <div className="p-4 border-2 border-[#660099] bg-black/50 rounded">
         <h3 className="font-pixel text-[#ff00ff] mb-3 text-lg" style={{ fontFamily: 'var(--font-pixel)' }}>
@@ -215,6 +273,9 @@ export default function ValidatorTrialsAdmin() {
                 <p className="text-xl font-pixel text-[#00ff00]">{stats.rewards.total_pending + stats.rewards.total_paid} $FSBD</p>
                 <p className="text-xs text-purple-muted mt-1">
                   {stats.rewards.total_pending} pending · {stats.rewards.total_paid} paid
+                  {!rewardsEnabled && (
+                    <span className="block mt-1 text-amber-400">Ledger off — enable below</span>
+                  )}
                 </p>
               </div>
             </div>
