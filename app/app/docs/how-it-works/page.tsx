@@ -51,13 +51,33 @@ export default function HowItWorksPage() {
             </p>
             <ol className="list-decimal pl-6 space-y-2 mb-3">
               <li><strong className="text-[#00ff00]">You provide an image</strong> — Take a photo or upload a picture of your item.</li>
-              <li><strong className="text-[#00ff00]">We send it to our AI</strong> — We use Google&apos;s Gemini model. It identifies the item and can search the web for similar listings and prices (when available).</li>
+              <li><strong className="text-[#00ff00]">We send it to our AI</strong> — We prefer the validator pool (community-run vision AI). If no validators are available, we fall back to Gemini. The validator pool is community-owned compute: you can run the AI in your browser or on your GPU and earn $FSBD. See <Link href="/validators" className="text-[#ff00ff] hover:text-[#00ff00] underline">Validators</Link> for details.</li>
               <li><strong className="text-[#00ff00]">We get suggestions</strong> — The AI returns a suggested title, description, price, category, subcategory, and search keywords. It can also suggest token name, symbol, and description if you plan to launch a token.</li>
               <li><strong className="text-[#00ff00]">We find comps</strong> — We search FSBD for active listings that match the keywords and show them as comparable listings (comps) so you can see market prices.</li>
               <li><strong className="text-[#00ff00]">You review and apply</strong> — The create form shows the AI analysis and comps. Click <strong className="text-cyan-400">Apply all AI suggestions</strong> to fill the form in one step, or pick individual comps/suggestions. Then edit any field and submit.</li>
             </ol>
             <p>
               All of this happens in your browser and our API; we do not store your photo after processing. The AI output is cleaned (no raw code or markdown) before it appears in the form.
+            </p>
+          </section>
+
+          {/* Validator pool */}
+          <section id="validators">
+            <h2 className="text-lg sm:text-xl font-pixel text-[#ff00ff] mb-3" style={{ fontFamily: 'var(--font-pixel)' }}>
+              Validator pool: community-owned AI
+            </h2>
+            <p className="mb-3">
+              The validator pool lets the community run the vision AI that powers Snap to Compare. Instead of relying only on third-party APIs (Gemini, etc.), we route image analysis requests to validators who run the model on their hardware. Validators stake $FSBD and earn for serving requests.
+            </p>
+            <p className="mb-3">
+              <strong className="text-cyan-400">Two ways to validate:</strong>
+            </p>
+            <ul className="list-disc pl-6 space-y-2 mb-3">
+              <li><strong>Run in browser</strong> — No install. Register as a browser validator, click &quot;Run in browser,&quot; and the vision model (Phi-3.5) loads in your tab. Keep the tab open; when a seller uses Snap to Compare, you get the job, run inference, and earn. Requires WebGPU (Chrome, Edge, Safari 18+).</li>
+              <li><strong>Run on a GPU server</strong> — Download ai-service.zip, install Ollama + llava, expose your server via a public URL. We call your endpoint directly when a seller uses Snap to Compare.</li>
+            </ul>
+            <p>
+              Go to <Link href="/validators" className="text-[#ff00ff] hover:text-[#00ff00] underline">/validators</Link> to register (whitelist required during private testing).
             </p>
           </section>
 

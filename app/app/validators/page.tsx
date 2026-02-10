@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useWallet } from '@solana/wallet-adapter-react'
+import Link from 'next/link'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import { Button } from '@/components/ui/button'
@@ -175,9 +176,20 @@ export default function ValidatorsPage() {
               <h2 className="text-lg font-pixel text-[#ff00ff] mb-3" style={{ fontFamily: 'var(--font-pixel)' }}>
                 How it works
               </h2>
-              <p>
-                Stake $FSBD, run the vision AI package on your GPU, and register your endpoint. We route Snap-to-Compare requests to you. Early supporters get treasury payouts; later, fees fund the pool.
+              <ol className="list-decimal list-inside space-y-2 mb-3">
+                <li><strong>Connect wallet</strong> — You must be whitelisted. Stake $FSBD and register as a validator.</li>
+                <li><strong>Choose your path</strong> — <strong>Browser:</strong> No install. Run the vision model in your browser (Phi-3.5). <strong>Endpoint:</strong> Download ai-service.zip, run Ollama + llava on your GPU server, expose a URL.</li>
+                <li><strong>Stay online</strong> — Browser: Keep the validators tab open and click &quot;Run in browser.&quot; Endpoint: Keep your server running.</li>
+                <li><strong>Get jobs</strong> — When a seller uses Snap to Compare (photograph an item for AI listing help), we send that image to validators. Browser validators poll for jobs; endpoint validators receive HTTP requests.</li>
+                <li><strong>Run the AI</strong> — Your node analyzes the image and returns title, description, price, keywords. We validate the response and pass it to the seller.</li>
+                <li><strong>Earn $FSBD</strong> — Validators earn for serving requests. Early supporters get treasury payouts; fees from Snap-to-Compare fund the pool over time.</li>
+              </ol>
+              <p className="text-xs text-purple-muted mb-2">
+                We validate all responses before showing them to users. No third-party APIs (Gemini, etc.) — the AI runs on hardware you control.
               </p>
+              <Link href="/docs/how-it-works#validators" className="text-xs text-cyan-400 hover:text-[#00ff00] underline">
+                Learn more in How It Works →
+              </Link>
             </section>
 
             <section>
@@ -194,9 +206,10 @@ export default function ValidatorsPage() {
               <h2 className="text-lg font-pixel text-[#ff00ff] mb-3" style={{ fontFamily: 'var(--font-pixel)' }}>
                 Run in browser (no download)
               </h2>
-              <p className="mb-3 text-sm">
-                No install needed. Click below to run the vision model in your browser. First time loads ~2GB; keep the tab open to validate.
+              <p className="mb-2 text-sm">
+                Easiest option. Register as a browser validator below, then click &quot;Run in browser.&quot; The vision model (Phi-3.5) loads in your tab via WebGPU. First time: ~2GB download. Keep the tab open to poll for jobs — when a seller uses Snap to Compare, you&apos;ll get the image, run inference, and earn.
               </p>
+              <p className="mb-3 text-xs text-purple-muted">Requires Chrome, Edge, or Safari 18+ (WebGPU).</p>
               {myStatus?.registered && myStatus.validator_type === 'browser' && wallet && (
                 <BrowserValidatorRunner wallet={wallet} />
               )}
@@ -209,12 +222,15 @@ export default function ValidatorsPage() {
               <h2 className="text-lg font-pixel text-[#ff00ff] mb-3" style={{ fontFamily: 'var(--font-pixel)' }}>
                 Or download package (GPU server)
               </h2>
+              <p className="mb-2 text-sm">
+                For more power: run Ollama + llava on your own GPU. Download the package, unzip, install Ollama and pull llava, run the server. Expose it via ngrok or a public URL, then register that endpoint below. We call your server directly when a seller uses Snap to Compare.
+              </p>
               <a href="/ai-service.zip" download="ai-service.zip">
                 <Button variant="outline" className="border-cyan-500 text-cyan-400 hover:bg-cyan-500/20">
                   Download ai-service.zip
                 </Button>
               </a>
-              <p className="mt-2 text-xs">Unzip, install Ollama + llava, run the server. See README inside.</p>
+              <p className="mt-2 text-xs">README inside has full setup instructions.</p>
             </section>
 
             {myStatus?.registered ? (
