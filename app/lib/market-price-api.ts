@@ -28,7 +28,7 @@ function extractPrices(items: unknown[]): number[] {
   const prices: number[] = []
   for (const item of items) {
     const o = item as Record<string, unknown>
-    const p = o?.price ?? o?.currentPrice?.value ?? o?.price?.value
+    const p = o?.price ?? (o?.currentPrice as Record<string, unknown>)?.value ?? (o?.price as Record<string, unknown>)?.value
     const n = typeof p === 'number' ? p : typeof p === 'string' ? parseFloat(p) : NaN
     if (Number.isFinite(n) && n > 0) prices.push(n)
   }
