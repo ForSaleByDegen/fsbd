@@ -10,6 +10,8 @@ export type ValidatorRewardsConfig = {
   decay_percent: number
   start_date: string | null
   min_reward_per_job: number
+  payout_min_accumulated: number
+  payout_schedule: 'immediate' | 'daily' | 'weekly'
 }
 
 const DEFAULT_CONFIG: ValidatorRewardsConfig = {
@@ -19,6 +21,8 @@ const DEFAULT_CONFIG: ValidatorRewardsConfig = {
   decay_percent: 5,
   start_date: null,
   min_reward_per_job: 1,
+  payout_min_accumulated: 100,
+  payout_schedule: 'weekly',
 }
 
 /**
@@ -54,5 +58,7 @@ export function parseRewardsConfig(raw: unknown): ValidatorRewardsConfig {
     decay_percent: typeof o.decay_percent === 'number' ? o.decay_percent : DEFAULT_CONFIG.decay_percent,
     start_date: typeof o.start_date === 'string' ? o.start_date : null,
     min_reward_per_job: typeof o.min_reward_per_job === 'number' ? o.min_reward_per_job : DEFAULT_CONFIG.min_reward_per_job,
+    payout_min_accumulated: typeof o.payout_min_accumulated === 'number' ? Math.max(0, o.payout_min_accumulated) : DEFAULT_CONFIG.payout_min_accumulated,
+    payout_schedule: (o.payout_schedule === 'immediate' || o.payout_schedule === 'daily' || o.payout_schedule === 'weekly') ? o.payout_schedule : DEFAULT_CONFIG.payout_schedule,
   }
 }

@@ -32,6 +32,7 @@ export default function Header() {
   const authenticated = privyAuth.authenticated || false
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [userIsAdmin, setUserIsAdmin] = useState(false)
+  const [validatorWhitelisted, setValidatorWhitelisted] = useState(false)
 
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/' && !searchParams.get('tab')
@@ -54,8 +55,10 @@ export default function Header() {
   useEffect(() => {
     if (connected && publicKey) {
       checkAdminStatus()
+      checkValidatorWhitelist()
     } else {
       setUserIsAdmin(false)
+      setValidatorWhitelisted(false)
     }
   }, [connected, publicKey])
 
@@ -67,6 +70,17 @@ export default function Header() {
     } catch (error) {
       console.error('Error checking admin status:', error)
       setUserIsAdmin(false)
+    }
+  }
+
+  const checkValidatorWhitelist = async () => {
+    if (!publicKey) return
+    try {
+      const res = await fetch(`/api/validators/check-whitelist?wallet=${encodeURIComponent(publicKey.toString())}`)
+      const data = await res.json().catch(() => ({}))
+      setValidatorWhitelisted(!!data.whitelisted)
+    } catch {
+      setValidatorWhitelisted(false)
     }
   }
 
@@ -120,15 +134,15 @@ export default function Header() {
             <Link href="/why" className={`${navLinkClass('/why')} hidden lg:inline`} style={{ fontFamily: 'var(--font-pixel-alt)' }}>
               Why $FSBD
             </Link>
-            {userIsAdmin && (
-              <>
+            {(userIsAdmin || validatorWhitelisted) && (
                 <Link href="/validators" className={navLinkClass('/validators')} style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                   Validators
                 </Link>
+            )}
+            {userIsAdmin && (
                 <Link href="/admin" className={`text-xs md:text-sm font-pixel-alt transition-colors touch-manipulation px-2 py-1 border-2 ${isActive('/admin') ? 'text-[#00ff00] border-[#00ff00]' : 'text-[#ff00ff] border-[#ff00ff] hover:text-[#00ff00] hover:border-[#00ff00]'}`} style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                   Admin
                 </Link>
-              </>
             )}
             <div className="touch-manipulation">
               <PrivyConnectButton />
@@ -245,8 +259,7 @@ export default function Header() {
               >
                 Why $FSBD
               </Link>
-              {userIsAdmin && (
-                <>
+              {(userIsAdmin || validatorWhitelisted) && (
                   <Link 
                     href="/validators" 
                     onClick={() => setMobileMenuOpen(false)}
@@ -255,6 +268,8 @@ export default function Header() {
                   >
                     Validators
                   </Link>
+              )}
+              {userIsAdmin && (
                   <Link 
                     href="/admin" 
                     onClick={() => setMobileMenuOpen(false)}
@@ -263,7 +278,6 @@ export default function Header() {
                   >
                     Admin
                   </Link>
-                </>
               )}
             </div>
           </nav>

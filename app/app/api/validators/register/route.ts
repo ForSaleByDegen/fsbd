@@ -45,6 +45,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Valid stake_amount required' }, { status: 400 })
     }
 
+    // Enforce admin-configured minimum stake
+    let minStake = 0
+    if (supabaseAdmin) {
+      const { data: cfg } = await supabaseAdmin.from('platform_config').select('value_json').eq('key', 'min_validator_stake').maybeSingle()
+      const v = (cfg as { value_json?: unknown } | null)?.value_json
+      if (typeof v === 'number' && v >= 0) minStake = Math.floor(v)
+    }
+    if (stakeAmount < minStake) {
+      return NextResponse.json(
+        { error: `Minimum stake required: ${minStake.toLocaleString()} $FSBD` },
+        { status: 400 }
+      )
+    }
+
     const whitelisted = await isWhitelisted(wallet)
     let isAdminWallet = false
     if (supabaseAdmin) {

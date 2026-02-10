@@ -20,6 +20,21 @@ export default function PlatformConfig() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
+  const [whitelist, setWhitelist] = useState<string[]>([])
+  const [validatorAddWallet, setValidatorAddWallet] = useState('')
+  const [whitelistBusy, setWhitelistBusy] = useState(false)
+
+  const [validatorConfig, setValidatorConfig] = useState({
+    min_validator_stake: 0,
+    enabled: false,
+    base_reward_per_job: 10,
+    decay_period_days: 30,
+    decay_percent: 5,
+    min_reward_per_job: 1,
+    payout_min_accumulated: 100,
+    payout_schedule: 'weekly' as 'immediate' | 'daily' | 'weekly',
+  })
+  const [validatorConfigSaving, setValidatorConfigSaving] = useState(false)
 
   useEffect(() => {
     fetch('/api/config')
@@ -28,6 +43,85 @@ export default function PlatformConfig() {
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => {
+    if (!publicKey) return
+    fetch(`/api/admin/validator-whitelist?wallet=${encodeURIComponent(publicKey.toString())}`)
+      .then((r) => r.json())
+      .then((data) => Array.isArray(data.whitelist) && setWhitelist(data.whitelist))
+      .catch(() => {})
+  }, [publicKey])
+
+  useEffect(() => {
+    if (!publicKey) return
+    fetch(`/api/admin/validator-config?wallet=${encodeURIComponent(publicKey.toString())}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.min_validator_stake != null) setValidatorConfig((c) => ({ ...c, min_validator_stake: data.min_validator_stake }))
+        const r = data.validator_rewards_config
+        if (r) {
+          setValidatorConfig((c) => ({
+            ...c,
+            min_validator_stake: data.min_validator_stake ?? c.min_validator_stake,
+            enabled: r.enabled ?? c.enabled,
+            base_reward_per_job: r.base_reward_per_job ?? c.base_reward_per_job,
+            decay_period_days: r.decay_period_days ?? c.decay_period_days,
+            decay_percent: r.decay_percent ?? c.decay_percent,
+            min_reward_per_job: r.min_reward_per_job ?? c.min_reward_per_job,
+            payout_min_accumulated: r.payout_min_accumulated ?? c.payout_min_accumulated,
+            payout_schedule: r.payout_schedule ?? c.payout_schedule,
+          }))
+        }
+      })
+      .catch(() => {})
+  }, [publicKey])
+
+  const handleAddValidatorWallet = async () => {
+    const w = validatorAddWallet.trim()
+    if (!publicKey || !w || !/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(w)) {
+      setMessage({ type: 'err', text: 'Enter a valid Solana wallet address' })
+      return
+    }
+    setWhitelistBusy(true)
+    setMessage(null)
+    try {
+      const res = await fetch('/api/admin/validator-whitelist', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wallet: publicKey.toString(), add: w }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Failed to add')
+      setWhitelist(data.whitelist ?? [...whitelist, w.toLowerCase()])
+      setValidatorAddWallet('')
+      setMessage({ type: 'ok', text: 'Wallet added to validator whitelist' })
+    } catch (e) {
+      setMessage({ type: 'err', text: e instanceof Error ? e.message : 'Failed to add' })
+    } finally {
+      setWhitelistBusy(false)
+    }
+  }
+
+  const handleRemoveValidatorWallet = async (wallet: string) => {
+    if (!publicKey) return
+    setWhitelistBusy(true)
+    setMessage(null)
+    try {
+      const res = await fetch('/api/admin/validator-whitelist', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wallet: publicKey.toString(), remove: wallet }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Failed to remove')
+      setWhitelist(data.whitelist ?? whitelist.filter((x) => x !== wallet.toLowerCase()))
+      setMessage({ type: 'ok', text: 'Wallet removed from whitelist' })
+    } catch (e) {
+      setMessage({ type: 'err', text: e instanceof Error ? e.message : 'Failed to remove' })
+    } finally {
+      setWhitelistBusy(false)
+    }
+  }
 
   const handleSave = async () => {
     if (!publicKey) return
@@ -64,6 +158,52 @@ export default function PlatformConfig() {
 
   return (
     <div className="space-y-6">
+      {/* Validator whitelist - first so admins find it easily */}
+      <div className="p-4 bg-black/50 border-2 border-[#660099] rounded">
+        <h3 className="font-pixel text-[#00ff00] mb-2" style={{ fontFamily: 'var(--font-pixel)' }}>
+          Validator Whitelist — Add Users for Trial Access
+        </h3>
+        <p className="text-purple-muted font-pixel-alt text-sm mb-4" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+          Add wallet addresses to grant validator pool access. Whitelisted users can register and run validators (browser or endpoint).
+        </p>
+        <div className="flex gap-2 mb-3">
+          <Input
+            placeholder="Solana wallet address"
+            value={validatorAddWallet}
+            onChange={(e) => setValidatorAddWallet(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleAddValidatorWallet()}
+            className="flex-1 bg-black border-2 border-[#660099] text-[#00ff00] font-mono text-sm"
+          />
+          <Button
+            onClick={handleAddValidatorWallet}
+            disabled={whitelistBusy || !validatorAddWallet.trim()}
+            className="border-2 border-[#00ff00] text-[#00ff00] hover:bg-[#00ff00] hover:text-black font-pixel-alt"
+          >
+            {whitelistBusy ? '…' : 'Add to whitelist'}
+          </Button>
+        </div>
+        {whitelist.length === 0 ? (
+          <p className="text-purple-muted text-sm">No wallets whitelisted.</p>
+        ) : (
+          <ul className="space-y-1">
+            {whitelist.map((w) => (
+              <li key={w} className="flex items-center justify-between gap-2 py-1 border-b border-[#660099]/30">
+                <code className="text-cyan-400 font-mono text-xs truncate flex-1">{w}</code>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-amber-500 text-amber-400 hover:bg-amber-500/20 shrink-0"
+                  disabled={whitelistBusy}
+                  onClick={() => handleRemoveValidatorWallet(w)}
+                >
+                  Remove
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
       <div className="p-4 bg-black/50 border-2 border-[#660099] rounded">
         <h3 className="font-pixel text-[#ff00ff] mb-4" style={{ fontFamily: 'var(--font-pixel)' }}>
           Platform Config
