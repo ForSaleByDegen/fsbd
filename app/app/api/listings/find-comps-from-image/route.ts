@@ -12,6 +12,7 @@ import { getClientId } from '@/lib/rate-limit'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { hashWalletAddress } from '@/lib/supabase'
 import { getUserTier, getSnapToCompareLimits, type Tier } from '@/lib/tier-check'
+import { parseAndValidateValidatorResponse } from '@/lib/validator-response-validate'
 
 const AI_LISTING_DAILY_MS = 24 * 60 * 60 * 1000
 
@@ -177,7 +178,17 @@ async function runGeminiWithGoogleSearch(
   }
 }
 
-/** Validator pool: call registered validators' /api/analyze. No 3rd party. */
+/** Safe URL check: http(s) only, no file:// or other schemes */
+function isSafeValidatorUrl(url: string): boolean {
+  try {
+    const u = new URL(url)
+    return (u.protocol === 'http:' || u.protocol === 'https:') && u.hostname.length > 0
+  } catch {
+    return false
+  }
+}
+
+/** Validator pool: call registered validators' /api/analyze. No 3rd party. Each validator is called independently to avoid cross-up. */
 async function runValidatorPool(base64: string, mimeType: string): Promise<string | null> {
   if (!supabaseAdmin) return null
   try {
@@ -186,10 +197,13 @@ async function runValidatorPool(base64: string, mimeType: string): Promise<strin
       .select('endpoint_url')
       .eq('status', 'active')
     const list = (validators || []) as { endpoint_url: string }[]
-    if (list.length === 0) return null
-    const shuffled = [...list].sort(() => Math.random() - 0.5)
+    const filtered = list.filter(
+      (v) => v?.endpoint_url && String(v.endpoint_url).trim().length >= 10 && isSafeValidatorUrl(String(v.endpoint_url).trim())
+    )
+    if (filtered.length === 0) return null
+    const shuffled = [...filtered].sort(() => Math.random() - 0.5)
     for (let i = 0; i < Math.min(3, shuffled.length); i++) {
-      const url = shuffled[i]!.endpoint_url.replace(/\/$/, '')
+      const url = String(shuffled[i]!.endpoint_url).trim().replace(/\/$/, '')
       try {
         const res = await fetch(`${url}/api/analyze`, {
           method: 'POST',
@@ -200,7 +214,10 @@ async function runValidatorPool(base64: string, mimeType: string): Promise<strin
         if (!res.ok) continue
         const data = (await res.json()) as { raw_content?: string; error?: string }
         const raw = data.raw_content?.trim()
-        if (raw) return raw
+        if (!raw) continue
+        const validated = parseAndValidateValidatorResponse(raw)
+        if (!validated.ok) continue
+        return raw
       } catch {
         continue
       }
@@ -211,7 +228,7 @@ async function runValidatorPool(base64: string, mimeType: string): Promise<strin
   }
 }
 
-/** In-house vision API (Ollama/llava on buddy's GPU). No 3rd party. */
+/** In-house vision API (Ollama/llava on buddy's GPU). No 3rd party. Validates response before accepting. */
 async function runInHouseVision(base64: string, mimeType: string): Promise<string | null> {
   if (!INHOUSE_AI_URL) return null
   try {
@@ -223,7 +240,11 @@ async function runInHouseVision(base64: string, mimeType: string): Promise<strin
     })
     if (!res.ok) return null
     const data = (await res.json()) as { raw_content?: string; error?: string }
-    return data.raw_content?.trim() ?? null
+    const raw = data.raw_content?.trim()
+    if (!raw) return null
+    const validated = parseAndValidateValidatorResponse(raw)
+    if (!validated.ok) return null
+    return raw
   } catch {
     return null
   }
@@ -400,32 +421,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    let parsed: {
-      itemDescription?: string
-      category?: string
-      subcategory?: string
-      searchKeywords?: string[]
-      suggestedTitle?: string
-      suggestedPrice?: string
-      suggestedTokenName?: string
-      suggestedTokenSymbol?: string
-      suggestedTokenDescription?: string
-    }
-    try {
-      const cleaned = rawContent.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim()
-      parsed = JSON.parse(cleaned) as typeof parsed
-    } catch {
-      parsed = {
-        itemDescription: rawContent.slice(0, 500),
-        category: 'for-sale',
-        subcategory: 'other',
-        searchKeywords: [],
-      }
-    }
+    // Validate and sanitize all AI responses before use (validator, inhouse, Gemini)
+    const validation = parseAndValidateValidatorResponse(rawContent)
+    const parsed = validation.ok
+      ? validation.parsed
+      : {
+          itemDescription: rawContent.slice(0, 500),
+          category: 'for-sale' as const,
+          subcategory: 'other' as const,
+          searchKeywords: [] as string[],
+        }
 
     const keywords = Array.isArray(parsed.searchKeywords) ? parsed.searchKeywords : []
-    const suggestedCategory = CATEGORIES.includes(parsed.category ?? '') ? parsed.category! : 'for-sale'
-    const suggestedSubcategory = parsed.subcategory ?? 'other'
+    const suggestedCategory = (parsed.category && CATEGORIES.includes(parsed.category)) ? parsed.category : 'for-sale'
+    const suggestedSubcategory = (parsed.subcategory && SUBCATEGORIES_FOR_SALE.includes(parsed.subcategory)) ? parsed.subcategory : 'other'
 
     let comps: unknown[] = []
     if (supabaseAdmin && keywords.length > 0) {
