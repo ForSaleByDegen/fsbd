@@ -11,6 +11,7 @@ import PwaWalletHint from '@/components/PwaWalletHint'
 import BrowserValidatorRunner from '@/components/BrowserValidatorRunner'
 
 type PoolStats = { totalValidators: number; totalStaked: number }
+type RewardsInfo = { enabled: boolean; current_reward_per_job: number }
 type MyStatus = { registered: boolean; endpoint_url?: string; stake_amount?: number; status?: string; validator_type?: string; jobs_completed?: number }
 
 export default function ValidatorsPage() {
@@ -20,6 +21,7 @@ export default function ValidatorsPage() {
   const [whitelisted, setWhitelisted] = useState<boolean | null>(null)
   const [userIsAdmin, setUserIsAdmin] = useState(false)
   const [poolStats, setPoolStats] = useState<PoolStats>({ totalValidators: 0, totalStaked: 0 })
+  const [rewardsInfo, setRewardsInfo] = useState<RewardsInfo>({ enabled: false, current_reward_per_job: 0 })
   const [myStatus, setMyStatus] = useState<MyStatus | null>(null)
   const [validatorMode, setValidatorMode] = useState<'endpoint' | 'browser'>('browser')
   const [endpointUrl, setEndpointUrl] = useState('')
@@ -61,6 +63,16 @@ export default function ValidatorsPage() {
       })
     return () => { cancelled = true }
   }, [myStatus])
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/validators/rewards-info')
+      .then((r) => r.json())
+      .then((data) => {
+        if (!cancelled) setRewardsInfo({ enabled: !!data.enabled, current_reward_per_job: data.current_reward_per_job ?? 0 })
+      })
+    return () => { cancelled = true }
+  }, [])
 
   const checkBalance = async () => {
     if (!wallet) return
@@ -245,7 +257,11 @@ export default function ValidatorsPage() {
                 {myStatus.endpoint_url && <p>Endpoint: {myStatus.endpoint_url}</p>}
                 <p>Staked: {formatNum(myStatus.stake_amount ?? 0)} $FSBD</p>
                 <p>Jobs completed: {myStatus.jobs_completed ?? 0}</p>
-                <p className="text-xs text-purple-muted">Earnings: Coming soon (rewards from completed jobs)</p>
+                <p className="text-xs text-purple-muted">
+                  {rewardsInfo.enabled && rewardsInfo.current_reward_per_job > 0
+                    ? `Earnings: ${rewardsInfo.current_reward_per_job} $FSBD per job (distribution slows over time)`
+                    : 'Earnings: Coming soon (rewards from completed jobs)'}
+                </p>
                 <Button
                   variant="outline"
                   size="sm"
