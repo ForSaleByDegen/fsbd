@@ -390,6 +390,9 @@ export async function POST(request: NextRequest) {
       if (!appWallet || appWallet === 'YOUR_WALLET_ADDRESS') {
         return NextResponse.json({ error: 'AI lookup payment not configured' }, { status: 503 })
       }
+      if (!supabaseAdmin) {
+        return NextResponse.json({ error: 'AI lookup payment not configured' }, { status: 503 })
+      }
       const { data: configRows } = await supabaseAdmin.from('platform_config').select('key, value_json')
       const fsbdMint = getFsbdMintAddress(extractFsbdMintFromConfig((configRows as { key: string; value_json: unknown }[]) ?? null))
       if (!fsbdMint || fsbdMint === 'FSBD_TOKEN_MINT_PLACEHOLDER') {
