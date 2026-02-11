@@ -12,6 +12,10 @@ export type ValidatorRewardsConfig = {
   min_reward_per_job: number
   payout_min_accumulated: number
   payout_schedule: 'immediate' | 'daily' | 'weekly'
+  primary_reward_share: number
+  verifier_reward_share: number
+  lottery_interval: number
+  lottery_bonus_multiplier: number
 }
 
 const DEFAULT_CONFIG: ValidatorRewardsConfig = {
@@ -23,6 +27,10 @@ const DEFAULT_CONFIG: ValidatorRewardsConfig = {
   min_reward_per_job: 1,
   payout_min_accumulated: 100,
   payout_schedule: 'weekly',
+  primary_reward_share: 0.75,
+  verifier_reward_share: 0.25,
+  lottery_interval: 10,
+  lottery_bonus_multiplier: 2,
 }
 
 /**
@@ -30,6 +38,28 @@ const DEFAULT_CONFIG: ValidatorRewardsConfig = {
  * Reward decays by decay_percent every decay_period_days.
  * Never goes below min_reward_per_job.
  */
+/** Primary (fastest) validator reward: base × primary_share */
+export function getPrimaryReward(config: ValidatorRewardsConfig): number {
+  const base = getCurrentRewardPerJob(config)
+  const share = typeof config.primary_reward_share === 'number' ? Math.min(1, Math.max(0, config.primary_reward_share)) : 0.75
+  return Math.floor(base * share)
+}
+
+/** Per-verifier reward: (base × verifier_share) / verifierCount */
+export function getVerifierReward(config: ValidatorRewardsConfig, verifierCount: number): number {
+  if (verifierCount <= 0) return 0
+  const base = getCurrentRewardPerJob(config)
+  const share = typeof config.verifier_reward_share === 'number' ? Math.min(1, Math.max(0, config.verifier_reward_share)) : 0.25
+  return Math.max(1, Math.floor((base * share) / verifierCount))
+}
+
+/** Lottery bonus: base × lottery_bonus_multiplier */
+export function getLotteryBonus(config: ValidatorRewardsConfig): number {
+  const base = getCurrentRewardPerJob(config)
+  const mult = typeof config.lottery_bonus_multiplier === 'number' ? Math.max(1, config.lottery_bonus_multiplier) : 2
+  return Math.floor(base * mult)
+}
+
 export function getCurrentRewardPerJob(config: ValidatorRewardsConfig): number {
   if (!config.enabled || config.base_reward_per_job <= 0) return 0
 
@@ -60,5 +90,9 @@ export function parseRewardsConfig(raw: unknown): ValidatorRewardsConfig {
     min_reward_per_job: typeof o.min_reward_per_job === 'number' ? o.min_reward_per_job : DEFAULT_CONFIG.min_reward_per_job,
     payout_min_accumulated: typeof o.payout_min_accumulated === 'number' ? Math.max(0, o.payout_min_accumulated) : DEFAULT_CONFIG.payout_min_accumulated,
     payout_schedule: (o.payout_schedule === 'immediate' || o.payout_schedule === 'daily' || o.payout_schedule === 'weekly') ? o.payout_schedule : DEFAULT_CONFIG.payout_schedule,
+    primary_reward_share: typeof o.primary_reward_share === 'number' ? Math.min(1, Math.max(0, o.primary_reward_share)) : DEFAULT_CONFIG.primary_reward_share,
+    verifier_reward_share: typeof o.verifier_reward_share === 'number' ? Math.min(1, Math.max(0, o.verifier_reward_share)) : DEFAULT_CONFIG.verifier_reward_share,
+    lottery_interval: typeof o.lottery_interval === 'number' ? Math.max(1, o.lottery_interval) : DEFAULT_CONFIG.lottery_interval,
+    lottery_bonus_multiplier: typeof o.lottery_bonus_multiplier === 'number' ? Math.max(1, o.lottery_bonus_multiplier) : DEFAULT_CONFIG.lottery_bonus_multiplier,
   }
 }

@@ -17,6 +17,7 @@ export default function BrowserValidatorRunner({ wallet, onStatus }: Props) {
   const [status, setStatus] = useState<Status>('idle')
   const [progress, setProgress] = useState<string>('')
   const [jobsCompleted, setJobsCompleted] = useState(0)
+  const [verificationsCompleted, setVerificationsCompleted] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const stopRef = useRef(false)
   const engineRef = useRef<unknown>(null)
@@ -53,6 +54,30 @@ export default function BrowserValidatorRunner({ wallet, onStatus }: Props) {
       const poll = async () => {
         while (!stopRef.current) {
           try {
+            // Try verification jobs first (lightweight) if no main job
+            const vRes = await fetch(`/api/validators/verification-jobs/claim?wallet=${encodeURIComponent(wallet)}`)
+            const vData = await vRes.json()
+            if (vData.claimed && vData.job) {
+              const { verification_job_id, primary_result } = vData.job as { verification_job_id: string; primary_result: string }
+              let match = false
+              try {
+                const cleaned = (primary_result || '').replace(/```json\s*/gi, '').replace(/```/g, '').trim()
+                const parsed = JSON.parse(cleaned) as Record<string, unknown>
+                match = !!(parsed?.itemDescription || parsed?.suggestedTitle) && typeof (parsed?.category ?? parsed?.subcategory) !== 'undefined'
+              } catch {
+                match = false
+              }
+              await fetch(`/api/validators/verification-jobs/${verification_job_id}/complete`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ wallet, match }),
+              })
+              setVerificationsCompleted((n) => n + 1)
+              updateStatus('ready', 'Polling for jobs…')
+              await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS))
+              continue
+            }
+
             const res = await fetch(`/api/validators/jobs/claim?wallet=${encodeURIComponent(wallet)}`)
             const data = await res.json()
 
@@ -80,7 +105,7 @@ export default function BrowserValidatorRunner({ wallet, onStatus }: Props) {
                     ],
                   },
                 ],
-                max_tokens: 600,
+                max_tokens: 400,
               })
 
               const rawContent = completion?.choices?.[0]?.message?.content?.trim()
@@ -151,7 +176,9 @@ export default function BrowserValidatorRunner({ wallet, onStatus }: Props) {
         <div className="space-y-2">
           <p className="text-sm text-cyan-400">{progress}</p>
           {status === 'ready' || status === 'validating' ? (
-            <p className="text-xs text-purple-muted">Jobs completed: {jobsCompleted}</p>
+            <p className="text-xs text-purple-muted">
+              Jobs: {jobsCompleted} · Verifications: {verificationsCompleted}
+            </p>
           ) : null}
           <Button variant="outline" size="sm" className="border-amber-500 text-amber-400" onClick={stop}>
             Stop

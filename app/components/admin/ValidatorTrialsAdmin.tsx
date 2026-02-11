@@ -25,14 +25,26 @@ export default function ValidatorTrialsAdmin() {
   const [message, setMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
   const [rewardsEnabled, setRewardsEnabled] = useState(false)
   const [rewardsSaving, setRewardsSaving] = useState(false)
+  const [advancedRewards, setAdvancedRewards] = useState({
+    primary_reward_share: 0.75,
+    verifier_reward_share: 0.25,
+    lottery_interval: 10,
+    lottery_bonus_multiplier: 2,
+  })
+  const [advancedSaving, setAdvancedSaving] = useState(false)
 
   const fetchRewardsConfig = async () => {
     if (!adminWallet) return
     try {
       const res = await fetch(`/api/admin/validator-config?wallet=${encodeURIComponent(adminWallet)}`)
       const data = await res.json().catch(() => ({}))
-      if (res.ok && data.validator_rewards_config?.enabled !== undefined) {
-        setRewardsEnabled(!!data.validator_rewards_config.enabled)
+      if (res.ok && data.validator_rewards_config) {
+        const r = data.validator_rewards_config
+        setRewardsEnabled(!!r.enabled)
+        if (typeof r.primary_reward_share === 'number') setAdvancedRewards((a) => ({ ...a, primary_reward_share: r.primary_reward_share }))
+        if (typeof r.verifier_reward_share === 'number') setAdvancedRewards((a) => ({ ...a, verifier_reward_share: r.verifier_reward_share }))
+        if (typeof r.lottery_interval === 'number') setAdvancedRewards((a) => ({ ...a, lottery_interval: r.lottery_interval }))
+        if (typeof r.lottery_bonus_multiplier === 'number') setAdvancedRewards((a) => ({ ...a, lottery_bonus_multiplier: r.lottery_bonus_multiplier }))
       }
     } catch { /* ignore */ }
   }
@@ -56,6 +68,32 @@ export default function ValidatorTrialsAdmin() {
       setMessage({ type: 'err', text: e instanceof Error ? e.message : 'Failed to update' })
     } finally {
       setRewardsSaving(false)
+    }
+  }
+
+  const saveAdvancedRewards = async () => {
+    if (!adminWallet) return
+    setAdvancedSaving(true)
+    setMessage(null)
+    try {
+      const res = await fetch('/api/admin/validator-config', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          wallet: adminWallet,
+          primary_reward_share: Math.min(1, Math.max(0, advancedRewards.primary_reward_share)),
+          verifier_reward_share: Math.min(1, Math.max(0, advancedRewards.verifier_reward_share)),
+          lottery_interval: Math.max(1, advancedRewards.lottery_interval),
+          lottery_bonus_multiplier: Math.max(1, advancedRewards.lottery_bonus_multiplier),
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Failed to update')
+      setMessage({ type: 'ok', text: 'Tiered rewards config saved' })
+    } catch (e) {
+      setMessage({ type: 'err', text: e instanceof Error ? e.message : 'Failed to update' })
+    } finally {
+      setAdvancedSaving(false)
     }
   }
 
@@ -221,7 +259,7 @@ export default function ValidatorTrialsAdmin() {
         <p className="text-purple-muted font-pixel-alt text-sm mb-3">
           When enabled, each completed job is logged and adds to the validator&apos;s total earned. Disabled = no ledger entries.
         </p>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 mb-4">
           <span className={`font-pixel-alt text-sm ${rewardsEnabled ? 'text-[#00ff00]' : 'text-amber-400'}`}>
             {rewardsEnabled ? 'Ledger ON — completions logged' : 'Ledger OFF — completions not logged'}
           </span>
@@ -233,6 +271,63 @@ export default function ValidatorTrialsAdmin() {
             {rewardsSaving ? '…' : rewardsEnabled ? 'Disable' : 'Enable'}
           </Button>
         </div>
+        <details className="mt-2">
+          <summary className="font-pixel-alt text-cyan-400 text-sm cursor-pointer hover:text-[#00ff00]">Tiered rewards (primary / verifier / lottery)</summary>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <label className="block text-xs text-purple-muted font-pixel-alt mb-1">Primary share (0–1)</label>
+              <Input
+                type="number"
+                min={0}
+                max={1}
+                step={0.05}
+                value={advancedRewards.primary_reward_share}
+                onChange={(e) => setAdvancedRewards((a) => ({ ...a, primary_reward_share: parseFloat(e.target.value) || 0.75 }))}
+                className="bg-black border border-[#660099] text-[#00ff00] text-sm h-8"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-purple-muted font-pixel-alt mb-1">Verifier share (0–1)</label>
+              <Input
+                type="number"
+                min={0}
+                max={1}
+                step={0.05}
+                value={advancedRewards.verifier_reward_share}
+                onChange={(e) => setAdvancedRewards((a) => ({ ...a, verifier_reward_share: parseFloat(e.target.value) || 0.25 }))}
+                className="bg-black border border-[#660099] text-[#00ff00] text-sm h-8"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-purple-muted font-pixel-alt mb-1">Lottery every N jobs</label>
+              <Input
+                type="number"
+                min={1}
+                value={advancedRewards.lottery_interval}
+                onChange={(e) => setAdvancedRewards((a) => ({ ...a, lottery_interval: parseInt(e.target.value, 10) || 10 }))}
+                className="bg-black border border-[#660099] text-[#00ff00] text-sm h-8"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-purple-muted font-pixel-alt mb-1">Lottery bonus ×</label>
+              <Input
+                type="number"
+                min={1}
+                value={advancedRewards.lottery_bonus_multiplier}
+                onChange={(e) => setAdvancedRewards((a) => ({ ...a, lottery_bonus_multiplier: parseInt(e.target.value, 10) || 2 }))}
+                className="bg-black border border-[#660099] text-[#00ff00] text-sm h-8"
+              />
+            </div>
+          </div>
+          <Button
+            onClick={saveAdvancedRewards}
+            disabled={advancedSaving}
+            size="sm"
+            className="mt-3 border border-cyan-500 text-cyan-400 hover:bg-cyan-500/20 font-pixel-alt text-xs"
+          >
+            {advancedSaving ? '…' : 'Save tiered config'}
+          </Button>
+        </details>
       </div>
 
       {/* Monitoring stats */}

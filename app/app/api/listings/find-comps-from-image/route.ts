@@ -16,9 +16,9 @@ import { LISTING_ANALYSIS_PROMPT } from '@/lib/validator-prompt'
 import { fetchMarketPrices } from '@/lib/market-price-api'
 
 const AI_LISTING_DAILY_MS = 24 * 60 * 60 * 1000
-const BROWSER_VALIDATOR_WAIT_MS = 45000
-const BROWSER_VALIDATOR_POLL_MS = 2000
-const ENDPOINT_VALIDATOR_TIMEOUT_MS = 20000
+const BROWSER_VALIDATOR_WAIT_MS = 60000
+const BROWSER_VALIDATOR_POLL_MS = 1000
+const ENDPOINT_VALIDATOR_TIMEOUT_MS = 15000
 
 const GEMINI_API_KEY = process.env.GOOGLE_GEMINI_API_KEY || process.env.GEMINI_API_KEY
 const INHOUSE_AI_URL = (process.env.INHOUSE_AI_URL || '').replace(/\/$/, '') // no trailing slash
@@ -192,22 +192,24 @@ function isSafeValidatorUrl(url: string): boolean {
   }
 }
 
-/** Validator pool: call registered validators' /api/analyze. No 3rd party. Each validator is called independently to avoid cross-up. */
-async function runValidatorPool(base64: string, mimeType: string): Promise<string | null> {
+/** Validator pool: call registered validators' /api/analyze. No 3rd party. Returns raw + primaryWallet when from endpoint. */
+async function runValidatorPool(base64: string, mimeType: string): Promise<{ raw: string; jobId: null; primaryWallet: string } | null> {
   if (!supabaseAdmin) return null
   try {
     const { data: validators } = await supabaseAdmin
       .from('ai_validators')
-      .select('endpoint_url')
+      .select('endpoint_url, wallet_address')
       .eq('status', 'active')
-    const list = (validators || []) as { endpoint_url: string }[]
+      .not('endpoint_url', 'is', null)
+    const list = (validators || []) as { endpoint_url: string | null; wallet_address: string }[]
     const filtered = list.filter(
-      (v) => v?.endpoint_url && String(v.endpoint_url).trim().length >= 10 && isSafeValidatorUrl(String(v.endpoint_url).trim())
+      (v) => v?.endpoint_url && String(v.endpoint_url).trim().length >= 10 && isSafeValidatorUrl(String(v.endpoint_url).trim()) && v.wallet_address
     )
     if (filtered.length === 0) return null
     const shuffled = [...filtered].sort(() => Math.random() - 0.5)
     for (let i = 0; i < Math.min(3, shuffled.length); i++) {
-      const url = String(shuffled[i]!.endpoint_url).trim().replace(/\/$/, '')
+      const v = shuffled[i]!
+      const url = String(v.endpoint_url).trim().replace(/\/$/, '')
       try {
         const res = await fetch(`${url}/api/analyze`, {
           method: 'POST',
@@ -221,7 +223,7 @@ async function runValidatorPool(base64: string, mimeType: string): Promise<strin
         if (!raw) continue
         const validated = parseAndValidateValidatorResponse(raw)
         if (!validated.ok) continue
-        return raw
+        return { raw, jobId: null, primaryWallet: v.wallet_address }
       } catch {
         continue
       }
@@ -233,7 +235,7 @@ async function runValidatorPool(base64: string, mimeType: string): Promise<strin
 }
 
 /** Browser validator pool: create job, wait for browser validator to claim and complete. */
-async function runBrowserValidatorPool(base64: string, mimeType: string): Promise<string | null> {
+async function runBrowserValidatorPool(base64: string, mimeType: string): Promise<{ raw: string; jobId: string; primaryWallet: string } | null> {
   if (!supabaseAdmin) return null
   try {
     const { count } = await supabaseAdmin
@@ -262,13 +264,13 @@ async function runBrowserValidatorPool(base64: string, mimeType: string): Promis
       await new Promise((r) => setTimeout(r, BROWSER_VALIDATOR_POLL_MS))
       const { data: job } = await supabaseAdmin
         .from('validator_jobs')
-        .select('status, result')
+        .select('status, result, validator_wallet')
         .eq('id', jobId)
         .single()
-      const row = job as { status: string; result: string | null } | null
-      if (row?.status === 'completed' && row.result) {
+      const row = job as { status: string; result: string | null; validator_wallet: string | null } | null
+      if (row?.status === 'completed' && row.result && row.validator_wallet) {
         const validated = parseAndValidateValidatorResponse(row.result)
-        if (validated.ok) return row.result
+        if (validated.ok) return { raw: row.result, jobId, primaryWallet: row.validator_wallet }
         break
       }
       if (row?.status === 'timeout') break
@@ -494,10 +496,12 @@ export async function POST(request: NextRequest) {
     let groundingSources: GroundingSource[] = []
     const geminiKey = GEMINI_API_KEY?.trim()
 
-    const runAll = async (): Promise<{ raw: string; grounding?: GroundingSource[] } | null> => {
-      const tasks: Promise<{ raw: string; grounding?: GroundingSource[] } | null>[] = []
-      tasks.push(runValidatorPool(base64, mimeType).then((r) => (r ? { raw: r } : null)))
-      tasks.push(runBrowserValidatorPool(base64, mimeType).then((r) => (r ? { raw: r } : null)))
+    // Run all providers in parallel; return as soon as ANY returns a valid result (don't wait for slowest)
+    type FirstResult = { raw: string; grounding?: GroundingSource[]; jobId?: string | null; primaryWallet?: string | null }
+    const runAll = (): Promise<FirstResult | null> => {
+      const tasks: Promise<FirstResult | null>[] = []
+      tasks.push(runValidatorPool(base64, mimeType).then((r) => (r ? { raw: r.raw, jobId: r.jobId, primaryWallet: r.primaryWallet } : null)))
+      tasks.push(runBrowserValidatorPool(base64, mimeType).then((r) => (r ? { raw: r.raw, jobId: r.jobId, primaryWallet: r.primaryWallet } : null)))
       if (INHOUSE_AI_URL) tasks.push(runInHouseVision(base64, mimeType).then((r) => (r ? { raw: r } : null)))
       if (geminiKey) {
         tasks.push(
@@ -508,15 +512,54 @@ export async function POST(request: NextRequest) {
         )
         tasks.push(runGeminiImageOnly(base64, mimeType, geminiKey).then((r) => (r ? { raw: r } : null)))
       }
-      const results = await Promise.all(tasks)
-      for (const r of results) if (r?.raw) return r
-      return null
+      return new Promise((resolve) => {
+        let done = 0
+        const total = tasks.length
+        for (const t of tasks) {
+          t.then((r) => {
+            if (r?.raw) resolve(r)
+            else {
+              done++
+              if (done === total) resolve(null)
+            }
+          }).catch(() => {
+            done++
+            if (done === total) resolve(null)
+          })
+        }
+      })
     }
 
     const first = await runAll()
     if (first) {
       rawContent = first.raw
       if (first.grounding?.length) groundingSources = first.grounding
+
+      // Async: create verification jobs when result came from browser validator (has job_id)
+      if (first.primaryWallet && first.jobId && supabaseAdmin) {
+        const jobIdForVerify = first.jobId
+        const primaryWallet = first.primaryWallet
+        void (async () => {
+          try {
+            const { data: validators } = await supabaseAdmin
+              .from('ai_validators')
+              .select('wallet_address')
+              .eq('status', 'active')
+            const others = (validators || []).filter(
+              (v) => (v as { wallet_address: string }).wallet_address?.toLowerCase() !== primaryWallet.toLowerCase()
+            )
+            if (others.length === 0) return
+            for (const v of others) {
+              await supabaseAdmin.from('validator_verification_jobs').insert({
+                job_id: jobIdForVerify,
+                status: 'pending',
+              })
+            }
+          } catch (e) {
+            console.error('[find-comps] verification jobs creation:', e)
+          }
+        })()
+      }
     }
 
     if (!rawContent && geminiKey) {

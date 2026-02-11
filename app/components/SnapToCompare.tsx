@@ -472,10 +472,10 @@ export default function SnapToCompare({ onUseComp, onUseSuggested, onApplyAllSug
             <div className="p-3 rounded-lg border border-cyan-500/40 bg-cyan-500/5">
               <p className="text-xs text-cyan-400 font-medium mb-1">AI analysis</p>
               {result.suggestedTitle && (
-                <p className="text-sm font-medium text-foreground mb-1">{result.suggestedTitle}</p>
+                <p className="text-sm font-medium text-foreground mb-1">{cleanListingText(result.suggestedTitle)}</p>
               )}
               {result.itemDescription && (
-                <p className="text-sm text-muted-foreground mb-2">{result.itemDescription}</p>
+                <p className="text-sm text-muted-foreground mb-2 whitespace-pre-wrap">{cleanListingText(result.itemDescription)}</p>
               )}
               {(result.suggestedPrice || result.searchKeywords.length > 0) && (
                 <div className="flex flex-wrap items-center gap-2 mb-2">
@@ -637,8 +637,8 @@ export default function SnapToCompare({ onUseComp, onUseSuggested, onApplyAllSug
                         </div>
                       ) : null}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm text-muted-foreground">
-                          {result.itemDescription || 'No description'}
+                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                          {result.itemDescription ? cleanListingText(result.itemDescription) : 'No description'}
                         </p>
                         <p className="text-xs text-muted-foreground mt-2">
                           {getCategoryLabel(result.suggestedCategory)} → {getSubcategoryLabel(result.suggestedCategory, result.suggestedSubcategory)}

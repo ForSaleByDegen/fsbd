@@ -92,11 +92,18 @@ export async function PATCH(request: NextRequest) {
       'min_reward_per_job',
       'payout_min_accumulated',
       'payout_schedule',
+      'primary_reward_share',
+      'verifier_reward_share',
+      'lottery_interval',
+      'lottery_bonus_multiplier',
     ] as const
     const rewardsUpdate: Record<string, unknown> = {}
     for (const k of rewardsFields) {
       if (k === 'enabled' && typeof body[k] === 'boolean') rewardsUpdate[k] = body[k]
       if ((k === 'base_reward_per_job' || k === 'decay_period_days' || k === 'decay_percent' || k === 'min_reward_per_job' || k === 'payout_min_accumulated') && typeof body[k] === 'number') {
+        rewardsUpdate[k] = body[k]
+      }
+      if ((k === 'primary_reward_share' || k === 'verifier_reward_share' || k === 'lottery_interval' || k === 'lottery_bonus_multiplier') && typeof body[k] === 'number') {
         rewardsUpdate[k] = body[k]
       }
       if (k === 'start_date' && (body[k] === null || body[k] === '' || typeof body[k] === 'string')) {

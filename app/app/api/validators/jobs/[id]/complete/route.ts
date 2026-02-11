@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { parseAndValidateValidatorResponse } from '@/lib/validator-response-validate'
-import { parseRewardsConfig, getCurrentRewardPerJob } from '@/lib/validator-rewards'
+import { parseRewardsConfig, getPrimaryReward, getLotteryBonus } from '@/lib/validator-rewards'
 
 const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/
 
@@ -76,16 +76,45 @@ export async function POST(
       .eq('key', 'validator_rewards_config')
       .maybeSingle()
     const config = parseRewardsConfig((configRow as { value_json?: unknown } | null)?.value_json)
-    const amount = getCurrentRewardPerJob(config)
+    const amount = getPrimaryReward(config)
     if (config.enabled && amount > 0) {
       const { error: ledgerErr } = await supabaseAdmin.from('validator_rewards_ledger').insert({
         validator_wallet: wallet,
         job_id: jobId,
         amount,
         status: 'pending',
+        reward_type: 'primary',
       })
       if (ledgerErr) {
         console.error('[validators/jobs/complete] Ledger insert failed:', ledgerErr)
+      }
+
+      // Lottery: every Nth job, pick random validator for bonus
+      const { count: completedCount } = await supabaseAdmin
+        .from('validator_jobs')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'completed')
+      const n = completedCount ?? 0
+      const interval = config.lottery_interval ?? 10
+      if (interval > 0 && n > 0 && n % interval === 0) {
+        const { data: validators } = await supabaseAdmin
+          .from('ai_validators')
+          .select('wallet_address')
+          .eq('status', 'active')
+        const list = (validators || []) as { wallet_address: string }[]
+        if (list.length > 0) {
+          const winner = list[Math.floor(Math.random() * list.length)]!
+          const bonus = getLotteryBonus(config)
+          if (bonus > 0) {
+            await supabaseAdmin.from('validator_rewards_ledger').insert({
+              validator_wallet: winner.wallet_address,
+              job_id: jobId,
+              amount: bonus,
+              status: 'pending',
+              reward_type: 'lottery',
+            })
+          }
+        }
       }
     }
 
