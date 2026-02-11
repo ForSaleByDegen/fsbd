@@ -36,6 +36,7 @@ export default function ValidatorsPage() {
   const [success, setSuccess] = useState<string | null>(null)
   const [myJobs, setMyJobs] = useState<MyJob[]>([])
   const [releasingStuck, setReleasingStuck] = useState(false)
+  const [refreshingStatus, setRefreshingStatus] = useState(false)
 
   useEffect(() => {
     if (!wallet) {
@@ -287,9 +288,29 @@ export default function ValidatorsPage() {
                 {myStatus.endpoint_url && <p>Endpoint: {myStatus.endpoint_url}</p>}
                 <p>Staked: {formatNum(myStatus.stake_amount ?? 0)} $FSBD</p>
                 <p>Jobs completed: {myStatus.jobs_completed ?? 0}</p>
-                {(myStatus.total_earned ?? 0) > 0 && (
-                  <p>Total earned: {formatNum(myStatus.total_earned ?? 0)} $FSBD</p>
-                )}
+                <p>Total earned: {formatNum(myStatus.total_earned ?? 0)} $FSBD</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mb-2 border-[#660099] text-purple-readable hover:border-[#00ff00] hover:text-[#00ff00]"
+                  disabled={refreshingStatus || !wallet}
+                  onClick={async () => {
+                    if (!wallet) return
+                    setRefreshingStatus(true)
+                    try {
+                      const [meRes, jobsRes] = await Promise.all([
+                        fetch(`/api/validators/me?wallet=${encodeURIComponent(wallet)}`).then((r) => r.json()),
+                        fetch(`/api/validators/jobs/my?wallet=${encodeURIComponent(wallet)}`).then((r) => r.json()),
+                      ])
+                      setMyStatus((s) => (s ? { ...s, jobs_completed: meRes.jobs_completed ?? s.jobs_completed ?? 0, total_earned: meRes.total_earned ?? s.total_earned ?? 0 } : s))
+                      if (Array.isArray(jobsRes.jobs)) setMyJobs(jobsRes.jobs)
+                    } finally {
+                      setRefreshingStatus(false)
+                    }
+                  }}
+                >
+                  {refreshingStatus ? '…' : 'Refresh status'}
+                </Button>
                 {myJobs.length > 0 && (
                   <div className="mt-3">
                     <h3 className="text-sm font-pixel text-cyan-400 mb-2" style={{ fontFamily: 'var(--font-pixel)' }}>Your recent jobs</h3>
