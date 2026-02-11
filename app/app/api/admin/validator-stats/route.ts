@@ -78,6 +78,21 @@ export async function GET(request: NextRequest) {
       // Table may not exist yet
     }
 
+    // Verification job counts (validator_verification_jobs table)
+    let verifications = { pending: 0, claimed: 0, completed: 0 }
+    try {
+      const vStatuses = ['pending', 'claimed', 'completed'] as const
+      for (const s of vStatuses) {
+        const { count } = await supabaseAdmin
+          .from('validator_verification_jobs')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', s)
+        ;(verifications as Record<string, number>)[s] = count ?? 0
+      }
+    } catch {
+      // Table may not exist yet
+    }
+
     return NextResponse.json({
       validators: {
         total: totalValidators ?? 0,
@@ -95,6 +110,11 @@ export async function GET(request: NextRequest) {
       rewards: {
         total_pending: totalPendingRewards,
         total_paid: totalPaidRewards,
+      },
+      verifications: {
+        pending: verifications.pending,
+        claimed: verifications.claimed,
+        completed: verifications.completed,
       },
       recent_jobs: (recentJobs ?? []).map((j) => ({
         id: (j as { id: string }).id,

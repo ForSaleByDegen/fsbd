@@ -9,6 +9,7 @@ type Stats = {
   validators: { total: number; browser: number; endpoint: number }
   jobs: { total: number; pending: number; claimed: number; completed: number; timeout: number; success_rate_percent: number }
   rewards: { total_pending: number; total_paid: number }
+  verifications?: { pending: number; claimed: number; completed: number }
   recent_jobs: Array<{ id: string; status: string; validator_wallet: string | null; created_at: string; claimed_at: string | null; completed_at: string | null }>
 }
 
@@ -373,6 +374,15 @@ export default function ValidatorTrialsAdmin() {
                   )}
                 </p>
               </div>
+              {stats.verifications && (
+                <div className="p-3 border border-amber-500/50 rounded bg-amber-500/5">
+                  <p className="text-xs text-purple-muted font-pixel-alt">Verifications</p>
+                  <p className="text-xl font-pixel text-[#00ff00]">{stats.verifications.completed}</p>
+                  <p className="text-xs text-purple-muted mt-1">
+                    {stats.verifications.pending} pending · {stats.verifications.claimed} claimed
+                  </p>
+                </div>
+              )}
             </div>
 
             <div>
