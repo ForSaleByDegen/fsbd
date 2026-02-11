@@ -82,56 +82,57 @@ export default function BrowserValidatorRunner({ wallet, onStatus }: Props) {
             const data = await res.json()
 
             if (data.claimed && data.job) {
-              updateStatus('validating', 'Running inference…')
               const { id, image_base64, mime_type, prompt } = data.job as {
                 id: string
                 image_base64: string
                 mime_type: string
                 prompt: string
               }
-
-              const dataUrl = image_base64.startsWith('data:')
-                ? image_base64
-                : `data:${mime_type};base64,${image_base64}`
-
-              const completion = await (engine as { chat: { completions: { create: (opts: unknown) => Promise<{ choices: { message?: { content?: string } }[] }> } } }).chat.completions.create({
-                model: MODEL_ID,
-                messages: [
-                  {
-                    role: 'user',
-                    content: [
-                      { type: 'image_url', image_url: { url: dataUrl } },
-                      { type: 'text', text: prompt },
-                    ],
-                  },
-                ],
-                max_tokens: 400,
-              })
-
-              const rawContent = completion?.choices?.[0]?.message?.content?.trim()
-              if (rawContent && rawContent.length >= 10) {
-                const completeRes = await fetch(`/api/validators/jobs/${id}/complete`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ wallet, raw_content: rawContent }),
-                })
-                if (completeRes.ok) {
-                  setJobsCompleted((n) => n + 1)
-                } else {
-                  // Validation failed — release job so it doesn't stay stuck
-                  await fetch(`/api/validators/jobs/${id}/fail`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ wallet }),
-                  })
-                }
-              } else {
-                // Empty or too short — release job
-                await fetch(`/api/validators/jobs/${id}/fail`, {
+              const releaseJob = () =>
+                fetch(`/api/validators/jobs/${id}/fail`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ wallet }),
                 })
+
+              try {
+                updateStatus('validating', 'Running inference…')
+                const dataUrl = image_base64.startsWith('data:')
+                  ? image_base64
+                  : `data:${mime_type};base64,${image_base64}`
+
+                const completion = await (engine as { chat: { completions: { create: (opts: unknown) => Promise<{ choices: { message?: { content?: string } }[] }> } } }).chat.completions.create({
+                  model: MODEL_ID,
+                  messages: [
+                    {
+                      role: 'user',
+                      content: [
+                        { type: 'image_url', image_url: { url: dataUrl } },
+                        { type: 'text', text: prompt },
+                      ],
+                    },
+                  ],
+                  max_tokens: 400,
+                })
+
+                const rawContent = completion?.choices?.[0]?.message?.content?.trim()
+                if (rawContent && rawContent.length >= 10) {
+                  const completeRes = await fetch(`/api/validators/jobs/${id}/complete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ wallet, raw_content: rawContent }),
+                  })
+                  if (completeRes.ok) {
+                    setJobsCompleted((n) => n + 1)
+                  } else {
+                    await releaseJob()
+                  }
+                } else {
+                  await releaseJob()
+                }
+              } catch (inferenceErr) {
+                console.error('[BrowserValidator] inference error', inferenceErr)
+                await releaseJob()
               }
               updateStatus('ready', 'Polling for jobs…')
             }

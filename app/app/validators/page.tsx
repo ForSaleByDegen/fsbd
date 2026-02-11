@@ -35,6 +35,7 @@ export default function ValidatorsPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [myJobs, setMyJobs] = useState<MyJob[]>([])
+  const [releasingStuck, setReleasingStuck] = useState(false)
 
   useEffect(() => {
     if (!wallet) {
@@ -301,6 +302,41 @@ export default function ValidatorsPage() {
                         </li>
                       ))}
                     </ul>
+                    {myJobs.some((j) => j.status === 'claimed') && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-2 border-amber-500 text-amber-400 hover:bg-amber-500/20"
+                        disabled={releasingStuck || !wallet}
+                        onClick={async () => {
+                          if (!wallet) return
+                          setReleasingStuck(true)
+                          setError(null)
+                          try {
+                            const res = await fetch('/api/validators/jobs/release-stuck', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ wallet }),
+                            })
+                            const data = await res.json().catch(() => ({}))
+                            if (res.ok && (data.released ?? 0) > 0) {
+                              setSuccess(`Released ${data.released} stuck job(s) back to the pool`)
+                              setError(null)
+                              fetch(`/api/validators/me?wallet=${encodeURIComponent(wallet)}`).then((r) => r.json()).then((d) => setMyStatus((s) => (s ? { ...s, jobs_completed: d.jobs_completed ?? s.jobs_completed } : s)))
+                              fetch(`/api/validators/jobs/my?wallet=${encodeURIComponent(wallet)}`).then((r) => r.json()).then((d) => Array.isArray(d.jobs) && setMyJobs(d.jobs))
+                            } else if (!res.ok) {
+                              setError(data.error || 'Failed to release')
+                            }
+                          } catch {
+                            setError('Failed to release stuck jobs')
+                          } finally {
+                            setReleasingStuck(false)
+                          }
+                        }}
+                      >
+                        {releasingStuck ? '…' : 'Release stuck jobs'}
+                      </Button>
+                    )}
                   </div>
                 )}
                 <p className="text-xs text-purple-muted">
