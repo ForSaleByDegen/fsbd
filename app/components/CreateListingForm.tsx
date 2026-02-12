@@ -104,6 +104,13 @@ function TokenLaunchRecoveryForm({
   )
 }
 
+async function signForCreateListing(signMessage: (msg: Uint8Array) => Promise<Uint8Array>): Promise<{ message: string; signature: string }> {
+  const message = `FSBD marketplace create_listing ${Date.now()}`
+  const sig = await signMessage(new TextEncoder().encode(message))
+  const signature = btoa(String.fromCharCode(...Array.from(sig)))
+  return { message, signature }
+}
+
 export default function CreateListingForm() {
   const { publicKey, signTransaction, signMessage } = useWallet()
   const { connection } = useConnection()
@@ -136,6 +143,18 @@ export default function CreateListingForm() {
       .then((res) => res.json())
       .then((data) => setIsAdminUser(!!data?.isAdmin))
       .catch(() => setIsAdminUser(false))
+  }, [publicKey?.toString()])
+
+  const [connectedPlatforms, setConnectedPlatforms] = useState<{ ebay: boolean; etsy: boolean; woocommerce: boolean } | null>(null)
+  useEffect(() => {
+    if (!publicKey) {
+      setConnectedPlatforms(null)
+      return
+    }
+    fetch(`/api/marketplace/connected?wallet=${encodeURIComponent(publicKey.toString())}`)
+      .then((r) => r.json())
+      .then((d) => setConnectedPlatforms(d))
+      .catch(() => setConnectedPlatforms(null))
   }, [publicKey?.toString()])
 
   useEffect(() => {
@@ -189,6 +208,7 @@ export default function CreateListingForm() {
     chatMinTokens: 1,
     vanitySuffix: 'pump',
     searchKeywords: [] as string[],
+    crossPostPlatforms: [] as ('ebay' | 'etsy' | 'woocommerce')[],
   })
   const [assetVerified, setAssetVerified] = useState<{ verified: boolean; error?: string } | null>(null)
   const [createdListingForToken, setCreatedListingForToken] = useState<{
@@ -325,6 +345,7 @@ export default function CreateListingForm() {
         chat_min_tokens: Math.max(1, Math.floor(Number(formData.chatMinTokens) || 1)),
         price_token: formData.priceToken === 'LISTING_TOKEN' ? 'LISTING_TOKEN' : formData.priceToken,
         search_keywords: (formData.searchKeywords && formData.searchKeywords.length > 0) ? formData.searchKeywords : [],
+        cross_post_platforms: formData.crossPostPlatforms?.length ? formData.crossPostPlatforms : undefined,
       }
       if (isDigitalAsset) {
         listingDataForCreate.asset_type = ['nft','token','whole_token','token_rights','wallet','meme_coin'].includes(formData.subcategory) ? formData.subcategory : (formData.subcategory === 'nft' ? 'nft' : 'meme_coin')
@@ -341,10 +362,12 @@ export default function CreateListingForm() {
           listingDataForCreate.listing_type = 'token_rights'
         }
       }
+      if (!signMessage) throw new Error('Wallet must support message signing to create listings')
+      const { message, signature } = await signForCreateListing(signMessage)
       const createRes = await fetch('/api/listings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(listingDataForCreate),
+        body: JSON.stringify({ ...listingDataForCreate, message, signature }),
       })
       if (!createRes.ok) {
         const errData = await createRes.json().catch(() => ({}))
@@ -501,6 +524,7 @@ export default function CreateListingForm() {
             chat_token_gated: formData.chatTokenGated,
             chat_min_tokens: Math.max(1, Math.floor(Number(formData.chatMinTokens) || 1)),
             search_keywords: (formData.searchKeywords && formData.searchKeywords.length > 0) ? formData.searchKeywords : [],
+            cross_post_platforms: formData.crossPostPlatforms?.length ? formData.crossPostPlatforms : undefined,
           }
           if (isDigitalAsset) {
             listingDataForCreate.asset_type = ['nft','token','whole_token','token_rights','wallet','meme_coin'].includes(formData.subcategory) ? formData.subcategory : 'meme_coin'
@@ -517,10 +541,12 @@ export default function CreateListingForm() {
               listingDataForCreate.listing_type = 'token_rights'
             }
           }
+          if (!signMessage) throw new Error('Wallet must support message signing to create listings')
+          const { message, signature } = await signForCreateListing(signMessage)
           const createRes = await fetch('/api/listings', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(listingDataForCreate),
+            body: JSON.stringify({ ...listingDataForCreate, message, signature }),
           })
           if (!createRes.ok) {
             const errData = await createRes.json().catch(() => ({}))
@@ -722,6 +748,7 @@ export default function CreateListingForm() {
         chat_token_gated: formData.chatTokenGated,
         chat_min_tokens: Math.max(1, Math.floor(Number(formData.chatMinTokens) || 1)),
         search_keywords: (formData.searchKeywords?.length ?? 0) > 0 ? formData.searchKeywords : [],
+        cross_post_platforms: formData.crossPostPlatforms?.length ? formData.crossPostPlatforms : undefined,
       }
       if (isDigitalAsset) {
         listingData.asset_type = ['nft','token','whole_token','wallet','meme_coin'].includes(formData.subcategory) ? formData.subcategory : 'meme_coin'
@@ -738,11 +765,14 @@ export default function CreateListingForm() {
       
       console.log('Creating listing with images:', imageUrls)
 
+      if (!signMessage) throw new Error('Wallet must support message signing to create listings')
+      const { message, signature } = await signForCreateListing(signMessage)
+
       // Always use API route - validates wallet_address server-side and uses service role for reliable insert
         const response = await fetch('/api/listings', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(listingData),
+        body: JSON.stringify({ ...listingData, message, signature }),
       })
 
       if (!response.ok) {
@@ -1325,6 +1355,72 @@ export default function CreateListingForm() {
           </div>
         )}
       </div>
+
+      {connectedPlatforms && (connectedPlatforms.ebay || connectedPlatforms.etsy || connectedPlatforms.woocommerce) && (
+        <div className="p-3 border-2 border-cyan-500/40 rounded-lg bg-cyan-500/5">
+          <label className="block text-sm font-medium mb-2">Also post to</label>
+          <p className="text-xs text-muted-foreground mb-2">Cross-post this listing to your connected marketplaces.</p>
+          <div className="flex flex-wrap gap-3">
+            {connectedPlatforms.ebay && (
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.crossPostPlatforms?.includes('ebay')}
+                  onChange={(e) => {
+                    setFormData(prev => {
+                      const next = prev.crossPostPlatforms ?? []
+                      return {
+                        ...prev,
+                        crossPostPlatforms: e.target.checked ? [...next, 'ebay'] : next.filter(p => p !== 'ebay'),
+                      }
+                    })
+                  }}
+                  className="rounded"
+                />
+                <span className="text-sm">eBay</span>
+              </label>
+            )}
+            {connectedPlatforms.etsy && (
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.crossPostPlatforms?.includes('etsy')}
+                  onChange={(e) => {
+                    setFormData(prev => {
+                      const next = prev.crossPostPlatforms ?? []
+                      return {
+                        ...prev,
+                        crossPostPlatforms: e.target.checked ? [...next, 'etsy'] : next.filter(p => p !== 'etsy'),
+                      }
+                    })
+                  }}
+                  className="rounded"
+                />
+                <span className="text-sm">Etsy</span>
+              </label>
+            )}
+            {connectedPlatforms.woocommerce && (
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.crossPostPlatforms?.includes('woocommerce')}
+                  onChange={(e) => {
+                    setFormData(prev => {
+                      const next = prev.crossPostPlatforms ?? []
+                      return {
+                        ...prev,
+                        crossPostPlatforms: e.target.checked ? [...next, 'woocommerce'] : next.filter(p => p !== 'woocommerce'),
+                      }
+                    })
+                  }}
+                  className="rounded"
+                />
+                <span className="text-sm">WooCommerce</span>
+              </label>
+            )}
+          </div>
+        </div>
+      )}
 
       <div>
         <label className="block text-sm font-medium mb-2">Also listed elsewhere? (optional)</label>

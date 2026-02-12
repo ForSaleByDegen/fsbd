@@ -36,6 +36,7 @@ export default function Header() {
 
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/' && !searchParams.get('tab')
+    if (href === '/hub') return pathname === '/hub'
     if (href === '/?tab=activity') return pathname === '/' && searchParams.get('tab') === 'activity'
     if (href === '/listings/create') return pathname === '/listings/create'
     if (href === '/listings/create-auction') return pathname.startsWith('/listings/create-auction')
@@ -103,6 +104,9 @@ export default function Header() {
               <>
                 <Link href="/" className={navLinkClass('/')} style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                   Browse
+                </Link>
+                <Link href="/hub" className={navLinkClass('/hub')} style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                  Hub
                 </Link>
                 <Link href="/?tab=activity" className={navLinkClass('/?tab=activity')} style={{ fontFamily: 'var(--font-pixel-alt)' }}>
                   Activity
@@ -187,6 +191,14 @@ export default function Header() {
                     style={{ fontFamily: 'var(--font-pixel-alt)' }}
                   >
                     Browse
+                  </Link>
+                  <Link 
+                    href="/hub" 
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={mobileNavLinkClass('/hub')}
+                    style={{ fontFamily: 'var(--font-pixel-alt)' }}
+                  >
+                    Hub
                   </Link>
                   <Link 
                     href="/?tab=activity" 

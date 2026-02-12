@@ -12,6 +12,9 @@ import { hashWalletAddress } from '@/lib/supabase'
 const EBAY_SCOPES = [
   'https://api.ebay.com/oauth/api_scope/sell.account',
   'https://api.ebay.com/oauth/api_scope/commerce.identity.readonly',
+  'https://api.ebay.com/oauth/api_scope/sell.inventory',
+  'https://api.ebay.com/oauth/api_scope/sell.marketing.readonly',
+  'https://api.ebay.com/oauth/api_scope/commerce.feedback.readonly',
 ].join(' ')
 
 export async function GET(request: NextRequest) {

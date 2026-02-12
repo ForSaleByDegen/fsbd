@@ -40,6 +40,7 @@ export const RATE_LIMITS = {
   adminVerifySeller: { max: 20, windowSec: 60 },
   sellerVerifications: { max: 30, windowSec: 60 },
   verifyOAuth: { max: 15, windowSec: 60 },
+  connectWooCommerce: { max: 5, windowSec: 300 },
   verifyCode: { max: 10, windowSec: 60 },
   findCompsFromImage: { max: 10, windowSec: 60 }, // base/fallback; use checkTieredFindCompsRateLimit for tier-based
   validatorRegister: { max: 5, windowSec: 300 },

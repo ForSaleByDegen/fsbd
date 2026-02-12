@@ -15,8 +15,12 @@ import {
   type SubscriptionTier,
 } from '@/lib/tier-check'
 import { postListingToTelegram } from '@/lib/telegram-bot'
+import { crossPost, type CrossPostPlatform } from '@/lib/marketplace-cross-post'
+import { verifyWalletSignature } from '@/lib/verify-wallet-signature'
 
 const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/
+
+const VALID_CROSS_POST_PLATFORMS: CrossPostPlatform[] = ['ebay', 'etsy', 'woocommerce']
 
 export async function GET(request: NextRequest) {
   try {
@@ -209,9 +213,23 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const message = typeof body.message === 'string' ? body.message : ''
+    const signature = typeof body.signature === 'string' ? body.signature : ''
+    if (!message || !signature || !verifyWalletSignature(wa, message, signature, 'create_listing')) {
+      return NextResponse.json(
+        { error: 'Wallet signature required. Please sign the message to prove you own this wallet.' },
+        { status: 401 }
+      )
+    }
+
     const walletHash = hashWalletAddress(wa)
     const searchKeywords = Array.isArray(body.search_keywords) ? body.search_keywords.filter((k: unknown): k is string => typeof k === 'string').slice(0, 20) : []
-    let listingData = { ...body, wallet_address: wa, wallet_address_hash: walletHash, search_keywords: searchKeywords }
+    const crossPostPlatforms = Array.isArray(body.cross_post_platforms)
+      ? (body.cross_post_platforms as unknown[]).filter((p): p is CrossPostPlatform =>
+          typeof p === 'string' && VALID_CROSS_POST_PLATFORMS.includes(p as CrossPostPlatform)
+        )
+      : []
+    let listingData = { ...body, wallet_address: wa, wallet_address_hash: walletHash, search_keywords: searchKeywords, cross_post_platforms: crossPostPlatforms.length ? crossPostPlatforms : null }
 
     // Block banned sellers (e.g. failed to add tracking within 7 days)
     if (supabaseAdmin) {
@@ -402,6 +420,25 @@ export async function POST(request: NextRequest) {
       if (error) throw error
       const baseUrl = request.nextUrl?.origin || `https://${process.env.VERCEL_URL || 'fsbd.fun'}`
       postListingToTelegram(data, baseUrl).catch(() => {})
+
+      if (crossPostPlatforms.length > 0) {
+        const listing = data as { id: string; title?: string; description?: string; price?: number; images?: string[]; quantity?: number; category?: string | null }
+        crossPost(
+          listing.id,
+          walletHash,
+          {
+            id: listing.id,
+            title: listing.title ?? '',
+            description: listing.description ?? '',
+            price: Number(listing.price) || 0,
+            images: Array.isArray(listing.images) ? listing.images : [],
+            quantity: Math.max(1, Number(listing.quantity) || 1),
+            category: listing.category ?? null,
+          },
+          crossPostPlatforms
+        ).catch((err) => console.error('[listings] cross-post failed:', err))
+      }
+
       return NextResponse.json(data)
     }
 

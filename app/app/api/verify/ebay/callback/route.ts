@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { hashWalletAddress } from '@/lib/supabase'
+import { encryptSellerToken } from '@/lib/seller-verification-encrypt'
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL ||
   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
@@ -78,8 +79,25 @@ export async function GET(request: NextRequest) {
     return redirect('/profile', 'ebay_token_failed')
   }
 
-  const tokenData = (await tokenRes.json()) as { access_token: string }
+  const tokenData = (await tokenRes.json()) as {
+    access_token: string
+    refresh_token?: string
+    expires_in?: number
+  }
   const accessToken = tokenData.access_token
+  const refreshToken = tokenData.refresh_token
+  const expiresIn = tokenData.expires_in ?? 7200
+  const tokenExpiresAt = new Date(Date.now() + expiresIn * 1000).toISOString()
+
+  let accessTokenEncrypted: string | null = null
+  let refreshTokenEncrypted: string | null = null
+  try {
+    accessTokenEncrypted = encryptSellerToken(accessToken)
+    if (refreshToken) refreshTokenEncrypted = encryptSellerToken(refreshToken)
+  } catch (e) {
+    console.error('[verify/ebay/callback] token encryption failed:', e)
+    return redirect('/profile', 'ebay_token_failed')
+  }
 
   const identityBase = isSandbox ? 'https://apiz.sandbox.ebay.com' : 'https://apiz.ebay.com'
   const userRes = await fetch(`${identityBase}/commerce/identity/v1/user/`, {
@@ -116,6 +134,9 @@ export async function GET(request: NextRequest) {
         platform_user_id: platformUserId || null,
         platform_username: platformUsername || null,
         store_url: storeUrl || null,
+        access_token_encrypted: accessTokenEncrypted,
+        refresh_token_encrypted: refreshTokenEncrypted,
+        token_expires_at: tokenExpiresAt,
         updated_at: new Date().toISOString(),
       },
       { onConflict: 'wallet_address_hash,platform' }

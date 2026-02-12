@@ -9,7 +9,7 @@ import { checkRateLimit } from '@/lib/rate-limit'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { hashWalletAddress } from '@/lib/supabase'
 
-const ETSY_SCOPES = 'shops_r profile_r'
+const ETSY_SCOPES = 'shops_r profile_r listings_r listings_w'
 
 function base64UrlEncode(buf: Buffer): string {
   return buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')

@@ -205,7 +205,7 @@ export default function ProfilePage() {
   const walletsHook = privyEnabled ? useWallets() : { wallets: [] }
   const { user, authenticated, ready } = privyHooks
   const { wallets } = walletsHook
-  const { publicKey, connected } = useWallet()
+  const { publicKey, connected, signMessage } = useWallet()
   const { connection } = useConnection()
   const { tier: tierState } = useTier()
   const tier = tierState.tier
@@ -221,6 +221,14 @@ export default function ProfilePage() {
   const [manualCode, setManualCode] = useState<{ code: string; qrDataUrl: string } | null>(null)
   const [manualUrl, setManualUrl] = useState('')
   const [manualVerifying, setManualVerifying] = useState(false)
+  const [hubSyncing, setHubSyncing] = useState(false)
+  const [hubSyncMessage, setHubSyncMessage] = useState<string | null>(null)
+  const [wooSectionOpen, setWooSectionOpen] = useState(false)
+  const [wooStoreUrl, setWooStoreUrl] = useState('')
+  const [wooConsumerKey, setWooConsumerKey] = useState('')
+  const [wooConsumerSecret, setWooConsumerSecret] = useState('')
+  const [wooConnecting, setWooConnecting] = useState(false)
+  const [wooConnectMessage, setWooConnectMessage] = useState<string | null>(null)
 
   const walletAddress = getWalletAddress(publicKey, wallets)
   const searchParams = useSearchParams()
@@ -422,6 +430,57 @@ export default function ProfilePage() {
               />
             </div>
 
+            {/* Marketplace Hub: All my listings */}
+            <div className="mt-4 pt-4 border-t border-[#660099]/30">
+              <h2 className="text-base sm:text-lg font-pixel text-[#00ff00] mb-2" style={{ fontFamily: 'var(--font-pixel)' }}>
+                Marketplace Hub
+              </h2>
+              <p className="text-purple-muted font-pixel-alt text-sm mb-2" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                View all your listings from FSBD and connected platforms (eBay, Etsy, WooCommerce) in one place.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  href={walletAddress ? `/hub?wallet=${encodeURIComponent(walletAddress)}` : '/hub'}
+                  className="px-3 py-2 border-2 border-[#660099] text-[#00ff00] hover:bg-[#660099]/30 font-pixel-alt text-xs transition-colors"
+                  style={{ fontFamily: 'var(--font-pixel-alt)' }}
+                >
+                  View my listings in Hub
+                </Link>
+                <button
+                  type="button"
+                  disabled={hubSyncing || !walletAddress}
+                  onClick={async () => {
+                    if (!walletAddress) return
+                    setHubSyncing(true)
+                    setHubSyncMessage(null)
+                    try {
+                      const res = await fetch('/api/marketplace/sync', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ wallet: walletAddress }),
+                      })
+                      const d = await res.json().catch(() => ({}))
+                      if (res.ok) {
+                        setHubSyncMessage(d.synced != null ? `Synced ${d.synced} listings` : 'Sync complete')
+                        loadProfile()
+                      } else {
+                        setHubSyncMessage(d.error || 'Sync failed')
+                      }
+                    } catch {
+                      setHubSyncMessage('Sync failed')
+                    } finally {
+                      setHubSyncing(false)
+                    }
+                  }}
+                  className="px-3 py-2 border-2 border-[#660099] text-[#00ff00] hover:bg-[#660099]/30 font-pixel-alt text-xs disabled:opacity-50"
+                  style={{ fontFamily: 'var(--font-pixel-alt)' }}
+                >
+                  {hubSyncing ? 'Syncing…' : 'Sync now'}
+                </button>
+              </div>
+              {hubSyncMessage && <p className="text-xs text-[#00ff00] mt-2">{hubSyncMessage}</p>}
+            </div>
+
             {/* Verified Seller section */}
             <div className="mt-4 pt-4 border-t border-[#660099]/30">
               <button
@@ -482,6 +541,138 @@ export default function ProfilePage() {
                         Verify with Etsy
                       </a>
                     )}
+                    <div className="w-full pt-2 border-t border-[#660099]/30 mt-2">
+                      <button
+                        type="button"
+                        onClick={() => setWooSectionOpen(!wooSectionOpen)}
+                        className="flex items-center gap-2 text-left font-pixel-alt text-[#00ff00] hover:bg-[#660099]/20 transition-colors p-2 rounded text-xs"
+                        style={{ fontFamily: 'var(--font-pixel-alt)' }}
+                      >
+                        Connect WooCommerce store {wooSectionOpen ? '▼' : '▶'}
+                      </button>
+                      {wooSectionOpen && (
+                        <div className="pt-2 space-y-2">
+                          <p className="text-xs text-purple-muted font-pixel-alt" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
+                            Add your WooCommerce store to import listings and cross-post. Use WooCommerce → Settings → Advanced → REST API to create keys.
+                          </p>
+                          <input
+                            type="url"
+                            value={wooStoreUrl}
+                            onChange={(e) => setWooStoreUrl(e.target.value)}
+                            placeholder="Store URL (e.g. https://myshop.com)"
+                            className="w-full bg-black border-2 border-[#660099] text-[#00ff00] font-pixel-alt text-xs p-2"
+                            style={{ fontFamily: 'var(--font-pixel-alt)' }}
+                          />
+                          <input
+                            type="text"
+                            value={wooConsumerKey}
+                            onChange={(e) => setWooConsumerKey(e.target.value)}
+                            placeholder="Consumer Key"
+                            className="w-full bg-black border-2 border-[#660099] text-[#00ff00] font-pixel-alt text-xs p-2"
+                            style={{ fontFamily: 'var(--font-pixel-alt)' }}
+                          />
+                          <input
+                            type="password"
+                            value={wooConsumerSecret}
+                            onChange={(e) => setWooConsumerSecret(e.target.value)}
+                            placeholder="Consumer Secret"
+                            className="w-full bg-black border-2 border-[#660099] text-[#00ff00] font-pixel-alt text-xs p-2"
+                            style={{ fontFamily: 'var(--font-pixel-alt)' }}
+                          />
+                          <button
+                            type="button"
+                            disabled={wooConnecting || !walletAddress || !wooStoreUrl.trim() || !wooConsumerKey.trim() || !wooConsumerSecret.trim()}
+                            onClick={async () => {
+                              if (!walletAddress || !wooStoreUrl.trim() || !wooConsumerKey.trim() || !wooConsumerSecret.trim()) return
+                              if (!signMessage) {
+                                setWooConnectMessage('Your wallet must support message signing')
+                                return
+                              }
+                              setWooConnecting(true)
+                              setWooConnectMessage(null)
+                              try {
+                                const msg = `FSBD marketplace connect_woocommerce ${Date.now()}`
+                                const sig = await signMessage(new TextEncoder().encode(msg))
+                                const signature = btoa(String.fromCharCode(...Array.from(sig)))
+                                const r = await fetch('/api/connect/woocommerce', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({
+                                    wallet: walletAddress,
+                                    store_url: wooStoreUrl.trim(),
+                                    consumer_key: wooConsumerKey.trim(),
+                                    consumer_secret: wooConsumerSecret.trim(),
+                                    message: msg,
+                                    signature,
+                                  }),
+                                })
+                                const d = await r.json().catch(() => ({}))
+                                if (r.ok) {
+                                  setWooConnectMessage('WooCommerce connected')
+                                  setWooStoreUrl('')
+                                  setWooConsumerKey('')
+                                  setWooConsumerSecret('')
+                                } else {
+                                  setWooConnectMessage(d.error || 'Connection failed')
+                                }
+                              } catch {
+                                setWooConnectMessage('Connection failed')
+                              } finally {
+                                setWooConnecting(false)
+                              }
+                            }}
+                            className="px-3 py-2 border-2 border-[#660099] text-[#00ff00] hover:bg-[#660099]/30 font-pixel-alt text-xs disabled:opacity-50"
+                            style={{ fontFamily: 'var(--font-pixel-alt)' }}
+                          >
+                            {wooConnecting ? 'Connecting…' : 'Connect'}
+                          </button>
+                          {wooConnectMessage && <p className={`text-xs ${wooConnectMessage.includes('connected') ? 'text-[#00ff00]' : 'text-amber-400'}`}>{wooConnectMessage}</p>}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2 pt-2">
+                      <Link href={walletAddress ? `/hub?wallet=${encodeURIComponent(walletAddress)}` : '/hub'} className="px-3 py-2 border-2 border-[#660099] text-[#00ff00] hover:bg-[#660099]/30 font-pixel-alt text-xs">
+                        View in Hub
+                      </Link>
+                      <button
+                        type="button"
+                        disabled={!walletAddress || hubSyncing}
+                        onClick={async () => {
+                          if (!walletAddress) return
+                          if (!signMessage) {
+                            setHubSyncMessage('Your wallet must support message signing')
+                            return
+                          }
+                          setHubSyncing(true)
+                          setHubSyncMessage(null)
+                          try {
+                            const msg = `FSBD marketplace sync_marketplace ${Date.now()}`
+                            const sig = await signMessage(new TextEncoder().encode(msg))
+                            const signature = btoa(String.fromCharCode(...Array.from(sig)))
+                            const r = await fetch('/api/marketplace/sync', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ wallet: walletAddress, message: msg, signature }),
+                            })
+                            const d = await r.json().catch(() => ({}))
+                            if (r.ok) {
+                              setHubSyncMessage(d.synced != null ? `Synced ${d.synced} listings` : 'Sync complete')
+                              loadProfile()
+                            } else {
+                              setHubSyncMessage(d.error || 'Sync failed')
+                            }
+                          } catch {
+                            setHubSyncMessage('Sync failed')
+                          } finally {
+                            setHubSyncing(false)
+                          }
+                        }}
+                        className="px-3 py-2 border-2 border-[#660099] text-[#00ff00] hover:bg-[#660099]/30 font-pixel-alt text-xs transition-colors disabled:opacity-50"
+                      >
+                        {hubSyncing ? 'Syncing…' : 'Sync now'}
+                      </button>
+                    </div>
+                    {hubSyncMessage && <p className="text-xs text-[#00ff00] mt-1">{hubSyncMessage}</p>}
                     {!verifications?.platforms?.some((p) => p.platform === 'manual') && (
                       <div className="flex flex-col gap-2 pt-2 border-t border-[#660099]/30 mt-2">
                         <span className="text-xs text-purple-muted font-pixel-alt">Manual: add QR to listing image</span>
