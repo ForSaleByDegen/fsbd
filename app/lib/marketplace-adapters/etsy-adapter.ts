@@ -54,7 +54,7 @@ export async function fetchEtsyListings(walletHash: string): Promise<ExternalSyn
         title?: string
         description?: string
         price?: { amount?: number; divisor?: number; currency_code?: string }
-        images?: Array<{ url_75x75?: string; url_170x135?: string; url_fullxfull?: string } }
+        images?: Array<{ url_75x75?: string; url_170x135?: string; url_fullxfull?: string }>
         state?: string
       }>
     }
