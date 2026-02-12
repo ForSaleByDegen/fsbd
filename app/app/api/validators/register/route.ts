@@ -11,6 +11,10 @@ import { getUserTokenBalance } from '@/lib/tier-check'
 
 const BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/
 
+function normalizeWallet(s: string) {
+  return s.trim().toLowerCase()
+}
+
 async function isWhitelisted(wallet: string): Promise<boolean> {
   if (!supabaseAdmin) return false
   const { data } = await supabaseAdmin
@@ -20,8 +24,23 @@ async function isWhitelisted(wallet: string): Promise<boolean> {
     .maybeSingle()
   const raw = (data as { value_json?: unknown } | null)?.value_json
   const list = Array.isArray(raw) ? raw : []
-  const addresses = list.filter((x: unknown): x is string => typeof x === 'string').map((s: string) => s.trim().toLowerCase())
-  return addresses.includes(wallet.toLowerCase())
+  const addresses = list.filter((x: unknown): x is string => typeof x === 'string').map((s: string) => normalizeWallet(s))
+  return addresses.includes(normalizeWallet(wallet))
+}
+
+/** Returns per-address min stake override for whitelisted wallets, or null if none/not whitelisted. */
+async function getWhitelistMinStakeOverride(wallet: string): Promise<number | null> {
+  if (!supabaseAdmin) return null
+  const { data } = await supabaseAdmin
+    .from('platform_config')
+    .select('value_json')
+    .eq('key', 'ai_validators_whitelist_min_stake')
+    .maybeSingle()
+  const raw = (data as { value_json?: unknown } | null)?.value_json
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return null
+  const v = (raw as Record<string, unknown>)[normalizeWallet(wallet)]
+  if (typeof v === 'number' && v >= 0 && Number.isFinite(v)) return Math.floor(v)
+  return null
 }
 
 export async function POST(request: NextRequest) {
@@ -45,21 +64,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Valid stake_amount required' }, { status: 400 })
     }
 
-    // Enforce admin-configured minimum stake (default 10M)
-    const DEFAULT_MIN_STAKE = 10_000_000
-    let minStake = DEFAULT_MIN_STAKE
-    if (supabaseAdmin) {
-      const { data: cfg } = await supabaseAdmin.from('platform_config').select('value_json').eq('key', 'min_validator_stake').maybeSingle()
-      const v = (cfg as { value_json?: unknown } | null)?.value_json
-      if (typeof v === 'number' && v >= 0) minStake = Math.floor(v)
-    }
-    if (stakeAmount < minStake) {
-      return NextResponse.json(
-        { error: `Minimum stake required: ${minStake.toLocaleString()} $FSBD` },
-        { status: 400 }
-      )
-    }
-
     const whitelisted = await isWhitelisted(wallet)
     let isAdminWallet = false
     if (supabaseAdmin) {
@@ -71,11 +75,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Wallet not whitelisted for validator access' }, { status: 403 })
     }
 
+    // Enforce min stake: global default, overridden per whitelisted address (incl. 0 for trials)
+    const DEFAULT_MIN_STAKE = 10_000_000
+    let minStake = DEFAULT_MIN_STAKE
+    if (supabaseAdmin) {
+      const { data: cfg } = await supabaseAdmin.from('platform_config').select('value_json').eq('key', 'min_validator_stake').maybeSingle()
+      const v = (cfg as { value_json?: unknown } | null)?.value_json
+      if (typeof v === 'number' && v >= 0) minStake = Math.floor(v)
+    }
+    if (whitelisted) {
+      const override = await getWhitelistMinStakeOverride(wallet)
+      if (override !== null) minStake = override
+    }
+    if (stakeAmount < minStake) {
+      return NextResponse.json(
+        { error: `Minimum stake required: ${minStake.toLocaleString()} $FSBD` },
+        { status: 400 }
+      )
+    }
+
     if (!supabaseAdmin) {
       return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
     }
 
-    // Verify balance >= stake_amount
+    // Verify balance >= stake_amount (skip when min_stake 0 allows trial without tokens)
     const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || 'https://api.mainnet-beta.solana.com'
     const connection = new Connection(rpcUrl)
     const mintOverride = await (async () => {
@@ -85,12 +108,15 @@ export async function POST(request: NextRequest) {
       if (typeof v === 'object' && v !== null && 'value' in v && typeof (v as { value: unknown }).value === 'string') return (v as { value: string }).value
       return null
     })()
-    const balance = await getUserTokenBalance(wallet, connection, mintOverride)
-    if (balance < stakeAmount) {
-      return NextResponse.json(
-        { error: `Insufficient $FSBD. You hold ${Math.floor(balance).toLocaleString()}; need ${Math.floor(stakeAmount).toLocaleString()} to stake.` },
-        { status: 400 }
-      )
+    // Skip balance check when whitelisted with min_stake 0 (trial from device without tokens)
+    if (minStake > 0) {
+      const balance = await getUserTokenBalance(wallet, connection, mintOverride)
+      if (balance < stakeAmount) {
+        return NextResponse.json(
+          { error: `Insufficient $FSBD. You hold ${Math.floor(balance).toLocaleString()}; need ${Math.floor(stakeAmount).toLocaleString()} to stake.` },
+          { status: 400 }
+        )
+      }
     }
 
     let cleanUrl: string | null = null

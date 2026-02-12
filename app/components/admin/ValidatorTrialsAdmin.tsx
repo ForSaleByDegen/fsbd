@@ -18,11 +18,13 @@ export default function ValidatorTrialsAdmin() {
   const adminWallet = publicKey?.toString() ?? ''
 
   const [whitelist, setWhitelist] = useState<string[]>([])
+  const [minStakeOverrides, setMinStakeOverrides] = useState<Record<string, number>>({})
   const [addWallet, setAddWallet] = useState('')
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
   const [whitelistLoading, setWhitelistLoading] = useState(false)
   const [addRemoving, setAddRemoving] = useState(false)
+  const [savingMinStake, setSavingMinStake] = useState<string | null>(null)
   const [message, setMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
   const [rewardsEnabled, setRewardsEnabled] = useState(false)
   const [rewardsSaving, setRewardsSaving] = useState(false)
@@ -104,8 +106,11 @@ export default function ValidatorTrialsAdmin() {
     try {
       const res = await fetch(`/api/admin/validator-whitelist?wallet=${encodeURIComponent(adminWallet)}`)
       const data = await res.json().catch(() => ({}))
-      if (res.ok && Array.isArray(data.whitelist)) {
-        setWhitelist(data.whitelist)
+      if (res.ok) {
+        if (Array.isArray(data.whitelist)) setWhitelist(data.whitelist)
+        if (data.min_stake_overrides && typeof data.min_stake_overrides === 'object') {
+          setMinStakeOverrides(data.min_stake_overrides)
+        }
       }
     } catch {
       setMessage({ type: 'err', text: 'Failed to load whitelist' })
@@ -157,6 +162,9 @@ export default function ValidatorTrialsAdmin() {
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Failed to add')
       setWhitelist(data.whitelist ?? [...whitelist, w.toLowerCase()])
+      if (data.min_stake_overrides && typeof data.min_stake_overrides === 'object') {
+        setMinStakeOverrides(data.min_stake_overrides)
+      }
       setAddWallet('')
       setMessage({ type: 'ok', text: 'Wallet added to whitelist' })
     } catch (e) {
@@ -179,11 +187,37 @@ export default function ValidatorTrialsAdmin() {
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Failed to remove')
       setWhitelist(data.whitelist ?? whitelist.filter((x) => x !== wallet.toLowerCase()))
+      setMinStakeOverrides((o) => {
+        const next = { ...o }
+        delete next[wallet.toLowerCase()]
+        return next
+      })
       setMessage({ type: 'ok', text: 'Wallet removed from whitelist' })
     } catch (e) {
       setMessage({ type: 'err', text: e instanceof Error ? e.message : 'Failed to remove' })
     } finally {
       setAddRemoving(false)
+    }
+  }
+
+  const handleSetMinStake = async (wallet: string, minStake: number) => {
+    if (!adminWallet) return
+    setSavingMinStake(wallet)
+    setMessage(null)
+    try {
+      const res = await fetch('/api/admin/validator-whitelist', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wallet: adminWallet, setMinStake: { wallet, min_stake: minStake } }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Failed to set min stake')
+      setMinStakeOverrides((o) => ({ ...o, [wallet.toLowerCase()]: minStake }))
+      setMessage({ type: 'ok', text: `Min stake set to ${minStake.toLocaleString()} $FSBD for ${wallet.slice(0, 8)}…` })
+    } catch (e) {
+      setMessage({ type: 'err', text: e instanceof Error ? e.message : 'Failed to set min stake' })
+    } finally {
+      setSavingMinStake(null)
     }
   }
 
@@ -202,7 +236,7 @@ export default function ValidatorTrialsAdmin() {
           Validator Trial Access
         </h3>
         <p className="text-purple-muted font-pixel-alt text-sm mb-4" style={{ fontFamily: 'var(--font-pixel-alt)' }}>
-          Add wallet addresses to grant validator pool access for trials. Whitelisted users can register and run validators (browser or endpoint).
+          Add wallet addresses to grant validator pool access for trials. Set a per-address min $FSBD threshold — use 0 to allow validators without tokens (e.g. device validation).
         </p>
 
         <div className="flex gap-2 mb-4">
@@ -227,10 +261,39 @@ export default function ValidatorTrialsAdmin() {
         ) : whitelist.length === 0 ? (
           <p className="text-purple-muted text-sm">No wallets whitelisted yet.</p>
         ) : (
-          <ul className="space-y-1">
+          <ul className="space-y-2">
             {whitelist.map((w) => (
-              <li key={w} className="flex items-center justify-between gap-2 py-1 border-b border-[#660099]/30">
-                <code className="text-cyan-400 font-mono text-xs truncate flex-1">{w}</code>
+              <li key={w} className="flex flex-wrap items-center gap-2 py-2 border-b border-[#660099]/30">
+                <code className="text-cyan-400 font-mono text-xs truncate flex-1 min-w-[120px]">{w}</code>
+                <span className="text-purple-muted text-xs font-pixel-alt shrink-0">Min $FSBD:</span>
+                <Input
+                  type="number"
+                  min={0}
+                  step={1000000}
+                  placeholder="0 = no tokens"
+                  value={minStakeOverrides[w] ?? ''}
+                  onChange={(e) => {
+                    const v = e.target.value === '' ? undefined : Math.max(0, parseInt(e.target.value, 10) || 0)
+                    setMinStakeOverrides((o) => {
+                      if (v === undefined) {
+                        const next = { ...o }
+                        delete next[w]
+                        return next
+                      }
+                      return { ...o, [w]: v }
+                    })
+                  }}
+                  className="w-28 bg-black border border-[#660099] text-[#00ff00] font-mono text-xs h-8"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-cyan-500 text-cyan-400 hover:bg-cyan-500/20 shrink-0"
+                  disabled={addRemoving || savingMinStake === w}
+                  onClick={() => handleSetMinStake(w, minStakeOverrides[w] ?? 0)}
+                >
+                  {savingMinStake === w ? '…' : 'Set'}
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
