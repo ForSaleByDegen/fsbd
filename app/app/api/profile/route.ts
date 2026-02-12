@@ -63,13 +63,18 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Fetch user's listings (as seller) - include tracking for sold listings
+    // Fetch user's listings (as seller) - include fee_paid for stats, tracking for sold listings
     const { data: listingsRaw } = await supabaseAdmin
       .from('listings')
-      .select('id, title, price, price_token, token_symbol, status, escrow_status, images, category, created_at, tracking_number, shipping_carrier, buyer_wallet_hash')
+      .select('id, title, price, price_token, token_symbol, status, escrow_status, images, category, created_at, tracking_number, shipping_carrier, buyer_wallet_hash, fee_paid')
       .eq('wallet_address_hash', walletHash)
       .order('created_at', { ascending: false })
     const listings = Array.isArray(listingsRaw) ? listingsRaw : []
+
+    // Derive stats from actual listings (source of truth) - fixes mismatch when profile counters weren't updated
+    const computedListingsCount = listings.length
+    const computedTotalSold = listings.filter((l: { status?: string }) => l.status === 'sold').length
+    const computedTotalFees = listings.reduce((sum: number, l: { fee_paid?: number }) => sum + (Number((l as { fee_paid?: number }).fee_paid) || 0), 0)
 
     // Fetch escrow threads (buyer or seller) - table may not exist if migration_chat not run
     let escrows: Array<{ id: string; listing_id: string; escrow_status: string; listing_title?: string; listing_price?: number; listing_price_token?: string; listing_token_symbol?: string | null }> = []
@@ -152,8 +157,18 @@ export async function GET(request: NextRequest) {
       claim_status: claimStatusMap[p.id as string] ?? (hasProtectionMap[p.id as string] ? 'none' : undefined),
     }))
 
+    // Override profile stats with computed values from listings (fixes stats not updating)
+    const profileWithStats = profileData
+      ? {
+          ...profileData,
+          listings_count: computedListingsCount,
+          total_listings_sold: computedTotalSold,
+          total_fees_paid: computedTotalFees,
+        }
+      : null
+
     return NextResponse.json({
-      profile: profileData,
+      profile: profileWithStats,
       listings: listings || [],
       escrows: escrows || [],
       bids: bids || [],

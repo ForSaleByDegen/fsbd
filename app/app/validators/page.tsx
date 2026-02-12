@@ -21,6 +21,7 @@ export default function ValidatorsPage() {
   const wallet = publicKey?.toString() ?? null
 
   const [whitelisted, setWhitelisted] = useState<boolean | null>(null)
+  const [minStakeOverride, setMinStakeOverride] = useState<number | null>(null)
   const [userIsAdmin, setUserIsAdmin] = useState(false)
   const [poolStats, setPoolStats] = useState<PoolStats>({ totalValidators: 0, totalStaked: 0 })
   const [rewardsInfo, setRewardsInfo] = useState<RewardsInfo>({ enabled: false, current_reward_per_job: 0 })
@@ -41,6 +42,7 @@ export default function ValidatorsPage() {
   useEffect(() => {
     if (!wallet) {
       setWhitelisted(null)
+      setMinStakeOverride(null)
       setMyStatus(null)
       setUserIsAdmin(false)
       return
@@ -53,6 +55,9 @@ export default function ValidatorsPage() {
     ]).then(([whitelistRes, meRes, adminRes]) => {
       if (cancelled) return
       setWhitelisted(!!whitelistRes.whitelisted)
+      const ms = typeof whitelistRes.min_stake === 'number' && whitelistRes.min_stake >= 0 ? whitelistRes.min_stake : null
+      setMinStakeOverride(ms)
+      if (ms === 0) setStakeAmount('0')
       setMyStatus({ registered: !!meRes.registered, endpoint_url: meRes.endpoint_url, stake_amount: meRes.stake_amount, status: meRes.status, validator_type: meRes.validator_type, jobs_completed: meRes.jobs_completed ?? 0, total_earned: meRes.total_earned ?? 0 })
       setUserIsAdmin(!!adminRes?.isAdmin)
     })
@@ -125,9 +130,9 @@ export default function ValidatorsPage() {
     const isBrowser = validatorMode === 'browser'
     if (!isBrowser && !endpointUrl.trim()) return
     const stake = parseInt(stakeAmount, 10)
-    const MIN_STAKE = 10_000_000
-    if (!Number.isFinite(stake) || stake < MIN_STAKE) {
-      setError(`Minimum stake: ${MIN_STAKE.toLocaleString()} $FSBD`)
+    const minStake = minStakeOverride !== null ? minStakeOverride : 10_000_000
+    if (!Number.isFinite(stake) || stake < minStake) {
+      setError(`Minimum stake: ${minStake.toLocaleString()} $FSBD`)
       return
     }
     setRegistering(true)
@@ -429,12 +434,17 @@ export default function ValidatorsPage() {
                     <label className="block text-sm mb-1">Stake amount ($FSBD)</label>
                     <Input
                       type="number"
-                      placeholder="10000000"
+                      min={minStakeOverride ?? 0}
+                      placeholder={minStakeOverride === 0 ? '0 (trial)' : '10000000'}
                       value={stakeAmount}
                       onChange={(e) => setStakeAmount(e.target.value)}
                       className="bg-black/50 border-cyan-500/40"
                     />
-                    <p className="text-xs mt-1">Minimum: 10,000,000 $FSBD. You must hold at least this much in your wallet.</p>
+                    <p className="text-xs mt-1">
+                      {minStakeOverride === 0
+                        ? 'Trial mode: 0 $FSBD required. You can validate without holding tokens (e.g. browser on tablet).'
+                        : `Minimum: ${(minStakeOverride ?? 10_000_000).toLocaleString()} $FSBD. You must hold at least this much in your wallet.`}
+                    </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Button
