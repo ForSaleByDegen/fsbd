@@ -11,9 +11,10 @@ type Status = 'idle' | 'loading' | 'ready' | 'validating' | 'error'
 type Props = {
   wallet: string
   onStatus?: (status: Status, message?: string) => void
+  onJobCompleted?: () => void
 }
 
-export default function BrowserValidatorRunner({ wallet, onStatus }: Props) {
+export default function BrowserValidatorRunner({ wallet, onStatus, onJobCompleted }: Props) {
   const [status, setStatus] = useState<Status>('idle')
   const [progress, setProgress] = useState<string>('')
   const [jobsCompleted, setJobsCompleted] = useState(0)
@@ -124,6 +125,7 @@ export default function BrowserValidatorRunner({ wallet, onStatus }: Props) {
                   })
                   if (completeRes.ok) {
                     setJobsCompleted((n) => n + 1)
+                    onJobCompleted?.()
                   } else {
                     await releaseJob()
                   }

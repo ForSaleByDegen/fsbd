@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useWallet } from '@solana/wallet-adapter-react'
 import Link from 'next/link'
 import Header from '@/components/Header'
@@ -94,6 +94,16 @@ export default function ValidatorsPage() {
       .catch(() => { if (!cancelled) setMyJobs([]) })
     return () => { cancelled = true }
   }, [wallet, connected, whitelisted, userIsAdmin, myStatus?.jobs_completed])
+
+  const refreshValidatorStatus = useCallback(() => {
+    if (!wallet) return
+    fetch(`/api/validators/me?wallet=${encodeURIComponent(wallet)}`)
+      .then((r) => r.json())
+      .then((meRes) => setMyStatus((s) => (s ? { ...s, jobs_completed: meRes.jobs_completed ?? s.jobs_completed ?? 0, total_earned: meRes.total_earned ?? s.total_earned ?? 0 } : s)))
+    fetch(`/api/validators/jobs/my?wallet=${encodeURIComponent(wallet)}`)
+      .then((r) => r.json())
+      .then((data) => { if (Array.isArray(data.jobs)) setMyJobs(data.jobs) })
+  }, [wallet])
 
   const checkBalance = async () => {
     if (!wallet) return
@@ -257,7 +267,7 @@ export default function ValidatorsPage() {
               </p>
               <p className="mb-3 text-xs text-purple-muted">Requires Chrome, Edge, or Safari 18+ (WebGPU).</p>
               {myStatus?.registered && myStatus.validator_type === 'browser' && wallet && (
-                <BrowserValidatorRunner wallet={wallet} />
+                <BrowserValidatorRunner wallet={wallet} onJobCompleted={refreshValidatorStatus} />
               )}
               {(!myStatus?.registered || myStatus.validator_type !== 'browser') && (
                 <p className="text-xs text-purple-muted">Register as a browser validator below, then come back here.</p>
