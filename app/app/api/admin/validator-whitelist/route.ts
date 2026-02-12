@@ -106,9 +106,10 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid wallet to remove' }, { status: 400 })
     }
     if (setMinStake) {
-      const targetWallet = typeof setMinStake.wallet === 'string' ? setMinStake.wallet.trim() : ''
+      const targetWallet = typeof setMinStake.wallet === 'string' ? setMinStake.wallet.trim().toLowerCase() : ''
       const minStake = typeof setMinStake.min_stake === 'number' ? setMinStake.min_stake : Number(setMinStake.min_stake)
-      if (!targetWallet || !BASE58.test(targetWallet)) {
+      // Target wallet must exist in whitelist (already validated when added); use length check to avoid rejecting valid addresses
+      if (!targetWallet || targetWallet.length < 32 || targetWallet.length > 44) {
         return NextResponse.json({ error: 'Invalid wallet in setMinStake' }, { status: 400 })
       }
       if (!Number.isFinite(minStake) || minStake < 0) {
